@@ -1,3 +1,6 @@
+import Image from "next/image";
+import Link from "next/link";
+
 const menuItems = [
   {
     title: "MENU",
@@ -5,18 +8,18 @@ const menuItems = [
       {
         icon: "/home.png",
         label: "Home",
-        href: "/",
+        href: "/admin",
         visible: ["admin", "teacher", "student", "parent"],
       },
       {
         icon: "/teacher.png",
-        label: "Teachers",
+        label: "Supervisor",
         href: "/list/teachers",
         visible: ["admin", "teacher"],
       },
       {
         icon: "/student.png",
-        label: "Students",
+        label: "PIC",
         href: "/list/students",
         visible: ["admin", "teacher"],
       },
@@ -89,7 +92,30 @@ const menuItems = [
     ],
   },
   {
-    title: "OTHER",
+    title: "warehouse",
+    items: [
+      {
+        icon: "/profile.png",
+        label: "Profile",
+        href: "/profile",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+      {
+        icon: "/setting.png",
+        label: "Settings",
+        href: "/settings",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+      {
+        icon: "/logout.png",
+        label: "Logout",
+        href: "/logout",
+        visible: ["admin", "teacher", "student", "parent"],
+      },
+    ],
+  },
+  {
+    title: "customer",
     items: [
       {
         icon: "/profile.png",
@@ -112,3 +138,30 @@ const menuItems = [
     ],
   },
 ];
+
+/////////////////////////////////////////////////
+const Menu = () => {
+  return (
+    <div className="mt-1 pb-5 h-[100%] overflow-scroll bg-blue-100/50">
+      {menuItems.map((item) => (
+        <div className="flex flex-col gap-2" key={item.title}>
+          <span className="hidden lg:block text-slate-400 font-light my-2 px-2 uppercase">
+            {item.title}
+          </span>
+          {item.items.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex items-center lg:justify-start justify-center gap-2 py-2 px-4 text-slate-700"
+            >
+              <Image src={item.icon} width={20} height={20} alt={item.label} />
+              <span className="hidden lg:block">{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default Menu;
