@@ -1,0 +1,500 @@
+/// This is your Prisma schema file,
+/// learn more about it in the docs: https:///pris.ly/d/prisma-schema
+
+/// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+/// Try Prisma Accelerate: https:///pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// =================================================================
+/// 1. Entitas Utama: Perusahaan (Customers, Vendors, Car Users, etc.)
+///    Ini adalah tabel sentral untuk mengelola semua pihak yang terlibat
+///    (customer kendaraan, penyewa, bengkel/vendor, supplier).
+/// =================================================================
+
+enum CompanyType {
+  CUSTOMER /// pemilik kendaraan 
+  VENDOR ///Bengkel/vendor service
+  CAR_USER /// Penyewa/pengguna kendaraan
+  SUPPLIER /// Pemasok/toko sparepart
+  INTERNAL /// Perusahaan internal jika ada
+}
+
+model Company {
+  id            String      @id @default(uuid()) /// UUID untuk ID publik
+  companyId     String      @unique @map("company_id") /// ID perusahaan dalam sistem (contoh: kode perusahaan)
+  companyName   String      @map("company_name") /// Nama perusahaan")
+  companyEmail  String?     @map("company_email") /// Email perusahaan
+  logo          String?
+  contact       String? ///Nomro telpon perusahaan
+  address       String?
+  taxRegistered Boolean     @default(false) @map("tax_registered") /// apakah sudah ppn?
+  companyType   CompanyType /// tipe perusahaan : CUSTOMER, VENDOR, CAR_USER, SUPPLIER, INTERNAL
+
+  /// =================================================================
+  /// Relasi
+
+  /// Customer (pemilik kendaraan) memiliki banyak kendaraan
+  vehiclesOwned          Vehicle[]       @relation("CompanyOwnedVehicles")
+  /// Car User (penyewa) menggunakan banyak kendaraan
+  vehiclesUsed           Vehicle[]       @relation("CompanyUsedVehicles")
+  /// Company bisa punya banyak karyawan
+  employees              Employee[]
+  /// Company bisa punya banyak Work Orders (sebagai customer, carUser, vendor)
+  customerWorkOrders     WorkOrder[]     @relation("CustomerWorkOrders")
+  carUserWorkOrders      WorkOrder[]     @relation("CarUserWorkOrders")
+  vendorWorkOrders       WorkOrder[]     @relation("VendorWorkOrders")
+  /// Company bisa punya banyak Purchase Orders (sebagai supplier)
+  suppliedPurchaseOrders PurchaseOrder[] @relation("SupplierPurchaseOrders")
+
+  ///TimeStamp
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("companies") ///nama tabel di database
+}
+
+/// =================================================================
+/// 2. Entitas Kendaraan
+/// =================================================================
+model Vehicle {
+  id           String  @id @default(uuid())
+  licensePlate String  @unique @map("license_plate") /// Nomor plat harus unik
+  vehicleMake  String
+  model        String
+  trimLevel    String? @map("trim_level")
+  modelYear    Int?    @map("model_year") /// Tipe data Int untuk tahun
+  bodyStyle    String? @map("body_style")
+  color        String?
+  vinNum       String? @unique @map("vin_num") /// VIN (Nomor Rangka) sangat sering unik
+  engineNum    String? @unique @map("engine_num") /// Nomor Mesin juga sering unik
+  settledOdo   Int /// Odometer type integer
+
+  /// Relasi
+  ownerId String  @map("owner_id") /// ID pemilik kendaraan (PT. Dipo Star Finance)
+  owner   Company @relation("CompanyOwnedVehicles", fields: [ownerId], references: [id])
+
+  /// Penyewa kendaraan (PT. SPX Express)
+  carUserId String  @map("car_user_id")
+  carUser   Company @relation("CompanyUsedVehicles", fields: [carUserId], references: [id])
+
+  workOrders  WorkOrder[] /// Kendaraan bisa memiliki banyak Work Orders
+  invoices    Invoice[] /// Kendaraan bisa memiliki banyak Invoices
+  estimations Estimation[] /// Kendaraan bisa memiliki banyak Estimasi
+
+  /// Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("vehicles")
+}
+
+/// =================================================================
+/// 3. Entitas Karyawan (Pegawai Bengkel, Driver, PIC Customer/Vendor)
+/// =================================================================
+enum EmployeeRole {
+  ADMIN
+  USER
+  MECHANIC /// Mekanik
+  DRIVER /// Driver
+  PIC_CUSTOMER /// PIC dari perusahaan customer
+  PIC_VENDOR /// PIC dari perusahaan vendor/bengkel
+  SERVICE_ADVISOR /// Service Advisor
+  /// Tambahkan role lain sesuai kebutuhan
+}
+
+model Employee {
+  id          String       @id @default(uuid())
+  employeeId  String?      @unique @map("employee_id") /// ID karyawan internal (opsional jika UUID sudah cukup)
+  name        String
+  email       String?      @unique
+  photo       String? /// URL foto
+  phone       String?
+  role        EmployeeRole @default(USER) /// Menggunakan Enum
+  departement String?      @map("departement") /// Salah ketik 'departement' menjadi 'departement'
+  companyId   String?      @map("company_id") /// ID perusahaan tempat karyawan bekerja (jika karyawan internal/vendor)
+  company     Company?     @relation(fields: [companyId], references: [id])
+
+  /// Relasi dengan WorkOrder
+  mechanicWorkOrders  WorkOrder[] @relation("MechanicWorkOrders") /// Mekanik
+  driverWorkOrders    WorkOrder[] @relation("DriverWorkOrders") /// Driver
+  approvedWorkOrders  WorkOrder[] @relation("ApprovedByWorkOrders") /// PIC yang menyetujui WO
+  requestedWorkOrders WorkOrder[] @relation("RequestedByWorkOrders") /// PIC yang merequest WO
+
+  /// Relasi dengan Invoice
+  mechanicInvoices Invoice[] @relation("MechanicInvoices")
+  approvedInvoices Invoice[] @relation("ApprovedByInvoices")
+
+  /// Relasi dengan Estimation
+  mechanicEstimations Estimation[] @relation("MechanicEstimations")
+  approvedEstimations Estimation[] @relation("ApprovedByEstimations")
+
+  /// Relasi dengan PurchaseOrder
+  requestedPurchaseOrders PurchaseOrder[] @relation("RequestedByPurchaseOrders")
+  approvedPurchaseOrders  PurchaseOrder[] @relation("ApprovedByPurchaseOrders")
+
+  /// Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("employees")
+}
+
+/// =================================================================
+/// 4. Entitas Spare Part
+/// =================================================================
+enum PartVariant {
+  OEM
+  AFTERMARKET
+  GBOX /// Genuine Box? Sesuaikan penamaan
+}
+
+model SparePart {
+  id          String      @id @default(uuid())
+  partNumber  String      @unique @map("part_number") /// Nomor part unik
+  sku         String? ///@unique Stock Keeping Unit (optional, tapi bagus)
+  partName    String      @map("part_name")
+  variant     PartVariant /// Menggunakan Enum
+  make        String? /// Produsen spare part (misal: Denso, Bosch)
+  /// suitable_for_vehicles String[] /// Jika perlu list model, bisa JSON atau tabel many-to-many
+  price       Decimal     @db.Decimal(10, 2) /// Gunakan Decimal untuk uang
+  unit        String /// Satuan (pcs, set, liter, dll.)
+  description String?
+  stock       Int         @default(0) /// Tambahkan kolom stok
+
+  /// Relasi (jika sparepart bisa jadi bagian dari PurchaseOrder, Invoice, Estimation)
+  invoiceItems       InvoiceItem[]
+  estimationItems    EstimationItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+
+  /// Timestamps
+  createdAt                DateTime                   @default(now()) @map("created_at")
+  updatedAt                DateTime                   @updatedAt @map("updated_at")
+  SparePartSuitableVehicle SparePartSuitableVehicle[]
+
+  @@map("spare_parts")
+}
+
+/// =================================================================
+/// 5. Entitas Work Order (WO)
+/// =================================================================
+enum WoProgresStatus {
+  DRAFT
+  PENDING
+  ON_PROCESS
+  WAITING_APPROVAL /// Menunggu persetujuan estimasi/perbaikan
+  WAITING_PART /// Menunggu sparepart
+  FINISHED /// Pekerjaan selesai, menunggu invoice
+  CANCELED
+}
+
+enum WoPriorityType {
+  NORMAL
+  URGENT
+  EMERGENCY
+}
+
+model WorkOrder {
+  id              String    @id @default(uuid())
+  woNumber        String    @unique @map("wo_number") /// Nomor WO dari bengkel (unik)
+  woMaster        String    @map("wo_master") /// Nomor WO dari customer (tidak unik jika satu customer banyak WO)
+  date            DateTime  @map("wo_date") /// Tanggal pembuatan WO (DateTime lebih baik)
+  settledOdo      Int       @map("settled_odo") /// Odometer saat pembuatan WO
+  remark          String /// Keluhan/kerusakan
+  schedule        DateTime? @map("schedule_date") /// Jadwal pengerjaan
+  serviceLocation String    @map("vehicle_location") /// Lokasi kendaraan
+  notes           String? /// Saran/catatan dari mekanik
+  vehicleMake     String
+
+  progresStatus WoProgresStatus @default(DRAFT) @map("progress_status")
+  priorityType  WoPriorityType  @default(NORMAL) @map("priority_type")
+
+  /// Relasi
+  vehicleId String  @map("vehicle_id")
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+
+  customerId String  @map("customer_id")
+  customer   Company @relation("CustomerWorkOrders", fields: [customerId], references: [id])
+
+  carUserId String  @map("car_user_id")
+  carUser   Company @relation("CarUserWorkOrders", fields: [carUserId], references: [id])
+
+  vendorId String  @map("vendor_id") /// Bengkel yang mengerjakan
+  vendor   Company @relation("VendorWorkOrders", fields: [vendorId], references: [id])
+
+  mechanicId String?   @map("mechanic_id")
+  mechanic   Employee? @relation("MechanicWorkOrders", fields: [mechanicId], references: [id])
+
+  driverId      String?   @map("driver_id")
+  driver        Employee? @relation("DriverWorkOrders", fields: [driverId], references: [id])
+  driverContact String?   @map("driver_contact") /// Simpan di Employee jika selalu sama
+
+  approvedById String?   @map("approved_by_id") /// PIC/Service Advisor dari bengkel
+  approvedBy   Employee? @relation("ApprovedByWorkOrders", fields: [approvedById], references: [id])
+
+  requestedById String?   @map("requested_by_id") /// PIC/Service Advisor dari customer
+  requestedBy   Employee? @relation("RequestedByWorkOrders", fields: [requestedById], references: [id])
+
+  /// custPicContact String? @map("cust_pic_contact") /// Sebaiknya simpan di entitas Employee atau Company
+
+  /// Relasi ke Invoice dan Estimation
+  invoice    Invoice?
+  estimation Estimation?
+
+  /// Timestamps
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  Location   Location? @relation("VehicleLocation", fields: [locationId], references: [id])
+  locationId String?
+
+  @@map("work_orders")
+}
+
+/// =================================================================
+/// 6. Entitas Invoice (Laporan Kerja Bengkel)
+/// =================================================================
+model Invoice {
+  id           String   @id @default(uuid())
+  invNum       String   @unique @map("invoice_number") /// Nomor Invoice dari bengkel
+  invoiceDate  DateTime @map("invoice_date") /// Tanggal invoice
+  requestOdo   Int      @map("request_odo") /// Odometer saat WO/request
+  actualOdo    Int      @map("actual_odo") /// Odometer saat LKB
+  remark       String /// Keluhan/kerusakan
+  finishedDate DateTime @map("finished_date") /// Tanggal selesai pekerjaan
+  totalAmount  Decimal  @default(0) @db.Decimal(10, 2) /// Total biaya invoice
+
+  /// Relasi (one-to-one dengan WorkOrder)
+  woId      String    @unique @map("wo_id") /// Satu Invoice untuk satu WO
+  workOrder WorkOrder @relation(fields: [woId], references: [id])
+
+  vehicleId String  @map("vehicle_id")
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+
+  mechanicId String?   @map("mechanic_id")
+  mechanic   Employee? @relation("MechanicInvoices", fields: [mechanicId], references: [id])
+
+  approvedById String?   @map("approved_by_id")
+  approvedBy   Employee? @relation("ApprovedByInvoices", fields: [approvedById], references: [id])
+
+  /// Items di Invoice (Many-to-Many dengan SparePart dan Jasa)
+  invoiceItems    InvoiceItem[]
+  invoiceServices InvoiceService[]
+
+  /// Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("invoices")
+}
+
+/// Item Spare Part di Invoice (Tabel join/many-to-many)
+model InvoiceItem {
+  id          String    @id @default(uuid())
+  invoiceId   String    @map("invoice_id")
+  invoice     Invoice   @relation(fields: [invoiceId], references: [id])
+  sparePartId String    @map("spare_part_id")
+  sparePart   SparePart @relation(fields: [sparePartId], references: [id])
+  quantity    Int
+  unitPrice   Decimal   @map("unit_price") @db.Decimal(10, 2)
+  totalPrice  Decimal   @map("total_price") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([invoiceId, sparePartId]) /// Mencegah duplikasi sparepart di satu invoice
+  @@map("invoice_items")
+}
+
+/// Jasa yang dikerjakan di Invoice (Tabel terpisah untuk jasa)
+model Service {
+  id                 String              @id @default(uuid())
+  serviceName        String              @unique @map("service_name")
+  description        String?
+  price              Decimal             @db.Decimal(10, 2)
+  invoiceServices    InvoiceService[]
+  estimationServices EstimationService[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("services") /// jenis pekerjaan jasa
+}
+
+model InvoiceService {
+  id         String  @id @default(uuid())
+  invoiceId  String  @map("invoice_id")
+  invoice    Invoice @relation(fields: [invoiceId], references: [id])
+  serviceId  String  @map("service_id")
+  service    Service @relation(fields: [serviceId], references: [id])
+  quantity   Int     @default(1)
+  totalPrice Decimal @map("total_price") @db.Decimal(10, 2) /// Harga total untuk jasa ini (quantity * price)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([invoiceId, serviceId])
+  @@map("invoice_services")
+}
+
+/// =================================================================
+/// 7. Entitas Estimation (Estimasi Biaya)
+/// =================================================================
+model Estimation {
+  id                   String    @id @default(uuid())
+  estNum               String    @unique @map("estimation_number") /// Nomor Estimasi dari bengkel
+  estimationDate       DateTime  @map("estimation_date") /// Tanggal estimasi
+  requestOdo           Int       @map("request_odo") /// Odometer saat WO/request
+  actualOdo            Int       @map("actual_odo") /// Odometer saat LKB (mungkin sama dengan requestOdo)
+  remark               String /// Keluhan/kerusakan
+  finishedDate         DateTime? @map("finished_date") /// Tanggal estimasi selesai pengerjaan (opsional)
+  totalEstimatedAmount Decimal   @default(0) @map("total_estimated_amount") @db.Decimal(10, 2)
+
+  /// Relasi (one-to-one dengan WorkOrder)
+  woId      String    @unique @map("wo_id")
+  workOrder WorkOrder @relation(fields: [woId], references: [id])
+
+  vehicleId String  @map("vehicle_id")
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+
+  mechanicId String?   @map("mechanic_id")
+  mechanic   Employee? @relation("MechanicEstimations", fields: [mechanicId], references: [id])
+
+  approvedById String?   @map("approved_by_id")
+  approvedBy   Employee? @relation("ApprovedByEstimations", fields: [approvedById], references: [id])
+
+  /// Items di Estimasi
+  estimationItems    EstimationItem[]
+  estimationServices EstimationService[]
+
+  /// Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("estimations")
+}
+
+/// Item Spare Part di Estimasi
+model EstimationItem {
+  id           String     @id @default(uuid())
+  estimationId String     @map("estimation_id")
+  estimation   Estimation @relation(fields: [estimationId], references: [id])
+  sparePartId  String     @map("spare_part_id")
+  sparePart    SparePart  @relation(fields: [sparePartId], references: [id])
+  quantity     Int
+  unitPrice    Decimal    @map("unit_price") @db.Decimal(10, 2)
+  totalPrice   Decimal    @map("total_price") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([estimationId, sparePartId])
+  @@map("estimation_items")
+}
+
+/// Jasa yang diestimasi
+model EstimationService {
+  id           String     @id @default(uuid())
+  estimationId String     @map("estimation_id")
+  estimation   Estimation @relation(fields: [estimationId], references: [id])
+  serviceId    String     @map("service_id")
+  service      Service    @relation(fields: [serviceId], references: [id])
+  quantity     Int        @default(1)
+  totalPrice   Decimal    @map("total_price") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([estimationId, serviceId])
+  @@map("estimation_services")
+}
+
+/// =================================================================
+/// 8. Entitas Purchase Order (PO)
+/// =================================================================
+enum PurchaseOrderStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  ORDERED
+  SHIPPED
+  RECEIVED
+  CANCELED
+}
+
+model PurchaseOrder {
+  id              String              @id @default(uuid())
+  poNum           String              @unique @map("po_number")
+  poDate          DateTime            @map("po_date")
+  supplierId      String              @map("supplier_id")
+  supplier        Company             @relation("SupplierPurchaseOrders", fields: [supplierId], references: [id])
+  deliveryAddress String?             @map("delivery_address")
+  subtotal        Decimal             @db.Decimal(10, 2)
+  tax             Decimal             @db.Decimal(10, 2)
+  totalAmount     Decimal             @map("total_amount") @db.Decimal(10, 2)
+  deliveryDate    DateTime?           @map("delivery_date")
+  status          PurchaseOrderStatus @default(DRAFT)
+  requestedById   String?             @map("requested_by_id")
+  requestedBy     Employee?           @relation("RequestedByPurchaseOrders", fields: [requestedById], references: [id])
+  approvedById    String?             @map("approved_by_id")
+  approvedBy      Employee?           @relation("ApprovedByPurchaseOrders", fields: [approvedById], references: [id])
+  remark          String?
+
+  orderItems PurchaseOrderItem[] /// Item yang dipesan dalam PO
+
+  /// Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id            String        @id @default(uuid())
+  poId          String        @map("po_id")
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id])
+  sparePartId   String        @map("spare_part_id")
+  sparePart     SparePart     @relation(fields: [sparePartId], references: [id])
+  quantity      Int
+  unitPrice     Decimal       @map("unit_price") @db.Decimal(10, 2)
+  totalPrice    Decimal       @map("total_price") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([poId, sparePartId])
+  @@map("purchase_order_items")
+}
+
+/// =================================================================
+/// Skema Tambahan yang Mungkin Berguna
+/// =================================================================
+/// Misalnya jika Anda punya daftar lokasi kendaraan yang baku
+model Location {
+  id         String      @id @default(uuid())
+  name       String
+  address    String?
+  workOrders WorkOrder[] @relation("VehicleLocation")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  @@map("locations")
+}
+
+/// Untuk relasi many-to-many suitable_for_vehicles di SparePart
+model SparePartSuitableVehicle {
+  sparePartId  String    @map("spare_part_id")
+  vehicleMake  String    @map("vehicle_make")
+  vehicleModel String    @map("vehicle_model")
+  sparePart    SparePart @relation(fields: [sparePartId], references: [id])
+
+  @@id([sparePartId, vehicleMake, vehicleModel])
+  @@map("spare_part_suitable_vehicles")
+}

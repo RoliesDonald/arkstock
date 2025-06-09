@@ -3,44 +3,78 @@
 @tailwind utilities;
 
 body {
+  font-family: Arial, Helvetica, sans-serif;
   overflow: hidden;
+}
+
+.poppins {
+  font-family: var(--font-poppins);
 }
 
 .react-calendar {
   width: 100% !important;
   border: 3px !important;
-  border-color: black;
+  border-color: hsl(var(--arkBackground-400)) !important;
   border-radius: 10px !important;
   font-family: "Inter", sans-serif !important;
   padding: 10px !important;
+  background: hsl(var(--arkBlue-50)) !important;
+}
+
+/* After your @tailwind directives and other imports */
+.rbc-header {
+  display: block !important; /* Ensure it's not display: none */
+  height: auto !important;
+
+  color: hsl(var(--arkBlue-500)) !important; /* Make sure it's visible */
+  font-weight: bold !important;
+  background-color: hsl(var(--arkBlue-50)) !important;
+  /* Add a background to see if the element exists */
+  padding: 5px !important;
+}
+
+.rbc-header:last-child {
+  border-radius: 0 9px 0 0 !important;
+}
+/* Also check the cells that contain the header text */
+.rbc-row-segment .rbc-header-slot {
+  visibility: visible !important;
 }
 
 .react-calendar__navigation__label__labelText {
   font-weight: 600;
-  color: darkslategray !important;
+  font-size: 0.8rem;
+  color: var(--arkBackground-50) !important;
 }
 .react-calendar__month-view__weekdays {
-  color: darkslategray !important;
+  color: var(--arkBackground-50) !important;
 }
 
 .react-calendar__tile--active {
-  background-color: #d2d2d2 !important;
-  color: black !important;
+  /* background-color: #6b74f880 !important; */
+  /* color: rgb(255, 255, 255) !important; */
   border-radius: 10% !important;
   font-weight: 500;
-}
-
-.rbc-btn-group:first-child {
-  display: none !important;
 }
 
 .rbc-toolbar-label {
   text-align: right !important;
   padding: 0px 20px !important;
+  font-weight: 700 !important;
+  color: rgb(109, 109, 109);
+  font-size: 0.9rem;
+  font-style: italic;
 }
 
+.rbc-allday-cell {
+  display: none !important;
+}
 .rbc-btn-group:last-child {
   font-size: 13px !important;
+}
+
+.rbc-btn-group:first-child {
+  display: none !important;
 }
 
 .rbc-btn-group:last-child button {
@@ -55,15 +89,34 @@ body {
 }
 
 .rbc-time-view {
-  border-color: #eee !important;
+  border-color: hsl(var(--arkBackground-300)) !important;
+  border-width: 0.15rem !important;
+  border-radius: 10px !important;
+  background-color: hsl(var(--arkBlue-50)) !important;
+  /* color: var(--arkBackground-100); */
 }
 
 .rbc-time-header {
-  display: none !important;
+  /* display: none !important; */
+  height: auto !important;
+  border-radius: 10px !important;
 }
 
+.rbc-time-slot,
+.rbc-time-gutter,
+.rbc-time-column {
+  border-color: hsl(var(--arkBackground-400)) !important;
+}
 .rbc-time-content {
   border: none !important;
+  background: hsl(var(--arkBackground-100)) !important;
+  overflow: hidden !important;
+  width: 100% !important;
+}
+
+.rbc-time-content > * + * > * {
+  /* border-left: #cecccc 1px solid !important; */
+  border-left: hsl(var(--arkBackground-300)) 0.15rem solid !important;
 }
 
 .rbc-time-gutter.rbc-time-column {
@@ -75,7 +128,7 @@ body {
 }
 
 .rbc-timeslot-group {
-  background-color: #f7fdff !important;
+  background-color: var(--arkBackground-100) !important;
 }
 
 .rbc-day-slot {
@@ -118,4 +171,238 @@ body {
 .rbc-event-label {
   color: gray !important;
   margin-bottom: 5px;
+}
+
+.rbc-label {
+  color: hsl(var(--arkBackground-700)) !important;
+  font-weight: 700;
+}
+
+.rbc-time-header-gutter {
+  border-bottom: #cecccc 1px solid !important;
+}
+
+@layer utilities {
+  .scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 20px;
+  }
+
+  .scrollbar::-webkit-scrollbar-track {
+    border-radius: 100vh;
+    background: #d1d1d100;
+  }
+
+  .scrollbar::-webkit-scrollbar-thumb {
+    background: #e0cbcb2d;
+    border-radius: 100vh;
+    border: 1px solid #f6f7ed00;
+  }
+
+  .scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #6b74f8;
+  }
+
+  @layer base {
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 222.2 84% 4.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 222.2 84% 4.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 222.2 84% 4.9%;
+      --primary: 222.2 47.4% 11.2%;
+      --primary-foreground: 210 40% 98%;
+      --secondary: 210 40% 96.1%;
+      --secondary-foreground: 222.2 47.4% 11.2%;
+      --muted: 210 40% 96.1%;
+      --muted-foreground: 215.4 16.3% 46.9%;
+      --accent: 210 40% 96.1%;
+      --accent-foreground: 222.2 47.4% 11.2%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 214.3 31.8% 91.4%;
+      --input: 214.3 31.8% 91.4%;
+      --ring: 222.2 84% 4.9%;
+      --chart-1: 12 76% 61%;
+      --chart-2: 173 58% 39%;
+      --chart-3: 197 37% 24%;
+      --chart-4: 43 74% 66%;
+      --chart-5: 27 87% 67%;
+      --radius: 0.5rem;
+
+      /* --- ARK BLUE (LIGHT MODE) --- */
+      --arkBlue-50: 216, 98%, 95%;
+      --arkBlue-100: 216, 98%, 90%;
+      --arkBlue-200: 216, 98%, 80%;
+      --arkBlue-300: 216, 98%, 70%;
+      --arkBlue-400: 216, 98%, 60%;
+      --arkBlue-500: 216, 98%, 52%;
+      --arkBlue-600: 216, 98%, 45%;
+      --arkBlue-700: 216, 98%, 35%;
+      --arkBlue-800: 216, 98%, 25%;
+      --arkBlue-900: 216, 98%, 15%;
+
+      /* --- ARK RED (LIGHT MODE) --- */
+      --arkRed-50: 342, 100%, 95%;
+      --arkRed-100: 342, 100%, 90%;
+      --arkRed-200: 342, 100%, 80%;
+      --arkRed-300: 342, 100%, 70%;
+      --arkRed-400: 342, 100%, 60%;
+      --arkRed-500: 342, 100%, 52%;
+      --arkRed-600: 342, 100%, 45%;
+      --arkRed-700: 342, 100%, 35%;
+      --arkRed-800: 342, 100%, 25%;
+      --arkRed-900: 342, 100%, 15%;
+
+      /* --- ARK ORANGE (LIGHT MODE) --- */
+      --arkOrange-50: 45, 100%, 95%;
+      --arkOrange-100: 45, 100%, 90%;
+      --arkOrange-200: 45, 100%, 80%;
+      --arkOrange-300: 45, 100%, 70%;
+      --arkOrange-400: 45, 100%, 60%;
+      --arkOrange-500: 45, 100%, 50%;
+      --arkOrange-600: 45, 100%, 45%;
+      --arkOrange-700: 45, 100%, 35%;
+      --arkOrange-800: 45, 100%, 25%;
+      --arkOrange-900: 45, 100%, 15%;
+
+      /* --- ARK GREEN (LIGHT MODE) --- */
+      --arkGreen-50: 111, 94%, 95%;
+      --arkGreen-100: 111, 94%, 90%;
+      --arkGreen-200: 111, 94%, 80%;
+      --arkGreen-300: 111, 94%, 70%;
+      --arkGreen-400: 111, 94%, 60%;
+      --arkGreen-500: 111, 94%, 39%;
+      --arkGreen-600: 111, 94%, 30%;
+      --arkGreen-700: 111, 94%, 25%;
+      --arkGreen-800: 111, 94%, 18%;
+      --arkGreen-900: 111, 94%, 10%;
+
+      /* HSL: Hue, Saturation, Lightness */
+      --arkBackground-50: 159, 2.4%, 95%; /* Paling terang, untuk elemen yang sangat light */
+      --arkBackground-100: 159, 2.4%, 89.6%; /* Base Light Mode Background */
+      --arkBackground-200: 159, 2.4%, 80%;
+      --arkBackground-300: 159, 2.4%, 70%;
+      --arkBackground-400: 159, 2.4%, 60%;
+      --arkBackground-500: 159, 2.4%, 50%; /* Tengah */
+      --arkBackground-600: 159, 2.4%, 40%;
+      --arkBackground-700: 159, 2.4%, 30%;
+      --arkBackground-800: 159, 2.4%, 20%;
+      --arkBackground-900: 159, 2.4%, 10%; /* Paling gelap, untuk teks atau elemen gelap */
+
+      /* Jika ada warna teks/foreground terpisah untuk light mode */
+      --arkForeground-DEFAULT: 159, 2.4%, 10%; /* Misalnya, hitam sangat gelap */
+      --arkMuted-foreground: 159, 2.4%, 30%; /* Untuk teks yang tidak menonjol */
+    }
+  }
+  .dark {
+    /* --- ARK BLUE (DARK MODE) --- */
+    --arkBlue-900: 216, 98%, 95%;
+    --arkBlue-800: 216, 98%, 90%;
+    --arkBlue-700: 216, 98%, 80%;
+    --arkBlue-600: 216, 98%, 70%;
+    --arkBlue-500: 216, 98%, 60%;
+    --arkBlue-400: 216, 98%, 52%;
+    --arkBlue-300: 216, 98%, 45%;
+    --arkBlue-200: 216, 98%, 35%;
+    --arkBlue-100: 216, 98%, 25%;
+    --arkBlue-50: 216, 98%, 15%;
+
+    /* --- ARK RED (DARK MODE) --- */
+    --arkRed-50: 342, 90%, 15%;
+    --arkRed-100: 342, 90%, 20%;
+    --arkRed-200: 342, 90%, 30%;
+    --arkRed-300: 342, 90%, 40%;
+    --arkRed-400: 342, 90%, 50%;
+    --arkRed-500: 342, 90%, 60%; /* Lebih terang dari base light mode */
+    --arkRed-600: 342, 90%, 50%;
+    --arkRed-700: 342, 90%, 40%;
+    --arkRed-800: 342, 90%, 30%;
+    --arkRed-900: 342, 90%, 20%;
+
+    /* --- ARK ORANGE (DARK MODE) --- */
+    --arkOrange-50: 45, 90%, 15%;
+    --arkOrange-100: 45, 90%, 20%;
+    --arkOrange-200: 45, 90%, 30%;
+    --arkOrange-300: 45, 90%, 40%;
+    --arkOrange-400: 45, 90%, 50%;
+    --arkOrange-500: 45, 90%, 65%;
+    --arkOrange-600: 45, 90%, 55%;
+    --arkOrange-700: 45, 90%, 45%;
+    --arkOrange-800: 45, 90%, 35%;
+    --arkOrange-900: 45, 90%, 25%;
+
+    /* --- ARK GREEN (DARK MODE) --- */
+    --arkGreen-50: 111, 80%, 15%;
+    --arkGreen-100: 111, 80%, 20%;
+    --arkGreen-200: 111, 80%, 30%;
+    --arkGreen-300: 111, 80%, 40%;
+    --arkGreen-400: 111, 80%, 50%;
+    --arkGreen-500: 111, 80%, 55%;
+    --arkGreen-600: 111, 80%, 45%;
+    --arkGreen-700: 111, 80%, 35%;
+    --arkGreen-800: 111, 80%, 25%;
+    --arkGreen-900: 111, 80%, 15%;
+
+    /* --- ARK BACKGROUND (DARK MODE) --- */
+    --arkBackground-50: 159, 3%, 5%; /* Paling gelap, untuk background utama aplikasi */
+    --arkBackground-100: 159, 3%, 8%; /* Base Dark Mode Background */
+    --arkBackground-200: 159, 3%, 12%; /* Untuk kartu/panel di atas background */
+    --arkBackground-300: 159, 3%, 18%;
+    --arkBackground-400: 159, 3%, 25%;
+    --arkBackground-500: 159, 3%, 35%; /* Tengah, bisa untuk hover/active states */
+    --arkBackground-600: 159, 3%, 45%;
+    --arkBackground-700: 159, 3%, 60%; /* Untuk elemen yang lebih menonjol atau teks gelap */
+    --arkBackground-800: 159, 3%, 75%;
+    --arkBackground-900: 159, 3%, 90%; /* Paling terang, untuk teks utama atau icon */
+
+    /* Specific Dark Mode Background (jika berbeda dari skala di atas) */
+    --arkBackground: 159, 3%, 8%; /* Ini bisa sama dengan --arkBackground-100 atau sedikit lebih gelap */
+
+    /* Foreground/Text Colors for Dark Mode */
+    --arkForeground-DEFAULT: 159, 3%, 90%; /* Teks utama, mendekati putih */
+    --arkMuted-foreground: 159, 3%, 70%; /* Teks sekunder, masih mudah dibaca */
+    --arkBorder: 159, 3%, 20%; /* Warna border */
+    --arkInput: 159, 3%, 25%; /* Warna input fields */
+    --arkRing: 159, 3%, 40%; /* Warna ring (fokus) */
+
+    /* Contoh warna primary (aksi utama) */
+    --primary-DEFAULT: 159, 70%, 45%; /* Warna utama aplikasi, lebih cerah */
+    --primary-foreground: 159, 3%, 98%; /* Teks di atas primary */
+
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

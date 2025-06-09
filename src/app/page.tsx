@@ -1,9 +1,9 @@
-import AuthPage from "./auth/page";
+import LoginPage from "./(auth)/login/page";
 
 const Homepage = () => {
   return (
-    <div className="">
-      <AuthPage />
+    <div className="flex min-h-screen flex-col items-center justify-center">
+      <LoginPage />
     </div>
   );
 };
