@@ -29,15 +29,16 @@ enum CompanyType {
 }
 
 model Company {
-  id            String      @id @default(uuid()) /// UUID untuk ID publik
-  companyId     String      @unique @map("company_id") /// ID perusahaan dalam sistem (contoh: kode perusahaan)
-  companyName   String      @map("company_name") /// Nama perusahaan")
-  companyEmail  String?     @map("company_email") /// Email perusahaan
-  logo          String?
-  contact       String? ///Nomro telpon perusahaan
-  address       String?
-  taxRegistered Boolean     @default(false) @map("tax_registered") /// apakah sudah ppn?
-  companyType   CompanyType /// tipe perusahaan : CUSTOMER, VENDOR, CAR_USER, SUPPLIER, INTERNAL
+  id              String      @id @default(uuid()) /// UUID untuk ID publik
+  companyId       String      @unique @map("company_id") /// ID perusahaan dalam sistem (contoh: kode perusahaan)
+  companyName     String      @map("company_name") /// Nama perusahaan")
+  companyEmail    String?     @map("company_email") /// Email perusahaan
+  logo            String?
+  contact         String? /// Nomro telpon perusahaan
+  address         String?
+  taxRegistered   Boolean     @default(false) @map("tax_registered") /// apakah sudah ppn?
+  companyType     CompanyType /// tipe perusahaan : CUSTOMER, VENDOR, CAR_USER, SUPPLIER, INTERNAL
+  parentCompanyId Int
 
   /// =================================================================
   /// Relasi
@@ -47,7 +48,7 @@ model Company {
   /// Car User (penyewa) menggunakan banyak kendaraan
   vehiclesUsed           Vehicle[]       @relation("CompanyUsedVehicles")
   /// Company bisa punya banyak karyawan
-  employees              Employee[]
+  user                   User[]
   /// Company bisa punya banyak Work Orders (sebagai customer, carUser, vendor)
   customerWorkOrders     WorkOrder[]     @relation("CustomerWorkOrders")
   carUserWorkOrders      WorkOrder[]     @relation("CarUserWorkOrders")
@@ -70,7 +71,7 @@ model Vehicle {
   licensePlate String  @unique @map("license_plate") /// Nomor plat harus unik
   vehicleMake  String
   model        String
-  trimLevel    String? @map("trim_level")
+  trimLevel    String? @map("trim_level") // contoh: canter cde 110ps, canter cdd 125ps, NMR 81, NMR 71
   modelYear    Int?    @map("model_year") /// Tipe data Int untuk tahun
   bodyStyle    String? @map("body_style")
   color        String?
@@ -100,28 +101,34 @@ model Vehicle {
 /// =================================================================
 /// 3. Entitas Karyawan (Pegawai Bengkel, Driver, PIC Customer/Vendor)
 /// =================================================================
-enum EmployeeRole {
+enum UserRole {
   ADMIN
   USER
   MECHANIC /// Mekanik
   DRIVER /// Driver
-  PIC_CUSTOMER /// PIC dari perusahaan customer
-  PIC_VENDOR /// PIC dari perusahaan vendor/bengkel
+  PIC /// PIC dari perusahaan customer
   SERVICE_ADVISOR /// Service Advisor
+  WAREHOSE_STAFF /// Staf gudang sparepart
+  WAREHOUSE_MANAGER /// Manajer gudang sparepart
+  ACCOUNTING_STAFF /// Staf akuntansi
+  ACCOUNTING_MANAGER /// Manajer akuntansi
+  PURCHASING_STAFF /// Staf pembelian
+  PURCHASING_MANAGER /// Manajer pembelian
+
   /// Tambahkan role lain sesuai kebutuhan
 }
 
-model Employee {
-  id          String       @id @default(uuid())
-  employeeId  String?      @unique @map("employee_id") /// ID karyawan internal (opsional jika UUID sudah cukup)
+model User {
+  id          String   @id @default(uuid())
+  userId      String?  @unique @map("user _id") /// ID karyawan internal (opsional jika UUID sudah cukup)
   name        String
-  email       String?      @unique
+  email       String?  @unique
   photo       String? /// URL foto
   phone       String?
-  role        EmployeeRole @default(USER) /// Menggunakan Enum
-  departement String?      @map("departement") /// Salah ketik 'departement' menjadi 'departement'
-  companyId   String?      @map("company_id") /// ID perusahaan tempat karyawan bekerja (jika karyawan internal/vendor)
-  company     Company?     @relation(fields: [companyId], references: [id])
+  role        UserRole @default(USER) /// Menggunakan Enum
+  departement String?  @map("departement") /// Salah ketik 'departement' menjadi 'departement'
+  companyId   String?  @map("company_id") /// ID perusahaan tempat karyawan bekerja (jika karyawan internal/vendor)
+  company     Company? @relation(fields: [companyId], references: [id])
 
   /// Relasi dengan WorkOrder
   mechanicWorkOrders  WorkOrder[] @relation("MechanicWorkOrders") /// Mekanik
@@ -145,7 +152,7 @@ model Employee {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("employees")
+  @@map("users")
 }
 
 /// =================================================================
@@ -155,20 +162,22 @@ enum PartVariant {
   OEM
   AFTERMARKET
   GBOX /// Genuine Box? Sesuaikan penamaan
+  RECONDITIONED
+  USED
 }
 
 model SparePart {
-  id          String      @id @default(uuid())
-  partNumber  String      @unique @map("part_number") /// Nomor part unik
-  sku         String? ///@unique Stock Keeping Unit (optional, tapi bagus)
-  partName    String      @map("part_name")
-  variant     PartVariant /// Menggunakan Enum
-  make        String? /// Produsen spare part (misal: Denso, Bosch)
-  /// suitable_for_vehicles String[] /// Jika perlu list model, bisa JSON atau tabel many-to-many
-  price       Decimal     @db.Decimal(10, 2) /// Gunakan Decimal untuk uang
-  unit        String /// Satuan (pcs, set, liter, dll.)
-  description String?
-  stock       Int         @default(0) /// Tambahkan kolom stok
+  id            String      @id @default(uuid())
+  partNumber    String      @unique @map("part_number") /// Nomor part unik
+  sku           String? ///@unique Stock Keeping Unit (optional, tapi bagus)
+  partName      String      @map("part_name")
+  variant       PartVariant /// Menggunakan Enum
+  make          String? /// Produsen spare part (misal: Denso, Bosch)
+  compatibility String[] /// Jika perlu list model, bisa JSON atau tabel many-to-many
+  price         Decimal     @db.Decimal(10, 2) /// Gunakan Decimal untuk uang
+  unit          String /// Satuan (pcs, set, liter, dll.)
+  description   String?
+  stock         Int         @default(0) /// Tambahkan kolom stok
 
   /// Relasi (jika sparepart bisa jadi bagian dari PurchaseOrder, Invoice, Estimation)
   invoiceItems       InvoiceItem[]
@@ -230,18 +239,18 @@ model WorkOrder {
   vendorId String  @map("vendor_id") /// Bengkel yang mengerjakan
   vendor   Company @relation("VendorWorkOrders", fields: [vendorId], references: [id])
 
-  mechanicId String?   @map("mechanic_id")
-  mechanic   Employee? @relation("MechanicWorkOrders", fields: [mechanicId], references: [id])
+  mechanicId String? @map("mechanic_id")
+  mechanic   User?   @relation("MechanicWorkOrders", fields: [mechanicId], references: [id])
 
-  driverId      String?   @map("driver_id")
-  driver        Employee? @relation("DriverWorkOrders", fields: [driverId], references: [id])
-  driverContact String?   @map("driver_contact") /// Simpan di Employee jika selalu sama
+  driverId      String? @map("driver_id")
+  driver        User?   @relation("DriverWorkOrders", fields: [driverId], references: [id])
+  driverContact String? @map("driver_contact") /// Simpan di User jika selalu sama
 
-  approvedById String?   @map("approved_by_id") /// PIC/Service Advisor dari bengkel
-  approvedBy   Employee? @relation("ApprovedByWorkOrders", fields: [approvedById], references: [id])
+  approvedById String? @map("approved_by_id") /// PIC/Service Advisor dari bengkel
+  approvedBy   User?   @relation("ApprovedByWorkOrders", fields: [approvedById], references: [id])
 
-  requestedById String?   @map("requested_by_id") /// PIC/Service Advisor dari customer
-  requestedBy   Employee? @relation("RequestedByWorkOrders", fields: [requestedById], references: [id])
+  requestedById String? @map("requested_by_id") /// PIC/Service Advisor dari customer
+  requestedBy   User?   @relation("RequestedByWorkOrders", fields: [requestedById], references: [id])
 
   /// custPicContact String? @map("cust_pic_contact") /// Sebaiknya simpan di entitas Employee atau Company
 
@@ -278,11 +287,11 @@ model Invoice {
   vehicleId String  @map("vehicle_id")
   vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
 
-  mechanicId String?   @map("mechanic_id")
-  mechanic   Employee? @relation("MechanicInvoices", fields: [mechanicId], references: [id])
+  mechanicId String? @map("mechanic_id")
+  mechanic   User?   @relation("MechanicInvoices", fields: [mechanicId], references: [id])
 
-  approvedById String?   @map("approved_by_id")
-  approvedBy   Employee? @relation("ApprovedByInvoices", fields: [approvedById], references: [id])
+  approvedById String? @map("approved_by_id")
+  approvedBy   User?   @relation("ApprovedByInvoices", fields: [approvedById], references: [id])
 
   /// Items di Invoice (Many-to-Many dengan SparePart dan Jasa)
   invoiceItems    InvoiceItem[]
@@ -364,11 +373,11 @@ model Estimation {
   vehicleId String  @map("vehicle_id")
   vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
 
-  mechanicId String?   @map("mechanic_id")
-  mechanic   Employee? @relation("MechanicEstimations", fields: [mechanicId], references: [id])
+  mechanicId String? @map("mechanic_id")
+  mechanic   User?   @relation("MechanicEstimations", fields: [mechanicId], references: [id])
 
-  approvedById String?   @map("approved_by_id")
-  approvedBy   Employee? @relation("ApprovedByEstimations", fields: [approvedById], references: [id])
+  approvedById String? @map("approved_by_id")
+  approvedBy   User?   @relation("ApprovedByEstimations", fields: [approvedById], references: [id])
 
   /// Items di Estimasi
   estimationItems    EstimationItem[]
@@ -442,9 +451,9 @@ model PurchaseOrder {
   deliveryDate    DateTime?           @map("delivery_date")
   status          PurchaseOrderStatus @default(DRAFT)
   requestedById   String?             @map("requested_by_id")
-  requestedBy     Employee?           @relation("RequestedByPurchaseOrders", fields: [requestedById], references: [id])
+  requestedBy     User?               @relation("RequestedByPurchaseOrders", fields: [requestedById], references: [id])
   approvedById    String?             @map("approved_by_id")
-  approvedBy      Employee?           @relation("ApprovedByPurchaseOrders", fields: [approvedById], references: [id])
+  approvedBy      User?               @relation("ApprovedByPurchaseOrders", fields: [approvedById], references: [id])
   remark          String?
 
   orderItems PurchaseOrderItem[] /// Item yang dipesan dalam PO

@@ -1,57 +1,68 @@
-// src/lib/features/workOrders/workOrdersSlice.ts
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { WorkOrderFormValues } from "@/types/work-order"; // Pastikan path ini benar
+// src/store/slices/workOrderSlice.ts
 
-// Definisikan state interface untuk workOrders
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import {
+  WorkOrder,
+  WorkOrderFormValues,
+  WoProgresStatus,
+  WoPriorityType,
+} from "@/types/workOrder";
+import { v4 as uuidv4 } from "uuid";
+
 interface WorkOrderState {
-  workOrders: WorkOrderFormValues[]; // Array work order yang disimpan
+  workOrders: WorkOrder[];
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
 }
 
-// State awal
 const initialState: WorkOrderState = {
-  workOrders: [],
+  workOrders: [], // ini diisi dari data dummy atau fetch awal
   status: "idle",
   error: null,
 };
 
-// ===========================================
-// DEFINISIKAN createNewWorkOrder DI SINI
-// ===========================================
-export const createNewWorkOrder = createAsyncThunk(
-  "workOrders/createNewWorkOrder",
-  async (newWorkOrderData: WorkOrderFormValues, { rejectWithValue }) => {
+export const createNewWorkOrder = createAsyncThunk<
+  WorkOrder, //ini adalah objek WorkOrder lengkap
+  WorkOrderFormValues,
+  { rejectValue: string }
+>(
+  "workOrders/createNew",
+  async (newWoData: WorkOrderFormValues, { rejectWithValue }) => {
     try {
-      // Simulasikan API call (misal: 2 detik delay)
-      // Dalam aplikasi nyata, ini akan menjadi panggilan ke backend API Anda
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Contoh respons yang akan dikembalikan setelah simulasi berhasil
-      const response = {
-        ...newWorkOrderData,
-        id: Date.now().toString(), // Tambahkan ID unik untuk work order yang baru
-        createdAt: new Date().toISOString(), // Tambahkan timestamp
+      const simulatedNewWorkOrder: WorkOrder = {
+        id: uuidv4(), // Generate ID baru
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...newWoData, // Copy semua properti dari form
+        // Tambahkan properti lain yang mungkin hilang dari WorkOrderFormValues
+        // tetapi diperlukan oleh interface WorkOrder lengkap atau oleh backend
+        // Misal:
+        // woNumber: newWoData.woNumber || 'AUTO-GENERATED', // pastikan woNumber terisi
+        // date: new Date(newWoData.date), // pastikan ini Date object
+        // status: newWoData.progresStatus, // Map progresStatus ke status jika diperlukan
+        // totalAmount: 0, // Mungkin dihitung di backend
       };
 
-      console.log("API Simulation: Work Order created successfully", response);
-      return response; // Mengembalikan data yang akan menjadi action.payload.
-    } catch (err: any) {
-      console.error("API Simulation: Failed to create Work Order", err);
-      // Mengembalikan error dengan rejectWithValue agar bisa ditangkap di rejected case
-      return rejectWithValue(err.message || "Gagal membuat Work Order");
+      // API Call
+      // const response = await apiService.post('/api/work-orders', simulatedNewWorkOrder);
+      // return response.data; // Kembalikan data WorkOrder yang dibuat dari backend
+
+      console.log(
+        "Simulating API call with new Work Order:",
+        simulatedNewWorkOrder
+      );
+      return simulatedNewWorkOrder; // Mengembalikan objek WorkOrder yang disimulasikan
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Gagal membuat Work Order");
     }
   }
 );
-// ===========================================
-// AKHIR DEFINISI createNewWorkOrder
-// ===========================================
 
-const workOrdersSlice = createSlice({
+const workOrderSlice = createSlice({
   name: "workOrders",
   initialState,
   reducers: {
-    // Anda bisa menambahkan reducer sinkron di sini jika diperlukan
+    // Reducer sinkronus lainnya
   },
   extraReducers: (builder) => {
     builder
@@ -61,26 +72,17 @@ const workOrdersSlice = createSlice({
       })
       .addCase(
         createNewWorkOrder.fulfilled,
-        // Penting: PayloadAction harus cocok dengan tipe yang dikembalikan oleh thunk.
-        // Jika thunk mengembalikan `WorkOrderFormValues & {id: string, createdAt: string}`,
-        // maka di sini juga harus sama.
-        (
-          state,
-          action: PayloadAction<
-            WorkOrderFormValues & { id: string; createdAt: string }
-          >
-        ) => {
+        (state, action: PayloadAction<WorkOrder>) => {
           state.status = "succeeded";
+          // Tambahkan work order baru ke state jika sukses
           state.workOrders.push(action.payload);
-          state.error = null;
         }
       )
       .addCase(createNewWorkOrder.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.payload as string; // Payload rejected biasanya string error
+        state.error = action.payload || "Terjadi kesalahan tidak dikenal";
       });
   },
 });
 
-export const {} = workOrdersSlice.actions; // Ekspor action jika ada, saat ini kosong
-export default workOrdersSlice.reducer;
+export default workOrderSlice.reducer;

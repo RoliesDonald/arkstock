@@ -5,27 +5,20 @@ import {
   Building,
   Car,
   ClipboardList,
-  Wrench,
   Package,
   Receipt,
   FileText,
   Warehouse,
-  ShoppingBag,
   Settings,
   User,
-  DollarSign,
   ChartBar,
   PlusCircle,
-  HelpCircle,
-  BarChart2, // Contoh ikon untuk laporan
   Tag, // Untuk faktur (tag)
   Truck, // Untuk armada/kendaraan
   Factory, // Untuk supplier/vendor
   BriefcaseBusiness, // General Affair
-  FileStack, // SPK
   Scale, // Tax
   Handshake,
-  UserRound,
   UsersRound, // Customers (jika bukan users)
 } from "lucide-react"; // Import ikon dari Lucide Icons
 
@@ -39,7 +32,7 @@ export const sidebarMenuItems: MenuItem[] = [
   // Bagian Umum & Dashboard
   // ======================================
   {
-    title: "Main",
+    title: "Dashboard",
     groupTitle: true,
     children: [
       {
@@ -59,7 +52,7 @@ export const sidebarMenuItems: MenuItem[] = [
         notification: 2,
       },
       {
-        title: "Admin Dashboard", // Dashboard khusus SuperAdmin
+        title: "Super Admin Dashboard", // Dashboard khusus SuperAdmin
         href: "/admin-dashboard",
         icon: LayoutDashboard,
         roles: ["SuperAdmin"],
@@ -75,13 +68,14 @@ export const sidebarMenuItems: MenuItem[] = [
   // Manajemen Utama (Operasional)
   // ======================================
   {
-    title: "Operasional",
+    title: "Vendor dan Customer",
     groupTitle: true,
     children: [
       {
         title: "Customer", // Ganti "Customers"
         groupTitle: false,
-        href: "/companies?type=CUSTOMER", // Asumsi Anda bisa memfilter berdasarkan type
+        // href: "/companies?type=CUSTOMER", // Asumsi Anda bisa memfilter berdasarkan type
+        href: "/companies",
         icon: Handshake,
         roles: ["SuperAdmin", "AdminUser", "SALES_STAFF"],
         companyTypes: [
@@ -116,7 +110,7 @@ export const sidebarMenuItems: MenuItem[] = [
         ],
       },
       {
-        title: "Operational", // Ganti "SPK"
+        title: "Work Order", // Ganti "SPK"
         href: "/work-orders",
         icon: ClipboardList,
         roles: [
@@ -135,13 +129,13 @@ export const sidebarMenuItems: MenuItem[] = [
         notification: 2, // Contoh dari SPK Anda
         children: [
           {
-            title: "List WO",
-            href: "/work-orders", //src\app\(main)\work-orders\page.tsx
+            title: "Daftar Work Order",
+            href: "/work-orders",
             icon: ClipboardList,
           },
           {
             title: "List Mekanik",
-            href: "#",
+            href: "/vendors/[vendorId]/employees", // src\app\(main)\work-orders\mechanics\page.tsx
             icon: UsersRound,
           },
         ],
@@ -166,7 +160,7 @@ export const sidebarMenuItems: MenuItem[] = [
     groupTitle: true,
     children: [
       {
-        title: "Ringkasan Keuangan",
+        title: "Summary",
         href: "/finance/overview", // Jika ada overview
         icon: ChartBar,
         roles: ["SuperAdmin", "FINANCE_STAFF"],
@@ -219,7 +213,7 @@ export const sidebarMenuItems: MenuItem[] = [
   // Manajemen Inventaris & Supplier
   // ======================================
   {
-    title: "Inventaris & Mitra",
+    title: "Gudang & Mitra",
     groupTitle: true,
     children: [
       {
@@ -291,7 +285,7 @@ export const sidebarMenuItems: MenuItem[] = [
   // Manajemen Pengguna & Sistem
   // ======================================
   {
-    title: "Administrasi",
+    title: "Managemen & HRD",
     groupTitle: true,
     children: [
       {

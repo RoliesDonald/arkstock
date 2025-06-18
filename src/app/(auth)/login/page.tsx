@@ -9,7 +9,7 @@ const LoginPage = () => {
       {/* sisi kiri */}
       <div className="flex w-[60%] h-full relative overflow-hidden rounded-tl-3xl rounded-bl-3xl ">
         <div className="absolute inset-0 flex items-center justify-end z-10">
-          <p className="font-bold text-red-600 dark:text-white text-[2rem]  text-end leading-none bg-white dark:bg-arkBlue-800 rounded-bl-3xl rounded-tl-3xl px-10 py-5 w-fit">
+          <p className="font-bold text-arkRed-600  text-[2rem]  text-end leading-none dark:bg-arkBlue-800 rounded-bl-3xl rounded-tl-3xl px-10 py-5 w-fit">
             Partner Terpercaya untuk Armada anda
           </p>
         </div>
@@ -65,7 +65,7 @@ const LoginPage = () => {
                 type="email"
                 name="email"
                 placeholder="Your Email"
-                className="focus:outline-none w-full boder mt-2 rounded-lg h-[45px] border-2 p-5 bg-arkBg-100 text-arkBlue-800"
+                className="focus:outline-none w-full boder placeholder:italic mt-2 text-sm rounded-lg h-[35px] border-2 p-5 bg-arkBg-100 text-arkBlue-800"
               />
             </div>
             <div>
@@ -76,12 +76,14 @@ const LoginPage = () => {
                 Email
               </label>
               <input
-                type="email"
+                type="password"
+                autoComplete="current-password"
                 name="email"
-                placeholder="Your Email"
-                className="focus:outline-none w-full boder mt-2 rounded-lg h-[45px] border-2 p-5 bg-arkBg-100 text-arkBlue-800"
+                placeholder="Password"
+                className="focus:outline-none w-full boder placeholder:italic text-sm mt-2 rounded-lg h-[35px] border-2 p-5 bg-arkBg-100 text-arkBlue-800"
               />
             </div>
+
             <Link href="/admin-dashboard">
               <Button
                 variant={"default"}

@@ -27,7 +27,7 @@ const MyMenu: React.FC<MyMenuProps> = () => {
   const currentRole = currentUser?.role || "";
   const currentCompanyType = currentUser?.companyType || "";
 
-  const { bengkelId, rentalCompanyId /* , otherDynamicId */ } =
+  const { vendorId, rentalCompanyId /* , otherDynamicId */ } =
     currentUser || {};
 
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
@@ -76,7 +76,7 @@ const MyMenu: React.FC<MyMenuProps> = () => {
         return (
           <div
             key={`sep-${index}`}
-            className="my-2 mx-2 lg:mx-10 border border-arkBlue-200"
+            className="my-2 mx-2 lg:mx-5 border border-arkBlue-100 "
           ></div>
         );
       }
@@ -84,7 +84,7 @@ const MyMenu: React.FC<MyMenuProps> = () => {
       const hasChildren = item.children && item.children.length > 0;
 
       const allDynamicParams: Record<string, string | null | undefined> = {
-        bengkelId: bengkelId,
+        vendorId: vendorId,
         rentalCompanyId: rentalCompanyId,
         ...(params || {}),
       };
@@ -105,11 +105,11 @@ const MyMenu: React.FC<MyMenuProps> = () => {
 
       if (item.groupTitle) {
         return (
-          <div key={item.title || `group-${index}`} className="mb-2 mt-4 px-2">
-            <h3 className="text-sm font-semibold text-arkBg-500 uppercase tracking-wider hidden lg:block text-ellipsis overflow-hidden whitespace-nowrap">
+          <div key={item.title || `group-${index}`} className="mb-2 mt-4 px-2 ">
+            <h3 className="text-[0.7rem] font-semibold text-arkBlue-500 opacity-25 uppercase tracking-wider hidden lg:block text-ellipsis overflow-hidden whitespace-nowrap">
               {item.title}
             </h3>
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 space-y-2 ">
               {renderMenuItems(item.children || [])}
             </div>
           </div>
@@ -167,7 +167,7 @@ const MyMenu: React.FC<MyMenuProps> = () => {
               )}
               <span
                 className={cn(
-                  "hidden lg:block truncate overflow-hidden whitespace-nowrap ml-1", // Tambahkan ml-1 kembali untuk spasi saat lg
+                  "hidden lg:block truncate overflow-hidden whitespace-nowrap ml-1 text-[0.8rem]", // Tambahkan ml-1 kembali untuk spasi saat lg
                   baseClasses,
                   isActive && activeClasses
                 )}
@@ -192,7 +192,7 @@ const MyMenu: React.FC<MyMenuProps> = () => {
             <Link
               href={linkHref || "#"}
               className={cn(
-                "flex items-center gap-1 w-full py-2 px-1 sm:px-2 sm:py-2 rounded-lg relative transition-colors duration-200 group",
+                "flex items-center gap-1 w-full text-[0.8rem] text-arkRed-500 py-2 px-1 sm:px-2 sm:py-2 rounded-lg relative transition-colors duration-200 group",
                 // Tambahkan perataan untuk ukuran kecil
                 "justify-center lg:justify-start"
               )}
@@ -200,7 +200,7 @@ const MyMenu: React.FC<MyMenuProps> = () => {
               {renderWithTooltip(
                 IconComponent && (
                   <IconComponent
-                    size={20}
+                    size={18}
                     className={cn(
                       "flex-shrink-0", // Hapus mr-1 dari sini untuk centering penuh pada sm/md
                       baseClasses,
@@ -259,7 +259,7 @@ const MyMenu: React.FC<MyMenuProps> = () => {
 
   return (
     <TooltipProvider>
-      <div className="mt-1 scrollbar h-screen overflow-auto pb-28 mb-10">
+      <div className="mt-1 scrollbar h-screen overflow-auto pb-10">
         {renderMenuItems(visibleMenuItems)}
       </div>
     </TooltipProvider>

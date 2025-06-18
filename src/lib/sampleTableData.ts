@@ -1,3 +1,6 @@
+import { Company, CompanyStatus, CompanyType } from "@/types/companies";
+import { UserRole, UserStatus } from "@/types/user";
+
 // --- ENUMS (Disesuaikan dari skema database) ---
 export enum WoProgressStatus {
   DRAFT = "Draft",
@@ -9,7 +12,7 @@ export enum WoProgressStatus {
   WAITING_ESTIMATION_APPROVAL = "Waiting Estimation",
   FINISHED = "Finished",
   INVOICED = "Invoiced",
-  NEW = "NEW",
+  NEW = "New",
   CANCELED = "Canceled",
   REJECTED = "Rejected",
 }
@@ -24,19 +27,6 @@ export enum PartVariant {
   OEM = "oem",
   AFTERMARKET = "aftermarket",
   GENUINE = "genuine", // Mengganti "gbox" dengan "genuine"
-}
-
-export enum EmployeeRole {
-  ADMIN = "Admin",
-  USER = "User",
-  MECHANIC = "Mechanic",
-  SERVICE_ADVISOR = "Service Advisor",
-  LEADER_MECHANIC = "Leader Mechanic",
-  FINANCE_STAFF = "Finance Staff",
-  ADMIN_STAFF = "Admin Staff",
-  WAREHOUSE_STAFF = "Warehouse Staff",
-  DRIVER = "Driver",
-  PIC_FLEET = "PIC Fleet",
 }
 
 export enum PurchaseOrderStatus {
@@ -106,61 +96,484 @@ export interface SparePart {
   unit: string;
 }
 
-export interface Employee {
+export interface User {
   id: number;
-  employeeId?: string;
+  userId?: string;
   name: string;
   email?: string;
   photo?: string;
   phone?: string;
-  role: EmployeeRole; // Menggunakan enum
+  role: UserRole; // Menggunakan enum
   department?: string; // 'departement' diubah menjadi 'department'
   companyName?: string; // company.name (untuk display)
   address?: string;
+  status: UserStatus; // Menggunakan enum
 }
 
-export interface Company {
-  id: number;
-  companyId: string;
-  companyName: string;
-  companyEmail?: string;
-  logo?: string;
-  contact?: string;
-  address?: string;
-  tax: boolean; // taxRegistered
-  // type: CompanyType; // Akan ditambahkan jika Anda menggunakan enum CompanyType
-}
+//============== User Dummy Data ===============
+export const userData: User[] = [
+  {
+    id: 1,
+    userId: "EMP001",
+    name: "Ahmad Wijaya",
+    email: "ahmad.wijaya@example.com",
+    phone: "081234567890",
+    status: UserStatus.ON_DUTY,
+    role: UserRole.MECHANIC,
+    department: "Workshop",
+    companyName: "PT. Bengkel Maju",
+    address: "Jl. Merdeka No. 10, Jakarta",
+  },
+  {
+    id: 2,
+    userId: "EMP002",
+    name: "Budi Santoso",
+    email: "budi.santoso@example.com",
+    phone: "081298765432",
+    status: UserStatus.OFF_DUTY,
+    role: UserRole.SERVICE_ADVISOR,
+    department: "Customer Service",
+    companyName: "PT. Bengkel Maju",
+    address: "Jl. Diponegoro No. 5, Surabaya",
+  },
+  {
+    id: 3,
+    userId: "EMP003",
+    name: "Citra Dewi",
+    email: "citra.dewi@example.com",
+    phone: "081311223344",
+    status: UserStatus.ON_LEAVE,
+    role: UserRole.ACCOUNTING_STAFF,
+    department: "Finance",
+    companyName: "PT. Bengkel Maju",
+    address: "Jl. Sudirman No. 20, Bandung",
+  },
+  {
+    id: 4,
+    userId: "EMP004",
+    name: "Denny Firmansyah",
+    email: "denny.f@example.com",
+    phone: "087855667788",
+    status: UserStatus.ON_DUTY,
+    role: UserRole.WAREHOSE_STAFF,
+    department: "Warehouse",
+    companyName: "PT. Bengkel Maju",
+    address: "Jl. Gatot Subroto No. 30, Semarang",
+  },
+  {
+    id: 5,
+    userId: "EMP005",
+    name: "Eka Putri",
+    email: "eka.p@example.com",
+    phone: "085299887766",
+    status: UserStatus.ON_DUTY,
+    role: UserRole.ADMIN,
+    department: "IT",
+    companyName: "PT. Bengkel Maju",
+    address: "Jl. Thamrin No. 40, Yogyakarta",
+  },
+  {
+    id: 6,
+    userId: "EMP006",
+    name: "Faisal Rahman",
+    email: "faisal.r@example.com",
+    phone: "081122334455",
+    status: UserStatus.SUSPENDED,
+    role: UserRole.DRIVER,
+    department: "Logistics",
+    companyName: "PT. Transportasi Jaya",
+    address: "Jl. Pahlawan No. 50, Medan",
+  },
+  {
+    id: 7,
+    userId: "EMP007",
+    name: "Gina Lestari",
+    email: "gina.l@example.com",
+    phone: "081900112233",
+    status: UserStatus.ON_DUTY,
+    role: UserRole.PURCHASING_MANAGER,
+    department: "Procurement",
+    companyName: "PT. Bengkel Maju",
+    address: "Jl. Asia Afrika No. 60, Palembang",
+  },
+  {
+    id: 8,
+    userId: "EMP008",
+    name: "Hadi Kusuma",
+    email: "hadi.k@example.com",
+    phone: "082144556677",
+    status: UserStatus.ON_DUTY,
+    role: UserRole.ADMIN,
+    department: "Management",
+    companyName: "PT. Bengkel Maju",
+    address: "Jl. Cendrawasih No. 70, Makassar",
+  },
+  {
+    id: 9,
+    userId: "EMP009",
+    name: "Indah Sari",
+    email: "indah.s@example.com",
+    phone: "085788990011",
+    status: UserStatus.OFF_DUTY,
+    role: UserRole.PIC,
+    department: "Client Relations",
+    companyName: "PT. Cepat Tanggap",
+    address: "Jl. Melati No. 80, Denpasar",
+  },
+  {
+    id: 10,
+    userId: "EMP010",
+    name: "Joko Susilo",
+    email: "joko.s@example.com",
+    phone: "081277665544",
+    status: UserStatus.ON_DUTY,
+    role: UserRole.MECHANIC,
+    department: "Workshop",
+    companyName: "PT. Bengkel Maju",
+    address: "Jl. Raya No. 90, Jakarta",
+  },
+];
 
+//================= Invoice sample data ===============
+export const companyData: Company[] = [
+  {
+    id: "uuid-comp-001", // Contoh UUID
+    companyId: "MB001",
+    companyName: "PT. Maju Bersama",
+    address: "Jl. Raya Bogor No. 123, Jakarta",
+    contact: "0211234567",
+    companyEmail: "maju.bersama@example.com",
+    logo: "https://placehold.co/150x150/lightblue/black?text=MB",
+    taxRegistered: true,
+    companyType: CompanyType.CUSTOMER,
+    status: CompanyStatus.ACTIVE, // Status FE
+    createdAt: new Date("2020-01-15T09:00:00Z"),
+    updatedAt: new Date("2024-06-12T10:00:00Z"),
+  },
+  {
+    id: "uuid-comp-002",
+    companyId: "JA002",
+    companyName: "CV. Jaya Abadi",
+    address: "Jl. Asia Afrika No. 45, Bandung",
+    contact: "0229876543",
+    companyEmail: "jaya.abadi@example.com",
+    logo: "https://placehold.co/150x150/lightgreen/black?text=JA",
+    taxRegistered: false,
+    companyType: CompanyType.VENDOR,
+    status: CompanyStatus.ACTIVE,
+    createdAt: new Date("2021-03-20T10:30:00Z"),
+    updatedAt: new Date("2024-06-12T10:05:00Z"),
+  },
+  {
+    id: "uuid-comp-003",
+    companyId: "TC003",
+    companyName: "PT. Transportasi Cepat",
+    address: "Jl. Merdeka No. 78, Surabaya",
+    contact: "0312345678",
+    companyEmail: "transport.cepat@example.com",
+    logo: "https://placehold.co/150x150/lightcoral/black?text=TC",
+    taxRegistered: true,
+    companyType: CompanyType.CAR_USER, // Menggunakan CAR_USER
+    status: CompanyStatus.ACTIVE,
+    createdAt: new Date("2022-05-01T11:00:00Z"),
+    updatedAt: new Date("2024-06-12T10:10:00Z"),
+  },
+  {
+    id: "uuid-comp-004",
+    companyId: "BP004",
+    companyName: "Bengkel Prima",
+    address: "Jl. Industri No. 10, Tangerang",
+    contact: "0218765432",
+    companyEmail: "prima.bengkel@example.com",
+    logo: "https://placehold.co/150x150/lightblue/black?text=BP",
+    taxRegistered: false,
+    companyType: CompanyType.INTERNAL, // Menggunakan INTERNAL jika ini workshop internal
+    status: CompanyStatus.ACTIVE,
+    createdAt: new Date("2023-01-10T14:00:00Z"),
+    updatedAt: new Date("2024-06-12T10:15:00Z"),
+  },
+  {
+    id: "uuid-comp-005",
+    companyId: "SL005",
+    companyName: "PT. Solusi Logistik",
+    address: "Jl. Pahlawan No. 200, Semarang",
+    contact: "0245678901",
+    companyEmail: "solusi.logistik@example.com",
+    logo: undefined,
+    taxRegistered: true,
+    companyType: CompanyType.CUSTOMER,
+    status: CompanyStatus.BLACKLISTED,
+    createdAt: new Date("2024-02-05T15:00:00Z"),
+    updatedAt: new Date("2024-06-12T10:20:00Z"),
+  },
+  {
+    id: "uuid-comp-006",
+    companyId: "BP006",
+    companyName: "UD. Baja Perkasa",
+    address: "Jl. Utama No. 50, Yogyakarta",
+    contact: "0274112233",
+    companyEmail: "baja.perkasa@example.com",
+    logo: "https://placehold.co/150x150/lightgray/black?text=BPRK",
+    taxRegistered: false,
+    companyType: CompanyType.SUPPLIER,
+    status: CompanyStatus.INACTIVE,
+    createdAt: new Date("2019-07-01T08:00:00Z"),
+    updatedAt: new Date("2024-06-12T10:25:00Z"),
+  },
+  {
+    id: "uuid-comp-007",
+    companyId: "GE007",
+    companyName: "PT. Global Engineering",
+    address: "Jl. Protokol No. 1, Jakarta Pusat",
+    contact: "02199887766",
+    companyEmail: "global.eng@example.com",
+    logo: "https://placehold.co/150x150/lightgreen/black?text=GE",
+    taxRegistered: true,
+    companyType: CompanyType.CUSTOMER,
+    status: CompanyStatus.ACTIVE,
+    createdAt: new Date("2021-11-11T13:00:00Z"),
+    updatedAt: new Date("2024-06-12T10:30:00Z"),
+  },
+  {
+    id: "uuid-comp-008",
+    companyId: "TS008",
+    companyName: "CV. Tekno Sejahtera",
+    address: "Jl. Kenangan Indah No. 7, Malang",
+    contact: "0341778899",
+    companyEmail: "tekno.sej@example.com",
+    logo: undefined,
+    taxRegistered: false,
+    companyType: CompanyType.VENDOR,
+    status: CompanyStatus.ON_HOLD,
+    createdAt: new Date("2023-04-25T10:00:00Z"),
+    updatedAt: new Date("2024-06-12T10:35:00Z"),
+  },
+  {
+    id: "uuid-comp-009",
+    companyId: "AW009",
+    companyName: "PT. Armada Wisata",
+    address: "Jl. Pariwisata No. 100, Bali",
+    contact: "0361223344",
+    companyEmail: "armada.wisata@example.com",
+    logo: "https://placehold.co/150x150/lightblue/black?text=AW",
+    taxRegistered: true,
+    companyType: CompanyType.CAR_USER, // Menggunakan CAR_USER
+    status: CompanyStatus.ACTIVE,
+    createdAt: new Date("2022-08-01T09:00:00Z"),
+    updatedAt: new Date("2024-06-12T10:40:00Z"),
+  },
+  {
+    id: "uuid-comp-010",
+    companyId: "OC010",
+    companyName: "PD. Otomotif Cerdas",
+    address: "Jl. Teknologi No. 5, Batam",
+    contact: "0778112233",
+    companyEmail: "otomotif.cerdas@example.com",
+    logo: undefined,
+    taxRegistered: false,
+    companyType: CompanyType.INTERNAL, // Menggunakan INTERNAL
+    status: CompanyStatus.BLACKLISTED,
+    createdAt: new Date("2020-09-01T16:00:00Z"),
+    updatedAt: new Date("2024-06-12T10:45:00Z"),
+  },
+];
+
+// Definisi interface untuk setiap item suku cadang di faktur
 export interface InvoiceItem {
-  itemName: string; // Ini akan menjadi sparePart.name
-  partNumber: string; // sparePart.partNumber
-  quantity: number;
-  unit: string; // sparePart.unit
-  unitPrice: number;
-  totalPrice: number;
+  itemName: string; // Nama suku cadang (misal: "Kampas Rem Depan")
+  partNumber: string; // Nomor suku cadang (misal: "BRK-FRT-001")
+  quantity: number; // Kuantitas suku cadang
+  unit: string; // Satuan (misal: "Set", "Pcs")
+  unitPrice: number; // Harga per satuan suku cadang
+  totalPrice: number; // Total harga untuk item ini (quantity * unitPrice)
 }
 
-export interface Invoice {
-  invNum: string; // invoiceNumber
-  woMaster: string; // woMasterNumber dari WO
-  date: Date; // invoiceDate
-  vehicleMake: string; // vehicle.make (untuk display)
-  model: string; // vehicle.model (untuk display)
-  trimLevel?: string; // vehicle.trimLevel (untuk display)
-  licensePlate: string; // vehicle.licensePlate (untuk display)
-  vinNum?: string; // vehicle.vinNum (untuk display)
-  requestOdo: number;
-  actualdOdo: number;
-  engineNum?: string; // vehicle.engineNum (untuk display)
-  customer: string; // requestorCompany.name (untuk display)
-  carUser: string; // carUserCompany.name (untuk display)
-  remark: string; // summaryRemark
-  mechanic?: string; // mechanic.name (untuk display)
-  sparePartList?: string; // Ini sebaiknya menjadi array atau objek InvoiceItem (untuk display)
-  servicesList?: string; // Ini sebaiknya menjadi array atau objek InvoiceService (untuk display)
-  finished: Date; // finishedDate
-  approvedBy?: string; // approvingEmployeeInvoice.name
+// Definisi interface untuk setiap item layanan di faktur
+export interface InvoiceService {
+  serviceName: string; // Nama layanan (misal: "Jasa Penggantian Kampas Rem")
+  description?: string; // Deskripsi layanan (opsional)
+  price: number; // Harga layanan
 }
+
+// Definisi interface untuk keseluruhan objek Invoice
+export interface Invoice {
+  id: string; // ID unik untuk setiap faktur (sering ditambahkan oleh database)
+  invNum: string; // Nomor faktur (invoiceNumber)
+  woMaster: string; // Nomor WO Master dari Work Order terkait
+  date: Date; // Tanggal terbit faktur (invoiceDate)
+  vehicleMake: string; // Merk kendaraan (untuk display)
+  model: string; // Model kendaraan (untuk display)
+  trimLevel?: string; // Tingkat trim kendaraan (opsional, untuk display)
+  licensePlate: string; // Plat nomor kendaraan (untuk display)
+  vinNum?: string; // Nomor VIN kendaraan (opsional, untuk display)
+  requestOdo: number; // Odometer saat request WO
+  actualdOdo: number; // Odometer aktual saat pengerjaan
+  engineNum?: string; // Nomor mesin kendaraan (opsional, untuk display)
+  customer: string; // Nama pelanggan/perusahaan pemohon
+  carUser: string; // Nama pengguna mobil/perusahaan pengguna
+  remark: string; // Ringkasan keluhan/pekerjaan
+  mechanic?: string; // Nama mekanik yang mengerjakan (opsional)
+
+  // Perubahan penting: Menggunakan array dari objek untuk daftar suku cadang dan layanan
+  sparePartList?: InvoiceItem[]; // Daftar suku cadang yang digunakan
+  servicesList?: InvoiceService[]; // Daftar layanan yang diberikan
+
+  finished: Date; // Tanggal pekerjaan selesai (finishedDate)
+  approvedBy?: string; // Nama karyawan yang menyetujui faktur (opsional)
+  totalAmount: number; // Total keseluruhan jumlah faktur (sum dari sparePartList dan servicesList)
+
+  // Properti tambahan yang sering ada pada data dari API
+  createdAt?: string; // Timestamp kapan faktur dibuat
+  updatedAt?: string; // Timestamp kapan faktur terakhir diperbarui
+  status: string; // Status faktur (contoh: "Paid", "Pending", "Overdue")
+}
+
+// Data sampel invoice
+export const invoiceData: Invoice[] = [
+  {
+    id: "inv-2025-001",
+    invNum: "INV 2025/5009344",
+    woMaster: "WO 2025/27454",
+    date: new Date("2025-06-08"),
+    vehicleMake: "Toyota",
+    model: "Avanza",
+    trimLevel: "G 1.3 M/T",
+    licensePlate: "L 1234 XY",
+    vinNum: "MHKF123456V678901",
+    requestOdo: 120000,
+    actualdOdo: 120000,
+    engineNum: "K3-VE-901234567",
+    customer: "PT. Rental Mobil Sejahtera",
+    carUser: "PT. Rental Mobil Sejahtera",
+    remark: "Bunyi berdecit saat mengerem",
+    mechanic: "Vino Akbar",
+    sparePartList: [
+      {
+        itemName: "Kampas Rem Depan",
+        partNumber: "BRK-FRT-AVZ",
+        quantity: 1,
+        unit: "Set",
+        unitPrice: 500000,
+        totalPrice: 500000,
+      },
+      {
+        itemName: "Minyak Rem",
+        partNumber: "OIL-BRK-001",
+        quantity: 1,
+        unit: "Botol",
+        unitPrice: 75000,
+        totalPrice: 75000,
+      },
+    ],
+    servicesList: [
+      {
+        serviceName: "Jasa Penggantian Kampas Rem",
+        price: 250000,
+      },
+      {
+        serviceName: "Bleeding Sistem Rem",
+        price: 100000,
+      },
+    ],
+    finished: new Date("2025-06-03"),
+    approvedBy: "Manajer Armada",
+    totalAmount: 925000, // 500k + 75k + 250k + 100k
+    createdAt: new Date("2025-06-08T10:00:00Z").toISOString(),
+    status: "Paid",
+  },
+  {
+    id: "inv-2025-002",
+    invNum: "INV 2025/5009345",
+    woMaster: "WO 2025/27455",
+    date: new Date("2025-06-09"),
+    vehicleMake: "Honda",
+    model: "Mobilio",
+    trimLevel: "E CVT",
+    licensePlate: "B 5678 CD",
+    vinNum: "MHKF987654H321098",
+    requestOdo: 80000,
+    actualdOdo: 80000,
+    engineNum: "L15Z1-123456789",
+    customer: "CV. Usaha Mandiri",
+    carUser: "Bapak Budi",
+    remark: "Servis rutin 80.000 KM",
+    mechanic: "Siti Rahma",
+    sparePartList: [
+      {
+        itemName: "Filter Oli",
+        partNumber: "FIL-OIL-MOB",
+        quantity: 1,
+        unit: "Pcs",
+        unitPrice: 80000,
+        totalPrice: 80000,
+      },
+      {
+        itemName: "Oli Mesin 4L",
+        partNumber: "OIL-ENG-SYN",
+        quantity: 1,
+        unit: "Pcs",
+        unitPrice: 350000,
+        totalPrice: 350000,
+      },
+    ],
+    servicesList: [
+      {
+        serviceName: "Jasa Servis Berkala",
+        price: 300000,
+      },
+    ],
+    finished: new Date("2025-06-09"),
+    approvedBy: "Manajer Operasional",
+    totalAmount: 730000, // 80k + 350k + 300k
+    createdAt: new Date("2025-06-09T14:30:00Z").toISOString(),
+    status: "Pending",
+  },
+  {
+    id: "inv-2025-003",
+    invNum: "INV 2025/5009346",
+    woMaster: "WO 2025/27456",
+    date: new Date("2025-06-01"),
+    vehicleMake: "Suzuki",
+    model: "Ertiga",
+    trimLevel: "GL M/T",
+    licensePlate: "D 7777 EF",
+    vinNum: "MHKF000111A222333",
+    requestOdo: 65000,
+    actualdOdo: 65000,
+    engineNum: "K15B-998877665",
+    customer: "PT. Logistik Cepat",
+    carUser: "Ibu Desi",
+    remark: "Perbaikan AC kurang dingin",
+    mechanic: "Agus Santoso",
+    sparePartList: [
+      {
+        itemName: "Refrigeran AC",
+        partNumber: "REF-AC-R134A",
+        quantity: 1,
+        unit: "Kg",
+        unitPrice: 150000,
+        totalPrice: 150000,
+      },
+    ],
+    servicesList: [
+      {
+        serviceName: "Jasa Perbaikan AC",
+        price: 400000,
+      },
+      {
+        serviceName: "Pembersihan Kondensor AC",
+        price: 100000,
+      },
+    ],
+    finished: new Date("2025-06-02"),
+    approvedBy: "PIC Perusahaan",
+    totalAmount: 650000, // 150k + 400k + 100k
+    createdAt: new Date("2025-06-01T09:15:00Z").toISOString(),
+    status: "Overdue",
+  },
+];
+
+//============== Estimation sample data ===============
 
 export interface EstimationItem {
   itemName: string; // Ini akan menjadi sparePart.name
@@ -680,59 +1093,6 @@ export const sparePartData: SparePart[] = [
     suitable_for_vehicles: ["Canter Euro 4", "Mitsubishi L300"],
     price: 75000, // Menggunakan number
     unit: "pcs",
-  },
-];
-
-export const employeeData: Employee[] = [
-  {
-    id: 1,
-    employeeId: "2323432",
-    name: "John Doe",
-    email: "john@doe.com",
-    photo:
-      "https://images.pexels.com/photos/2888150/pexels-photo-2888150.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    phone: "081284698523",
-    role: EmployeeRole.ADMIN, // Menggunakan enum yang lebih umum untuk contoh ini
-    department: "Finance",
-    companyName: "PT. Jaya Sentosa Abadi",
-    address: "Jl. Rasuna Said, Surabaya, Jawa Timur",
-  },
-];
-
-export const companyData: Company[] = [
-  {
-    id: 1,
-    companyId: "2323432",
-    companyName: "PT. Jaya Sentosa Abadi",
-    companyEmail: "info@jayasentosa.com",
-    logo: "https://images.pexels.com/photos/2888150/pexels-photo-2888150.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    contact: "081284698523",
-    address: "Jl. Bendungan, Surabaya, Jawa Timur",
-    tax: true,
-  },
-];
-
-export const invoiceData: Invoice[] = [
-  {
-    invNum: "WO 2025/5009344",
-    woMaster: "WO 2025/27454",
-    date: new Date("2025-06-08"),
-    vehicleMake: "Toyota",
-    model: "Avanza",
-    trimLevel: "G 1.3 M/T",
-    licensePlate: "L 1234 XY",
-    vinNum: "MHKF123456V678901",
-    requestOdo: 120000,
-    actualdOdo: 120000,
-    engineNum: "K3-VE-901234567",
-    customer: "PT. Rental Mobil Sejahtera",
-    carUser: "PT. Rental Mobil Sejahtera",
-    remark: "Bunyi berdecit saat mengerem",
-    mechanic: "Vino Akbar",
-    sparePartList: "Kampas rem depan dan belakang", // Ini string, tapi idealnya array InvoiceItem
-    servicesList: "Penggantian kampas rem depan dan belakang", // Ini string, tapi idealnya array InvoiceService
-    finished: new Date("2025-06-03"),
-    approvedBy: "Manajer Armada",
   },
 ];
 

@@ -15,7 +15,7 @@ interface User {
   name: string;
   email: string;
   role: string;
-  bengkelId?: string;
+  vendorId?: string;
   rentalCompanyId?: string;
 }
 

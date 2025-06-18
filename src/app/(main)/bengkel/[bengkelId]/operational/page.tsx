@@ -8,7 +8,7 @@ interface User {
   name: string;
   email: string;
   role: string;
-  bengkelId?: string;
+  vendorId?: string;
   rentalCompanyId?: string;
 }
 
@@ -23,13 +23,12 @@ const PicOperationalPage: React.FC = () => {
     <div className="flex gap-4 flex-col md:flex-row">
       {/* LEFT */}
       <div className="w-full gap-4 flex-col flex">
-        <h1 className="text-sm font-semibold text-arkBg-800 ">
-          List SPK{" "}
-          <span className="text-arkBlue-900 text-lg italic">
-            {currentUser?.bengkelId}
+        <h1 className="text-sm font-semibold text-arkBlue-800 ">
+          BreadCrumb / Operational
+          <span className="text-arkBlue-700 italic ml-2">
+            {currentUser?.vendorId}
           </span>
         </h1>
-        <TablesArea searchQuery={searchQuery} />
         <div className="flex md:flex-row flex-col gap-4">
           {/* JADWAL MEKANIK */}
           <CalendarSchedule />

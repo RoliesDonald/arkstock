@@ -5,7 +5,7 @@ interface User {
   name: string;
   email: string;
   role: string; // ["AdminUser", "PIC", "Manager", "Staf", "SuperAdmin"]
-  bengkelId?: string;
+  vendorId?: string;
   rentalCompanyId?: string;
   fleetCompanyId?: string;
   companyType?: string;
@@ -26,7 +26,7 @@ const initialState: UserState = {
     name: "Mock Admin User",
     email: "admin@example.com",
     role: "SuperAdmin",
-    bengkelId: "BENGKEL001",
+    vendorId: "VENDOR_BENGKEL001",
     rentalCompanyId: "RENTAL001",
     fleetCompanyId: "FLEET001",
     companyType: "SERVICE_MAINTENANCE", // <-- Contoh PENAMBAHAN VALUE
@@ -41,14 +41,14 @@ const initialState: UserState = {
 /*
 // Jika Anda ingin menguji role lain, uncomment salah satu di bawah:
 
-// Untuk Role Bengkel
+// Untuk Role Bengkel/Vendor
 const initialState: UserState = {
   currentUser: {
     id: 'mock-bengkel-id-456',
     name: 'Mock Bengkel User',
     email: 'bengkel@example.com',
     role: 'Bengkel',
-    bengkelId: 'bengkel-alpha-1', // Tambahkan ID bengkel jika relevan
+    vendorId: 'bengkel-alpha-1', // Tambahkan ID bengkel jika relevan
     rentalCompanyId:'RENTAL002',
     companyType: ''
 

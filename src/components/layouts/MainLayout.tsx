@@ -4,6 +4,8 @@ import React from "react";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import NavBar from "../common/NavBar";
 import { MySideBar } from "../common/MySidebar";
+import { sidebarMenuItems } from "@/config/sidebar";
+import Link from "next/link";
 
 interface MainLayoutProps {
   children: React.ReactNode;

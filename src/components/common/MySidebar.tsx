@@ -13,7 +13,7 @@ interface User {
   name: string;
   email: string;
   role: string;
-  bengkelId?: string;
+  vendorId?: string;
   companyType?: string;
 }
 
@@ -45,20 +45,10 @@ export function MySideBar() {
       <MyMenu />
 
       {/* SIDEBAR BOTTOM */}
-      <div>
-        <Link
-          href={"/profile"}
-          className="flex items-center p-3 rounded-lg text-arkBg-700 hover:bg-border transition-colors duration-200"
-        >
-          <User className="h-5 w-5 mr-3" />
-          <span className="hidden lg:block">Profilwwwe</span>
-        </Link>
+      <div className="items-center justify-center flex  pb-2">
         {/* LOGOUT BUTTON */}
-        <Button
-          onClick={() => dispatch(logout())}
-          className="flex items-center w-full p-3 rounded-lg text-arkBg-700 hover:bg-border transition-colors duration-200 mt-2"
-        >
-          <LogOut className="w-5 h-5 mr-3" />
+        <Button onClick={() => dispatch(logout())} variant={"secondary"}>
+          <LogOut className="w-8 h-8 text-arkBg-800" />
           <span className="hidden lg:block">LogOut</span>
         </Button>
       </div>
