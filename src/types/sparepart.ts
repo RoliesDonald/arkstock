@@ -3,10 +3,11 @@ import * as z from "zod";
 
 // Enum untuk varian suku cadang
 export enum PartVariant {
-  OEM = "OEM", // Original Equipment Manufacturer
   AFTERMARKET = "AFTERMARKET", // Suku cadang pengganti
   RECONDITIONED = "RECONDITIONED", // Suku cadang rekondisi
   USED = "USED", // Suku cadang bekas
+  NEW = "NEW", // Suku cadang baru
+  GBOX = "GBOX", // Suku cadang GBOX
 }
 
 // Interface untuk kompatibilitas suku cadang dengan kendaraan tertentu

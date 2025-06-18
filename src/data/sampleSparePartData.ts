@@ -48,7 +48,7 @@ export const sparePartData: SparePart[] = [
     stock: 25,
     minStock: 10,
     price: 85000,
-    variant: PartVariant.OEM,
+    variant: PartVariant.NEW,
     brand: "Denso",
     manufacturer: "Denso Corporation",
     compatibility: [
@@ -58,7 +58,7 @@ export const sparePartData: SparePart[] = [
     ],
     createdAt: new Date("2024-02-10T09:30:00Z"),
     updatedAt: new Date("2024-06-16T10:15:00Z"),
-    sku: generateSku("OIL-FIL-BRIO001", PartVariant.OEM, "Denso"),
+    sku: generateSku("OIL-FIL-BRIO001", PartVariant.NEW, "Denso"),
   },
   {
     id: uuidv4(),
@@ -112,7 +112,7 @@ export const sparePartData: SparePart[] = [
     stock: 10,
     minStock: 2,
     price: 1200000,
-    variant: PartVariant.OEM,
+    variant: PartVariant.NEW,
     brand: "Mitsubishi Fuso",
     manufacturer: "Mitsubishi Fuso Truck and Bus Corporation",
     compatibility: [
@@ -121,6 +121,6 @@ export const sparePartData: SparePart[] = [
     ],
     createdAt: new Date("2024-06-18T08:00:00Z"),
     updatedAt: new Date("2024-06-18T08:00:00Z"),
-    sku: generateSku("ME515796", PartVariant.OEM, "Mitsubishi Fuso"),
+    sku: generateSku("ME515796", PartVariant.NEW, "Mitsubishi Fuso"),
   },
 ];

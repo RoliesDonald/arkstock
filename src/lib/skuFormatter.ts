@@ -3,8 +3,6 @@ import { get } from "lodash";
 
 export const getPartVariantShortCode = (variant: PartVariant): string => {
   switch (variant) {
-    case PartVariant.OEM:
-      return "O";
     case PartVariant.AFTERMARKET:
       return "AM";
     case PartVariant.RECONDITIONED:

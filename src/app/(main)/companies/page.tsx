@@ -1,4 +1,6 @@
-// src/app/companies/page.tsx
+// halaman ini hanya bisa di akses oleh Super Admin,
+// dan hanya super admin yang bisa mendaftarkan perusahaan tersebut.
+
 "use client";
 import TableMain from "@/components/common/table/TableMain";
 import CompanyDialog from "@/components/dialog/companyDialog/_component/CompanyDialog";
