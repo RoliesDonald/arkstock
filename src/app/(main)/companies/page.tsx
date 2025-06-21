@@ -4,7 +4,6 @@
 "use client";
 import TableMain from "@/components/common/table/TableMain";
 import CompanyDialog from "@/components/dialog/companyDialog/_component/CompanyDialog";
-// --- PERBAIKAN: Path Import CompanyDialog ---
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -85,7 +84,7 @@ export default function CompanyListPage() {
             case CompanyType.CAR_USER:
               typeColor = "bg-green-200 text-green-800";
               break;
-            case CompanyType.SUPPLIER:
+            case CompanyType.CHILD_COMPANY:
               typeColor = "bg-orange-200 text-orange-800";
               break;
             case CompanyType.INTERNAL:
@@ -289,10 +288,10 @@ export default function CompanyListPage() {
         ).length,
       },
       {
-        value: CompanyType.SUPPLIER.toLowerCase(),
+        value: CompanyType.VENDOR.toLowerCase(),
         label: "Supplier", // PERBAIKAN: Label lebih spesifik
         count: allCompanies.filter(
-          (company) => company.companyType === CompanyType.SUPPLIER
+          (company) => company.companyType === CompanyType.VENDOR
         ).length,
       },
       {

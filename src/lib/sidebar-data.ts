@@ -68,7 +68,7 @@ export const sidebarMenuItems: MenuItem[] = [
   // Manajemen Utama (Operasional)
   // ======================================
   {
-    title: "Vendor dan Customer",
+    title: "Operational",
     groupTitle: true,
     children: [
       {
@@ -88,7 +88,7 @@ export const sidebarMenuItems: MenuItem[] = [
       },
       {
         title: "Manajemen Kendaraan", // Ganti "Armada"
-        href: "/vehicles",
+        href: "",
         icon: Car,
         roles: ["SuperAdmin", "AdminUser", "FLEET_PIC", "SERVICE_ADVISOR"],
         companyTypes: [
@@ -102,16 +102,11 @@ export const sidebarMenuItems: MenuItem[] = [
             href: "/vehicles",
             icon: Truck,
           },
-          {
-            title: "Tambah Kendaraan",
-            href: "/vehicles/create",
-            icon: PlusCircle,
-          },
         ],
       },
       {
-        title: "Work Order", // Ganti "SPK"
-        href: "/work-orders",
+        title: "Operational", // Ganti "SPK"
+        href: "",
         icon: ClipboardList,
         roles: [
           "SuperAdmin",

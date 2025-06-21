@@ -4,6 +4,7 @@ import userReducer from "./slices/userSlices";
 import appReducer from "./slices/appSlice"; // Untuk state aplikasi umum seperti tema, loading
 import tableSearchSlice from "./slices/tableSearchSlice";
 import workOrderReducer from "./slices/workOrderSlice";
+import vehiclesReducer from "./slices/vehicleSlice";
 
 export const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ export const store = configureStore({
     app: appReducer,
     tableSearch: tableSearchSlice,
     workOrders: workOrderReducer,
+    vehicles: vehiclesReducer,
   },
   // Anda bisa menambahkan middleware kustom atau konfigurasi lain di sini
   // devTools: process.env.NODE_ENV !== 'production', // DevTools diaktifkan di development
