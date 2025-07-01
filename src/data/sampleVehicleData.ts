@@ -12,12 +12,12 @@ import { v4 as uuidv4 } from "uuid";
 
 export const vehicleData: Vehicle[] = [
   {
-    id: uuidv4(),
+    id: "v-001",
     licensePlate: "B 1234 ABC",
     vehicleMake: "Toyota",
     model: "Avanza",
     trimLevel: "G", // Contoh nilai string
-    vinNum: null, // Menggunakan null
+    vinNum: "SAJDAJDA-SDA-JFDKSAJ", // Menggunakan null
     engineNum: "1NR-VE",
     chassisNum: "ABCDE12345FGH6789",
     yearMade: 2020,
@@ -36,12 +36,12 @@ export const vehicleData: Vehicle[] = [
     updatedAt: new Date("2024-06-18T10:00:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "v-002",
     licensePlate: "D 5678 EFG",
     vehicleMake: "Honda",
     model: "Civic",
     trimLevel: "RS",
-    vinNum: null,
+    vinNum: "89842JDAJDA-DJLKAJDA",
     engineNum: "L15BF",
     chassisNum: "FGHIJ98765KLM43210",
     yearMade: 2022,
@@ -60,12 +60,12 @@ export const vehicleData: Vehicle[] = [
     updatedAt: new Date("2024-06-15T14:30:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "v-003",
     licensePlate: "N 9012 HIJ",
     vehicleMake: "Mitsubishi",
     model: "Colt Diesel",
     trimLevel: null, // Menggunakan null
-    vinNum: null,
+    vinNum: "FGHIJ98765KLM43210-89842JDAJDA",
     engineNum: null,
     chassisNum: null,
     yearMade: 2018,
@@ -84,12 +84,12 @@ export const vehicleData: Vehicle[] = [
     updatedAt: new Date("2024-06-17T09:00:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "v-004",
     licensePlate: "L 3456 KL",
     vehicleMake: "Yamaha",
     model: "NMAX",
     trimLevel: null,
-    vinNum: null,
+    vinNum: "FGHIJ98765KLM43210-89842JDAJDA",
     engineNum: null,
     chassisNum: null,
     yearMade: 2023,

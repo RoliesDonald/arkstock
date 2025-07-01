@@ -13,11 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // Import data dummy
-import { workOrderData as initialWorkOrderData } from "@/data/sampleWorkOrderData";
+import {
+  workOrderData as initialWorkOrderData,
+  workOrderData,
+} from "@/data/sampleWorkOrderData";
 import { companyData } from "@/data/sampleCompanyData"; // Dibutuhkan untuk mendapatkan nama vendor dari ID
 
 // Import Redux hooks
-import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 // Import tipe
 import {
@@ -30,24 +33,92 @@ import { Company } from "@/types/companies"; // Untuk tipe company jika dibutuhk
 
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreVertical } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { v4 as uuidv4 } from "uuid"; // Untuk ID Work Order baru (simulasi)
 import { format } from "date-fns";
 import { id } from "date-fns/locale"; // Untuk format tanggal Indonesia
 import WoDialog from "@/components/dialog/woDialog/_components/WoDialog";
+import { useRouter } from "next/navigation";
+import {
+  createNewWorkOrder,
+  deleteWorkOrder,
+  fetchWorkOrders,
+  updateWorkOrder,
+} from "@/store/slices/workOrderSlice";
+import { set } from "lodash";
 
 export default function WorkOrderListPage() {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+
+  const allWorkOrders = useAppSelector((state) => state.workOrders.workOrders);
+  const workOrderStatus = useAppSelector((state) => state.workOrders.status);
+  const workOrderError = useAppSelector((state) => state.workOrders.error);
+
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
-  const [allWorkOrders, setAllWorkOrders] =
-    useState<WorkOrder[]>(initialWorkOrderData);
+  // const [allWorkOrders, setAllWorkOrders] =
+  //   useState<WorkOrder[]>(initialWorkOrderData);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isWoDialogOpen, setIsWoDialogOpen] = useState<boolean>(false);
+  const [editWorkOrderData, setEditWorkOrderData] = useState<
+    WorkOrder | undefined
+  >(undefined);
+
+  useEffect(() => {
+    if (workOrderStatus === "idle") {
+      dispatch(fetchWorkOrders());
+    }
+    console.log(
+      "Sample Work Order Data Loaded",
+      JSON.stringify(workOrderData, null, 2)
+    );
+  }, [dispatch, workOrderStatus]);
 
   // Fungsi pembantu untuk mendapatkan nama perusahaan dari ID
-  const getCompanyNameById = (companyId: string) => {
-    const company = companyData.find((c) => c.id === companyId);
-    return company ? company.companyName : "N/A";
-  };
+  const getCompanyNameById = useCallback(
+    (companyId: string | null | undefined) => {
+      if (!companyId) {
+        return "N/A";
+      }
+      const company = companyData.find((c) => c.id === companyId);
+      return company ? company.companyName : "Tidak dikenal";
+    },
+    []
+  );
+
+  const handleDetailWorkOrder = useCallback(
+    (workOrder: WorkOrder) => {
+      router.push(`/work-orders/${workOrder.id}`);
+    },
+    [router]
+  );
+
+  const handleEditWorkOrder = useCallback((workOrder: WorkOrder) => {
+    setEditWorkOrderData(workOrder);
+    setIsWoDialogOpen(true);
+  }, []);
+
+  const handleSaveWorkOrder = useCallback(
+    async (values: WorkOrderFormValues) => {
+      if (values.id) {
+        await dispatch(updateWorkOrder(values));
+      } else {
+        await dispatch(createNewWorkOrder(values));
+      }
+      setIsWoDialogOpen(false);
+      setEditWorkOrderData(undefined);
+    },
+    [dispatch]
+  );
+
+  const handleDeleteWorkOrder = useCallback(
+    async (workOrderId: string) => {
+      if (window.confirm("Apakah Anda yakin ingin menghapus Work Order ini?")) {
+        await dispatch(deleteWorkOrder(workOrderId));
+      }
+    },
+    [dispatch]
+  );
 
   const workOrderColumns: ColumnDef<WorkOrder>[] = useMemo(
     () => [
@@ -198,12 +269,12 @@ export default function WorkOrderListPage() {
                   Create new Invoice from this selected WO
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => alert(`Lihat detail WO ${workOrder.woNumber}`)}
+                  onClick={() => handleDetailWorkOrder(workOrder)}
                 >
                   Lihat Detail
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => alert(`Edit WO ${workOrder.woNumber}`)}
+                  onClick={() => alert(`edit wo ${workOrder.woNumber}`)}
                 >
                   Edit Work Order
                 </DropdownMenuItem>
@@ -219,7 +290,7 @@ export default function WorkOrderListPage() {
         },
       },
     ],
-    []
+    [getCompanyNameById, handleDetailWorkOrder]
   );
 
   const filteredWorkOrders = useMemo(() => {
@@ -270,7 +341,7 @@ export default function WorkOrderListPage() {
       );
     }
     return currentWorkOrders;
-  }, [allWorkOrders, activeTab, searchQuery]);
+  }, [allWorkOrders, activeTab, searchQuery, getCompanyNameById]);
 
   const workOrderTabItems = useMemo(() => {
     const allCount = allWorkOrders.length;
@@ -298,31 +369,33 @@ export default function WorkOrderListPage() {
     return tabItems;
   }, [allWorkOrders]);
 
-  const handleAddWoSubmit = (values: WorkOrderFormValues) => {
-    const newWo: WorkOrder = {
-      ...values,
-      id: uuidv4(), // Generate ID baru
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      woNumber: values.woNumber!,
-      // Pastikan properti opsional yang null dari form tetap null
-      schedule: values.schedule || null,
-      notes: values.notes || null,
-      mechanicId: values.mechanicId || null,
-      driverId: values.driverId || null,
-      driverContact: values.driverContact || null,
-      approvedById: values.approvedById || null,
-      requestedById: values.requestedById || null,
-      locationId: values.locationId || null,
-    };
-    setAllWorkOrders((prev) => [...prev, newWo]);
-    setIsWoDialogOpen(false);
-    alert("Work Order berhasil ditambahkan!");
-  };
+  // const handleAddWoSubmit = (values: WorkOrderFormValues) => {
+  //   const newWo: WorkOrder = {
+  //     ...values,
+  //     id: uuidv4(), // Generate ID baru
+  //     createdAt: new Date(),
+  //     updatedAt: new Date(),
+  //     woNumber: values.woNumber!,
+  //     settledOdo: values.settledOdo || null,
+  //     remark: values.remark || null,
+  //     // Pastikan properti opsional yang null dari form tetap null
+  //     schedule: values.schedule || null,
+  //     notes: values.notes || null,
+  //     mechanicId: values.mechanicId || null,
+  //     driverId: values.driverId || null,
+  //     driverContact: values.driverContact || null,
+  //     approvedById: values.approvedById || null,
+  //     requestedById: values.requestedById || null,
+  //     locationId: values.locationId || null,
+  //   };
+  //   setAllWorkOrders((prev) => [...prev, newWo]);
+  //   setIsWoDialogOpen(false);
+  //   alert("Work Order berhasil ditambahkan!");
+  // };
 
-  const handleDialogCLose = () => {
-    setIsWoDialogOpen(false);
-  };
+  // const handleDialogCLose = () => {
+  //   setIsWoDialogOpen(false);
+  // };
   return (
     <TableMain<WorkOrder>
       searchQuery={searchQuery}
@@ -336,7 +409,16 @@ export default function WorkOrderListPage() {
       emptyMessage="Tidak ada Work Order ditemukan."
       isDialogOpen={isWoDialogOpen}
       onOpenChange={setIsWoDialogOpen}
-      dialogContent={<WoDialog onClose={handleDialogCLose} />}
+      dialogContent={
+        <WoDialog
+          onClose={() => {
+            setIsWoDialogOpen(false);
+            setEditWorkOrderData(undefined);
+          }}
+          onSubmitWorkOrder={handleSaveWorkOrder}
+          initialData={editWorkOrderData}
+        />
+      }
       dialogTitle="Tambahkan Work Order Baru"
       dialogDescription="Isi detail Work Order untuk menambah data Work Order baru ke sistem."
     />

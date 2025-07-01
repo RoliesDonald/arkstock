@@ -2,10 +2,6 @@
 import { WorkOrder, WoProgresStatus, WoPriorityType } from "@/types/workOrder";
 import { v4 as uuidv4 } from "uuid";
 
-// Asumsi ID dari data dummy Company, Vehicle, User, Location
-// --- PENTING: Pastikan ID ini sesuai dengan UUID yang dihasilkan di file sample data Anda yang sebenarnya ---
-// Jika UUID Anda berbeda, silakan sesuaikan nilai di bawah ini.
-
 // Company IDs (dari sampleCompanyData.ts)
 const companyId1 = "6df3ee3b-8515-41e9-9188-752119154a49"; // PT. Maju Bersama (Customer) - Contoh UUID
 const companyId3 = "12e7f86f-2b5d-4f0e-a9c1-54c3e2d1f0a9"; // PT. Transportasi Cepat (Car User) - Contoh UUID
@@ -37,7 +33,7 @@ const locationId1 = "a1b2c3d4-e5f6-7890-1234-567890abcdef"; // Bengkel Utama Daa
 
 export const workOrderData: WorkOrder[] = [
   {
-    id: uuidv4(),
+    id: "woid-001",
     woNumber: "WO/BP/2024/001",
     woMaster: "CUST-WO-2024-001",
     date: new Date("2024-06-10T09:00:00Z"),
@@ -63,7 +59,7 @@ export const workOrderData: WorkOrder[] = [
     updatedAt: new Date("2024-06-10T11:30:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "woid-002",
     woNumber: "WO/BP/2024/002",
     woMaster: "CUST-WO-2024-002",
     date: new Date("2024-06-09T14:00:00Z"),
@@ -89,13 +85,13 @@ export const workOrderData: WorkOrder[] = [
     updatedAt: new Date("2024-06-10T12:00:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "woid-003",
     woNumber: "WO/BP/2024/003",
     woMaster: "CUST-WO-2024-003",
     date: new Date("2024-06-08T10:00:00Z"),
     settledOdo: 30000,
     remark: "AC kurang dingin, perlu dicek refrigerant.",
-    schedule: null, // Menggunakan null
+    schedule: new Date(), // Menggunakan null
     serviceLocation: "Mobile Service",
     notes: null, // Menggunakan null
     vehicleMake: "Suzuki",
@@ -115,7 +111,7 @@ export const workOrderData: WorkOrder[] = [
     updatedAt: new Date("2024-06-08T15:00:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "woid-004",
     woNumber: "WO/BP/2024/004",
     woMaster: "CUST-WO-2024-004",
     date: new Date("2024-06-07T11:00:00Z"),
@@ -141,13 +137,13 @@ export const workOrderData: WorkOrder[] = [
     updatedAt: new Date("2024-06-07T16:00:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "woid-005",
     woNumber: "WO/BP/2024/005",
     woMaster: "CUST-WO-2024-005",
     date: new Date("2024-06-06T16:00:00Z"),
     settledOdo: 75000,
     remark: "Overhaul mesin, suara mesin kasar dan ngebul.",
-    schedule: null, // Menggunakan null
+    schedule: new Date(), // Menggunakan null
     serviceLocation: "Bengkel Utama",
     notes: null, // Menggunakan null
     vehicleMake: "Nissan",
@@ -167,7 +163,7 @@ export const workOrderData: WorkOrder[] = [
     updatedAt: new Date("2024-06-06T17:00:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "woid-006",
     woNumber: "WO/BP/2024/006",
     woMaster: "CUST-WO-2024-006",
     date: new Date("2024-06-05T10:00:00Z"),
@@ -193,7 +189,7 @@ export const workOrderData: WorkOrder[] = [
     updatedAt: new Date("2024-06-05T16:00:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "woid-007",
     woNumber: "WO/BP/2024/007",
     woMaster: "CUST-WO-2024-007",
     date: new Date("2024-06-04T09:30:00Z"),
@@ -219,13 +215,13 @@ export const workOrderData: WorkOrder[] = [
     updatedAt: new Date("2024-06-04T12:00:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "woid-008",
     woNumber: "WO/BP/2024/008",
     woMaster: "CUST-WO-2024-008",
     date: new Date("2024-06-03T14:00:00Z"),
     settledOdo: 12000,
     remark: "Suara dengung dari bagian belakang.",
-    schedule: null, // Menggunakan null
+    schedule: new Date(), // Menggunakan null
     serviceLocation: "Bengkel Utama",
     notes: null, // Menggunakan null
     vehicleMake: "Hyundai",
@@ -245,7 +241,7 @@ export const workOrderData: WorkOrder[] = [
     updatedAt: new Date("2024-06-03T16:00:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "woid-009",
     woNumber: "WO/BP/2024/009",
     woMaster: "CUST-WO-2024-009",
     date: new Date("2024-06-02T10:00:00Z"),
@@ -271,7 +267,7 @@ export const workOrderData: WorkOrder[] = [
     updatedAt: new Date("2024-06-02T15:00:00Z"),
   },
   {
-    id: uuidv4(),
+    id: "woid-010",
     woNumber: "WO/BP/2024/010",
     woMaster: "CUST-WO-2024-010",
     date: new Date("2024-06-01T08:00:00Z"),

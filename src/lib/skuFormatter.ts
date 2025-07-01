@@ -1,5 +1,4 @@
 import { PartVariant } from "@/types/sparepart";
-import { get } from "lodash";
 
 export const getPartVariantShortCode = (variant: PartVariant): string => {
   switch (variant) {

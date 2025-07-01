@@ -5,6 +5,10 @@ import appReducer from "./slices/appSlice"; // Untuk state aplikasi umum seperti
 import tableSearchSlice from "./slices/tableSearchSlice";
 import workOrderReducer from "./slices/workOrderSlice";
 import vehiclesReducer from "./slices/vehicleSlice";
+import employeeReducer from "./slices/employeeSlice";
+import companiesReducer from "./slices/companySlice";
+
+// Konfigurasi Redux Store
 
 export const store = configureStore({
   reducer: {
@@ -13,6 +17,8 @@ export const store = configureStore({
     tableSearch: tableSearchSlice,
     workOrders: workOrderReducer,
     vehicles: vehiclesReducer,
+    employee: employeeReducer,
+    companies: companiesReducer,
   },
   // Anda bisa menambahkan middleware kustom atau konfigurasi lain di sini
   // devTools: process.env.NODE_ENV !== 'production', // DevTools diaktifkan di development

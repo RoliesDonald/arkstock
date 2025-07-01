@@ -1,4 +1,3 @@
-// src/store/hooks.ts
 import { useDispatch, useSelector, useStore } from "react-redux";
 import type { AppDispatch, RootState, AppStore } from "./store"; // Impor tipe dari store
 

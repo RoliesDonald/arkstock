@@ -1,4 +1,3 @@
-// src/types/workOrder.ts
 import * as z from "zod";
 
 export enum WoProgresStatus {
@@ -20,6 +19,7 @@ export enum WoPriorityType {
 
 // Skema Zod untuk form WorkOrder
 export const workOrderFormSchema = z.object({
+  id: z.string().optional(),
   woNumber: z.string().optional(),
   woMaster: z.string().min(1, { message: "Nomor WO Master wajib diisi." }),
   date: z.date({ required_error: "Tanggal WO wajib diisi." }),
@@ -59,7 +59,7 @@ export interface WorkOrder {
   date: Date;
   settledOdo: number | null;
   remark: string;
-  schedule?: Date | null;
+  schedule?: Date;
   serviceLocation: string;
   notes?: string | null;
   vehicleMake: string; // Bisa diambil dari relasi Vehicle

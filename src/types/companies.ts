@@ -25,6 +25,7 @@ export enum CompanyStatus {
 
 // Skema Zod untuk validasi form Company
 export const companyFormSchema = z.object({
+  id: z.string().optional(),
   companyId: z.string().min(1, { message: "ID Perusahaan wajib diisi." }),
   companyName: z.string().min(1, { message: "Nama perusahaan wajib diisi." }),
   companyEmail: z

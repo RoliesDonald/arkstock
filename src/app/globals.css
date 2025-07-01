@@ -406,3 +406,9 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .detail-strong-text strong {
+    @apply text-arkBg-700 font-semibold;
+  }
+}

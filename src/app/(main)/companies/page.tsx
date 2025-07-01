@@ -25,8 +25,9 @@ import {
 // --- PERBAIKAN: Path Import types (singular) dan nama type CompanyFormValues ---
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreVertical } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { useRouter } from "next/navigation";
 
 export default function CompanyListPage() {
   // --- PERBAIKAN: Typo seachQuery menjadi searchQuery ---
@@ -36,6 +37,15 @@ export default function CompanyListPage() {
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isCompanyDialogOpen, setIsCompanyDialogOpen] =
     useState<boolean>(false);
+
+  const route = useRouter();
+
+  const handleDetailCompany = useCallback(
+    (company: Company) => {
+      route.push(`/companies/${company.id}`);
+    },
+    [route]
+  );
 
   const companyColumns: ColumnDef<Company>[] = useMemo(
     () => [
@@ -159,9 +169,7 @@ export default function CompanyListPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Action</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => alert(`Lihat detail ${company.companyName}`)}
-                >
+                <DropdownMenuItem onClick={() => handleDetailCompany(company)}>
                   Lihat Detail
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -181,7 +189,7 @@ export default function CompanyListPage() {
         },
       },
     ],
-    []
+    [handleDetailCompany]
   );
 
   const filteredCompanies = useMemo(() => {
@@ -309,8 +317,8 @@ export default function CompanyListPage() {
     const newCompany: Company = {
       ...values,
       id: uuidv4(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     setAllCompanies((prev) => [...prev, newCompany]);
     setIsCompanyDialogOpen(false);

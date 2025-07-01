@@ -23,7 +23,6 @@ export const fetchVehicles = createAsyncThunk(
   }
 );
 
-// async thunk untuk menambahkan kendaraan
 export const createVehicle = createAsyncThunk(
   "vehicles/createVehicle",
   async (newVehicleData: VehicleFormValues, { rejectWithValue }) => {

@@ -43,6 +43,7 @@ import {
   workOrderFormSchema,
   WoProgresStatus,
   WoPriorityType,
+  WorkOrder, // Import WorkOrder interface
 } from "@/types/workOrder";
 import { CompanyType } from "@/types/companies";
 import { Company } from "@/types/companies";
@@ -53,17 +54,22 @@ import { Location } from "@/types/location";
 import { companyData } from "@/data/sampleCompanyData";
 import { userData } from "@/data/sampleUserData";
 import { vehicleData } from "@/data/sampleVehicleData";
-import { workOrderData } from "@/data/sampleWorkOrderData";
+import { workOrderData } from "@/data/sampleWorkOrderData"; // Digunakan untuk generate WO number
 import { locationData } from "@/data/sampleLocationData";
 
-import { createNewWorkOrder } from "@/store/slices/workOrderSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 interface WoDialogProps {
   onClose?: () => void;
+  initialData?: WorkOrder | null; // <-- Properti baru untuk mode edit
+  onSubmitWorkOrder: (values: WorkOrderFormValues) => void; // <-- Properti baru untuk submit
 }
 
-const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
+const WoDialog: React.FC<WoDialogProps> = ({
+  onClose,
+  initialData,
+  onSubmitWorkOrder,
+}) => {
   const dispatch = useAppDispatch();
   const status = useAppSelector((state) => state.workOrders.status);
   const error = useAppSelector((state) => state.workOrders.error);
@@ -119,76 +125,121 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
 
   const form = useForm<WorkOrderFormValues>({
     resolver: zodResolver(workOrderFormSchema),
-    defaultValues: {
-      woNumber: "",
-      woMaster: "",
-      date: new Date(),
-      settledOdo: 0,
-      remark: "",
-      schedule: undefined,
-      serviceLocation: "",
-      notes: undefined,
-      vehicleMake: "",
-      progresStatus: WoProgresStatus.DRAFT,
-      priorityType: WoPriorityType.NORMAL,
-      vehicleId: "",
-      customerId: "",
-      carUserId: "",
-      vendorId: "",
-      mechanicId: undefined,
-      driverId: undefined,
-      driverContact: undefined,
-      approvedById: undefined,
-      requestedById: undefined,
-      locationId: undefined,
-    },
+    defaultValues: useMemo(() => {
+      // Jika ada initialData, konstruksi objek WorkOrderFormValues secara eksplisit
+      if (initialData) {
+        // PERBAIKAN: Hanya ambil properti yang ada di WorkOrderFormValues
+        const defaultFormValues: WorkOrderFormValues = {
+          woNumber: initialData.woNumber,
+          woMaster: initialData.woMaster,
+          date: initialData.date,
+          settledOdo: initialData.settledOdo ?? undefined,
+          remark: initialData.remark,
+          schedule: initialData.schedule ?? undefined, // Correctly handles null to undefined
+          serviceLocation: initialData.serviceLocation,
+          notes: initialData.notes ?? undefined,
+          vehicleMake: initialData.vehicleMake,
+          progresStatus: initialData.progresStatus,
+          priorityType: initialData.priorityType,
+          vehicleId: initialData.vehicleId,
+          customerId: initialData.customerId,
+          carUserId: initialData.carUserId,
+          vendorId: initialData.vendorId,
+          mechanicId: initialData.mechanicId ?? undefined,
+          driverId: initialData.driverId ?? undefined,
+          driverContact: initialData.driverContact ?? undefined,
+          approvedById: initialData.approvedById ?? undefined,
+          requestedById: initialData.requestedById ?? undefined,
+          locationId: initialData.locationId ?? undefined,
+        };
+        console.log(
+          "WoDialog: Setting defaultValues from initialData:",
+          defaultFormValues
+        ); // Debugging log
+        return defaultFormValues;
+      }
+      // Default untuk form baru
+      const newFormDefaults = {
+        woNumber: "",
+        woMaster: "",
+        date: new Date(),
+        settledOdo: undefined,
+        remark: "",
+        schedule: undefined,
+        serviceLocation: "",
+        notes: undefined,
+        vehicleMake: "",
+        progresStatus: WoProgresStatus.DRAFT,
+        priorityType: WoPriorityType.NORMAL,
+        vehicleId: "",
+        customerId: "",
+        carUserId: "",
+        vendorId: "",
+        mechanicId: undefined,
+        driverId: undefined,
+        driverContact: undefined,
+        approvedById: undefined,
+        requestedById: undefined,
+        locationId: undefined,
+      };
+      console.log(
+        "WoDialog: Setting defaultValues for new form:",
+        newFormDefaults
+      ); // Debugging log
+      return newFormDefaults;
+    }, [initialData]), // Re-compute defaultValues jika initialData berubah
   });
 
   const selectedVendorId = form.watch("vendorId");
   const woDate = form.watch("date");
   const selectedVehicleId = form.watch("vehicleId");
+  const currentWoNumber = form.watch("woNumber");
 
   useEffect(() => {
-    const generateAndSetWoNumber = () => {
-      if (selectedVendorId && woDate) {
-        const selectedVendor = vendors.find((v) => v.id === selectedVendorId);
-        if (selectedVendor) {
-          const vendorInitial = generateInitial(selectedVendor.companyName);
-          const year = woDate.getFullYear();
+    // Generate WO number hanya jika ini form baru (tidak ada initialData)
+    // atau jika woNumber di initialData kosong (misal, WO lama yang belum punya nomor)
+    if (!initialData || !initialData.woNumber) {
+      const generateAndSetWoNumber = () => {
+        if (selectedVendorId && woDate) {
+          const selectedVendor = vendors.find((v) => v.id === selectedVendorId);
+          if (selectedVendor) {
+            const vendorInitial = generateInitial(selectedVendor.companyName);
+            const year = woDate.getFullYear();
 
-          const maxSequenceForVendorAndYear = workOrderData
-            .filter((wo) => {
-              const woYear = wo.date.getFullYear();
-              const woVendorCompany = companyData.find(
-                (c) => c.id === wo.vendorId
-              );
-              return (
-                woYear === year && woVendorCompany?.id === selectedVendor.id
-              );
-            })
-            .map((wo) => {
-              const parts = wo.woNumber.split("/");
-              return parseInt(parts[parts.length - 1], 10);
-            })
-            .reduce((max, current) => Math.max(max, current), 0);
+            const maxSequenceForVendorAndYear = workOrderData
+              .filter((wo) => {
+                const woYear = wo.date.getFullYear();
+                const woVendorCompany = companyData.find(
+                  (c) => c.id === wo.vendorId
+                );
+                return (
+                  woYear === year && woVendorCompany?.id === selectedVendor.id
+                );
+              })
+              .map((wo) => {
+                const parts = wo.woNumber.split("/");
+                return parseInt(parts[parts.length - 1], 10);
+              })
+              .reduce((max, current) => Math.max(max, current), 0);
 
-          const nextWoSequence = maxSequenceForVendorAndYear + 1;
+            const nextWoSequence = maxSequenceForVendorAndYear + 1;
 
-          const formattedWo = formatWoNumber(
-            nextWoSequence,
-            vendorInitial,
-            woDate
-          );
-          form.setValue("woNumber", formattedWo, { shouldValidate: true });
+            const formattedWo = formatWoNumber(
+              nextWoSequence,
+              vendorInitial,
+              woDate
+            );
+            form.setValue("woNumber", formattedWo, { shouldValidate: true });
+          } else {
+            form.setValue("woNumber", "", { shouldValidate: true });
+          }
         } else {
           form.setValue("woNumber", "", { shouldValidate: true });
         }
-      } else {
-        form.setValue("woNumber", "", { shouldValidate: true });
-      }
-    };
-    generateAndSetWoNumber();
-  }, [selectedVendorId, woDate, vendors, form]);
+      };
+      generateAndSetWoNumber();
+    }
+  }, [selectedVendorId, woDate, vendors, form, initialData]);
 
   useEffect(() => {
     if (selectedVehicleId) {
@@ -204,21 +255,19 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
   }, [selectedVehicleId, form]);
 
   const onSubmit = async (values: WorkOrderFormValues) => {
-    console.log("Mengirim Work Order Baru:", values);
-    try {
-      const resultAction = await dispatch(createNewWorkOrder(values)).unwrap();
-      console.log("Work Order berhasil dibuat:", resultAction);
-      alert("Work Order berhasil dibuat!");
-      onClose?.();
-      form.reset();
-    } catch (err: any) {
-      console.error("Gagal membuat Work Order:", err);
-      alert(
-        `Gagal membuat Work Order: ${
-          error || err.message || "Terjadi kesalahan"
-        }`
-      );
+    if (!values.woNumber) {
+      form.setError("woNumber", {
+        type: "manual",
+        message:
+          "Nomor WO wajib diisi. Pastikan Anda memilih Vendor dan Tanggal terlebih dahulu.",
+      });
+      return;
     }
+
+    console.log("Mengirim Work Order:", values);
+    onSubmitWorkOrder(values); // Panggil callback yang diterima dari parent
+    onClose?.();
+    form.reset();
   };
 
   return (
@@ -236,7 +285,18 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
               <FormControl>
                 <Input placeholder="WO/BP/VII/2024/005" {...field} disabled />
               </FormControl>
-              <FormMessage />
+              {form.formState.errors.woNumber && currentWoNumber === "" ? (
+                <FormMessage>
+                  {form.formState.errors.woNumber.message}
+                </FormMessage>
+              ) : (
+                currentWoNumber === "" &&
+                (!selectedVendorId || !woDate) && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Pilih Vendor dan Tanggal untuk otomatis mengisi nomor WO.
+                  </p>
+                )
+              )}
             </FormItem>
           )}
         />
@@ -273,7 +333,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                       )}
                     >
                       {field.value ? (
-                        format(field.value, "dd MMMM yyyy", { locale: id }) // Format tanggal yang benar
+                        format(field.value, "PPPP", { locale: id })
                       ) : (
                         <span>Pilih tanggal</span>
                       )}
@@ -284,7 +344,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={field.value}
+                    selected={field.value} // <-- Ini sudah benar karena field.value bisa Date atau undefined
                     onSelect={field.onChange}
                     initialFocus
                   />
@@ -352,7 +412,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                       )}
                     >
                       {field.value ? (
-                        format(field.value, "dd MMMM yyyy", { locale: id }) // Format tanggal yang benar
+                        format(field.value, "PPPP", { locale: id })
                       ) : (
                         <span>Pilih tanggal</span>
                       )}
@@ -363,8 +423,8 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={field.value || undefined}
-                    onSelect={(date) => field.onChange(date || null)}
+                    selected={field.value ?? undefined} // <-- PERBAIKAN UTAMA: Pastikan null menjadi undefined
+                    onSelect={(date) => field.onChange(date || null)} // <-- Pastikan undefined dari Calendar menjadi null
                     initialFocus
                   />
                 </PopoverContent>
@@ -548,7 +608,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                 onValueChange={(value) =>
                   field.onChange(value === "__null__" ? null : value)
                 }
-                value={field.value || "__null__"} // Set value ke "__null__" jika field.value null/undefined
+                value={field.value || "__null__"}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -556,8 +616,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="__null__">Tidak Ada</SelectItem>{" "}
-                  {/* Ganti value="" */}
+                  <SelectItem value="__null__">Tidak Ada</SelectItem>
                   {mechanics.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name}
@@ -581,7 +640,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                 onValueChange={(value) =>
                   field.onChange(value === "__null__" ? null : value)
                 }
-                value={field.value || "__null__"} // Set value ke "__null__" jika field.value null/undefined
+                value={field.value || "__null__"}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -589,8 +648,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="__null__">Tidak Ada</SelectItem>{" "}
-                  {/* Ganti value="" */}
+                  <SelectItem value="__null__">Tidak Ada</SelectItem>
                   {drivers.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name}
@@ -638,7 +696,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                 onValueChange={(value) =>
                   field.onChange(value === "__null__" ? null : value)
                 }
-                value={field.value || "__null__"} // Set value ke "__null__" jika field.value null/undefined
+                value={field.value || "__null__"}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -646,8 +704,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="__null__">Tidak Ada</SelectItem>{" "}
-                  {/* Ganti value="" */}
+                  <SelectItem value="__null__">Tidak Ada</SelectItem>
                   {approvedByUsers.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name} ({user.role})
@@ -671,7 +728,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                 onValueChange={(value) =>
                   field.onChange(value === "__null__" ? null : value)
                 }
-                value={field.value || "__null__"} // Set value ke "__null__" jika field.value null/undefined
+                value={field.value || "__null__"}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -679,8 +736,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="__null__">Tidak Ada</SelectItem>{" "}
-                  {/* Ganti value="" */}
+                  <SelectItem value="__null__">Tidak Ada</SelectItem>
                   {requestedByUsers.map((user) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.name} ({user.role})
@@ -704,7 +760,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                 onValueChange={(value) =>
                   field.onChange(value === "__null__" ? null : value)
                 }
-                value={field.value || "__null__"} // Set value ke "__null__" jika field.value null/undefined
+                value={field.value || "__null__"}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -712,8 +768,7 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="__null__">Tidak Ada</SelectItem>{" "}
-                  {/* Ganti value="" */}
+                  <SelectItem value="__null__">Tidak Ada</SelectItem>
                   {locationData.map((loc: Location) => (
                     <SelectItem key={loc.id} value={loc.id}>
                       {loc.name}
@@ -788,7 +843,8 @@ const WoDialog: React.FC<WoDialogProps> = ({ onClose }) => {
             Batal
           </Button>
           <Button type="submit" disabled={status === "loading"}>
-            {status === "loading" ? "Membuat..." : "Buat Work Order"}
+            {initialData ? "Simpan Perubahan" : "Buat Work Order"}
+            {/* Teks tombol dinamis */}
           </Button>
         </DialogFooter>
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}

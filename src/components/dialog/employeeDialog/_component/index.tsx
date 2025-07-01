@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useAppDispatch, useAppStore } from "@/store/hooks";
 import {
   employeeFormSchema,
   EmployeeFormValues,
@@ -58,7 +57,7 @@ const EmployeeDialog: React.FC<EmployeeDialogProps> = ({
       phoneNumber: "",
       address: "",
       position: "",
-      role: EmployeeRole.STAFF,
+      role: EmployeeRole.SALES_STAFF,
       status: EmployeeStatus.ACTIVE,
       tanggalBergabung: new Date(),
     },
@@ -156,21 +155,6 @@ const EmployeeDialog: React.FC<EmployeeDialogProps> = ({
               <FormLabel>Alamat</FormLabel>
               <FormControl>
                 <Textarea placeholder="Alamat lengkap karyawan..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Jabatan */}
-        <FormField
-          control={form.control}
-          name="position"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Jabatan</FormLabel>
-              <FormControl>
-                <Input placeholder="Mekanik, Staf Admin, dll." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

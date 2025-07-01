@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { Company } from "./companies";
 
 export enum VehicleType {
   PASSENGER = "PASSENGER",
@@ -139,7 +140,7 @@ export interface Vehicle {
   createdAt: Date;
   updatedAt: Date;
   // Relasi:
-  // owner?: Company; // Objek perusahaan pemilik (jika di-populate)
-  // carUser?: Company; // Objek pengguna kendaraan (jika di-populate)
+  owner?: Company; // Objek perusahaan pemilik (jika di-populate)
+  carUser?: Company; // Objek pengguna kendaraan (jika di-populate)
   // workOrders?: WorkOrder[];
 }

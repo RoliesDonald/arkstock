@@ -8,7 +8,7 @@ import { Badge } from "../ui/badge";
 import { isActiveRoute } from "@/lib/utils/isActiveRoute";
 import React, { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { sidebarMenuItems } from "@/lib/sidebar-data";
+// import { sidebarMenuItems } from "@/lib/sidebar-data";
 import { cn } from "@/lib/utils";
 
 import {
@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { sidebarMenuItems } from "@/config/sidebar";
 
 interface MyMenuProps {}
 

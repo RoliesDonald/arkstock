@@ -32,7 +32,7 @@ import {
 
 // Untuk generate UUID baru
 import { v4 as uuidv4 } from "uuid";
-import EmployeeDialog from "@/components/dialog/employeeDialog/_component/page";
+import EmployeeDialog from "@/components/dialog/employeeDialog/_component";
 
 export default function EmployeePage() {
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);

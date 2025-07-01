@@ -37,14 +37,14 @@ import {
   fetchVehicles,
   updateVehicle,
 } from "@/store/slices/vehicleSlice";
-import { fa } from "zod/v4/locales";
+import { useRouter } from "next/navigation";
 // import { v4 as uuidv4 } from "uuid";
 
 export default function VehicleListPage() {
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
   const dispatch = useAppDispatch();
+  const router = useRouter();
 
-  // const [allVehicles, setAllVehicles] = useState<Vehicle[]>(vehicleData);
   const allVehicles = useAppSelector((state) => state.vehicles.vehicles);
   const vehicleStatus = useAppSelector((state) => state.vehicles.status);
   const vehicleError = useAppSelector((state) => state.vehicles.error);
@@ -77,38 +77,18 @@ export default function VehicleListPage() {
     []
   );
 
-  // const getCompanyNameById = (companyId: string | null | undefined) => {
-  //   if (!companyId) {
-  //     // Return "N/A" if companyId is null or undefined
-  //     return "N/A";
-  //   }
-  //   // Find the company by its ID
-  //   const company = companyData.find((c) => c.id === companyId);
+  const handleDetailVehicle = useCallback(
+    (vehicle: Vehicle) => {
+      router.push(`/vehicles/${vehicle.id}`);
+    },
+    [router]
+  );
 
-  //   // DIAGNOSTIC LOG: Detailed check for company ID matching
-  //   if (!company) {
-  //     console.warn(
-  //       `Company not found for ID: "${companyId}". Available company IDs:`,
-  //       companyData.map((c) => c.id)
-  //     );
-  //   } else {
-  //     console.log(
-  //       `Found company "${company.companyName}" for ID: "${companyId}"`
-  //     );
-  //   }
-
-  //   // Return company name if found, otherwise "Tidak Dikenal"
-  //   return company ? company.companyName : "Tidak Dikenal";
-  // };
-
-  // Wrap handleEditVehicle with useCallback
   const handleEditVehicle = useCallback((vehicle: Vehicle) => {
     setEditVehicleData(vehicle);
     setIsVehicleDialogOpen(true);
-  }, []); // Dependencies are empty because setEditVehicleData and setIsVehicleDialogOpen do not change
+  }, []);
 
-  // FIX: Change 'values' parameter type to VehicleFormValues
-  // Wrap handleSaveVehicle with useCallback
   const handleSaveVehicle = useCallback(
     async (values: VehicleFormValues) => {
       if (values.id) {
@@ -239,11 +219,7 @@ export default function VehicleListPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() =>
-                    alert(`Lihat detail kendaraan ${vehicle.licensePlate}`)
-                  }
-                >
+                <DropdownMenuItem onClick={() => handleDetailVehicle(vehicle)}>
                   Lihat Detail
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleEditVehicle(vehicle)}>
@@ -262,7 +238,12 @@ export default function VehicleListPage() {
       },
     ],
     // FIX: Use memoized handleEditVehicle and handleDeleteVehicle
-    [handleEditVehicle, handleDeleteVehicle, getCompanyNameById]
+    [
+      handleEditVehicle,
+      handleDeleteVehicle,
+      getCompanyNameById,
+      handleDetailVehicle,
+    ]
   );
 
   const filteredVehicles = useMemo(() => {

@@ -69,7 +69,7 @@ export type SparePartFormValues = z.infer<typeof sparePartFormSchema>;
 export interface SparePart {
   id: string; // UUID
   sku: string;
-  name: string; // <--- Pastikan ini 'name'
+  name: string;
   partNumber: string;
   description?: string | null;
   unit: string;

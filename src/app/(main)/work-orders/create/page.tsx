@@ -2,7 +2,7 @@
 "use client";
 
 import React from "react";
-import WoDialog from "@/components/woDialog/_components/WoDialog";
+import WoDialog from "@/components/dialog/woDialog/_components/WoDialog";
 import {
   DialogHeader,
   DialogTitle,
