@@ -23,8 +23,9 @@ export const serviceFormSchema = serviceSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  invoiceServices: true, // Relasi
-  estimationServices: true, // Relasi
+  // Relasi ini diasumsikan tidak ada di form input langsung
+  // invoiceServices: true,
+  // estimationServices: true,
 });
 
 export type ServiceFormValues = z.infer<typeof serviceFormSchema>;
@@ -32,6 +33,7 @@ export type ServiceFormValues = z.infer<typeof serviceFormSchema>;
 // Interface untuk item layanan dalam transaksi (InvoiceService, EstimationService)
 // Ini adalah "view model" item layanan yang berisi detail layanan untuk ditampilkan
 export const transactionServiceDetailsSchema = z.object({
+  sparePartId: z.string().optional(),
   serviceId: z.string().uuid(), // ID layanan dari database
   serviceName: z.string().min(1, { message: "Nama layanan wajib diisi." }),
   description: z.string().optional().nullable(),

@@ -1,36 +1,75 @@
 // src/store/store.ts
 import { configureStore } from "@reduxjs/toolkit";
-import userReducer from "./slices/userSlices";
-import appReducer from "./slices/appSlice"; // Untuk state aplikasi umum seperti tema, loading
-import tableSearchSlice from "./slices/tableSearchSlice";
-import workOrderReducer from "./slices/workOrderSlice";
+import tableSearchReducer from "./slices/tableSearchSlice";
+import workOrdersReducer from "./slices/workOrderSlice";
 import vehiclesReducer from "./slices/vehicleSlice";
-import employeeReducer from "./slices/employeeSlice";
 import companiesReducer from "./slices/companySlice";
-
-// Konfigurasi Redux Store
+import warehousesReducer from "./slices/warehouseSlice";
+import stockTransactionsReducer from "./slices/stockTransactionSlice";
+import warehouseStockReducer from "./slices/warehouseStockSlice";
+import unitsReducer from "./slices/unitSlice";
+import sparePartsReducer from "./slices/sparePartSlice";
+import userReducer from "./slices/userSlices";
+import appReducer from "./slices/appSlice";
+import tableSearchSlice from "./slices/tableSearchSlice";
+import employeeReducer from "./slices/employeeSlice";
 
 export const store = configureStore({
   reducer: {
     user: userReducer,
     app: appReducer,
-    tableSearch: tableSearchSlice,
-    workOrders: workOrderReducer,
+    // tableSearch: tableSearchReducer,
+    workOrders: workOrdersReducer,
     vehicles: vehiclesReducer,
-    employee: employeeReducer,
     companies: companiesReducer,
+    warehouses: warehousesReducer,
+    stockTransactions: stockTransactionsReducer,
+    warehouseStock: warehouseStockReducer,
+    units: unitsReducer,
+    spareParts: sparePartsReducer,
+    tableSearch: tableSearchSlice,
+    employee: employeeReducer,
   },
-  // Anda bisa menambahkan middleware kustom atau konfigurasi lain di sini
-  // devTools: process.env.NODE_ENV !== 'production', // DevTools diaktifkan di development
+  // Middleware untuk menangani objek Date agar tidak diserialisasi
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        // Abaikan path untuk properti Date di state Redux Anda
+        ignoredPaths: [
+          "spareParts.spareParts", // Untuk array spareParts
+          "spareParts.spareParts.createdAt",
+          "spareParts.spareParts.updatedAt",
+          "warehouses.warehouses",
+          "warehouses.warehouses.createdAt",
+          "warehouses.warehouses.updatedAt",
+          "stockTransactions.transactions",
+          "stockTransactions.transactions.date",
+          "stockTransactions.transactions.createdAt",
+          "stockTransactions.transactions.updatedAt",
+          "warehouseStock.stockItems",
+          "warehouseStock.stockItems.createdAt",
+          "warehouseStock.stockItems.updatedAt",
+          "units.units",
+          "units.units.createdAt",
+          "units.units.updatedAt",
+          // Tambahkan path lain jika ada objek Date di state Redux Anda
+          // Misalnya untuk Purchase Order jika sudah ada slice-nya
+          // 'purchaseOrders.purchaseOrders',
+          // 'purchaseOrders.purchaseOrders.date',
+          // 'purchaseOrders.purchaseOrders.createdAt',
+          // 'purchaseOrders.purchaseOrders.updatedAt',
+        ],
+        ignoredActionPaths: [
+          "payload.createdAt",
+          "payload.updatedAt",
+          "meta.arg.createdAt",
+          "meta.arg.updatedAt",
+          "payload.date", // Untuk tanggal di transaksi/PO
+          "meta.arg.date",
+        ],
+      },
+    }),
 });
 
-// Infer the `RootState` and `AppDispatch` types from the store itself
-// export type RootState = ReturnType<typeof store.getState>;
-// Inferred type: {user: UserState, app: AppState}
-// export type AppDispatch = typeof store.dispatch;
-
-import type { EnhancedStore } from "@reduxjs/toolkit";
-
-export type AppStore = EnhancedStore<ReturnType<typeof store.getState>>;
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

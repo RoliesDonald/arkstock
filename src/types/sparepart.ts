@@ -1,13 +1,12 @@
-// src/types/sparepart.ts
 import * as z from "zod";
 
 // Enum untuk varian suku cadang
 export enum PartVariant {
+  OEM = "OEM", // Original Equipment Manufacturer
   AFTERMARKET = "AFTERMARKET", // Suku cadang pengganti
   RECONDITIONED = "RECONDITIONED", // Suku cadang rekondisi
   USED = "USED", // Suku cadang bekas
-  NEW = "NEW", // Suku cadang baru
-  GBOX = "GBOX", // Suku cadang GBOX
+  GBOX = "GBOX", // Genuine Box
 }
 
 // Interface untuk kompatibilitas suku cadang dengan kendaraan tertentu
@@ -28,10 +27,11 @@ export const sparePartCompatibilitySchema = z.object({
 
 // Skema Zod untuk form penambahan/edit SparePart
 export const sparePartFormSchema = z.object({
+  id: z.string().optional(), // Opsional untuk kasus edit
   sku: z.string().optional(),
   name: z
     .string()
-    .min(2, { message: "Nama suku cadang wajib diisi (minimal 2 karakter)." }), // <--- Pastikan ini 'name'
+    .min(2, { message: "Nama suku cadang wajib diisi (minimal 2 karakter)." }),
   partNumber: z
     .string()
     .min(3, { message: "Nomor part wajib diisi (minimal 3 karakter)." }),
@@ -42,7 +42,7 @@ export const sparePartFormSchema = z.object({
   initialStock: z.coerce
     .number()
     .int()
-    .min(0, { message: "Stok awal tidak boleh negatif." }),
+    .min(0, { message: "Stok awal tidak boleh negatif." }), // Ini hanya untuk inisialisasi awal
   minStock: z.coerce
     .number()
     .int()
@@ -62,7 +62,6 @@ export const sparePartFormSchema = z.object({
   compatibility: z.array(sparePartCompatibilitySchema).optional(),
 });
 
-// <--- PASTIKAN NAMA TIPE INI ADALAH SparePartFormValues
 export type SparePartFormValues = z.infer<typeof sparePartFormSchema>;
 
 // Interface untuk data SparePart lengkap (termasuk ID dan timestamp)
@@ -73,8 +72,8 @@ export interface SparePart {
   partNumber: string;
   description?: string | null;
   unit: string;
-  stock: number; // Stok saat ini (akan sama dengan initialStock saat dibuat)
-  minStock?: number | null; // <--- PASTIKAN INI: Opsional dan bisa null
+  // HAPUS BARIS INI: stock: number; // <-- Ini yang menyebabkan error. Stok dikelola di WarehouseStock
+  minStock?: number | null;
   price: number;
   variant: PartVariant;
   brand: string;
@@ -83,3 +82,22 @@ export interface SparePart {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Skema untuk item spare part dalam transaksi (InvoiceItem, EstimationItem)
+export const transactionPartDetailsSchema = z.object({
+  sparePartId: z.string().optional(),
+  itemName: z.string().min(1, { message: "Nama item wajib diisi." }),
+  partNumber: z.string().min(1, { message: "Nomor part wajib diisi." }),
+  quantity: z.coerce.number().int().min(1).default(1),
+  unit: z.string().min(1, { message: "Satuan wajib diisi." }),
+  unitPrice: z.coerce
+    .number()
+    .min(0.01, { message: "Harga satuan harus lebih dari 0." }),
+  totalPrice: z.coerce
+    .number()
+    .min(0, { message: "Total harga tidak boleh negatif." }),
+});
+
+export type TransactionPartDetails = z.infer<
+  typeof transactionPartDetailsSchema
+>;

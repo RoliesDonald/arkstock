@@ -19,10 +19,11 @@ import {
   BriefcaseBusiness,
   Scale,
   Handshake,
-  UsersRound,
   HelpCircle,
-  LucideIcon, // Menambahkan HelpCircle jika ingin menggunakannya
+  LucideIcon,
+  PencilRuler, // Menambahkan HelpCircle jika ingin menggunakannya
 } from "lucide-react"; // Import ikon dari Lucide Icons
+import { title } from "process";
 
 // Definisikan interface MenuItem agar sesuai dengan struktur Anda
 // Asumsikan MenuItem sudah didefinisikan di '@/types/sidebar'
@@ -83,7 +84,7 @@ export const sidebarMenuItems: MenuItem[] = [
     groupTitle: true,
     children: [
       {
-        title: "Perusahaan", // Ganti dari "Customer" ke "Company" untuk lebih umum
+        title: "Customer", // Ganti dari "Customer" ke "Company" untuk lebih umum
         groupTitle: false,
         href: "/companies", // Sesuai dengan src/app/(main)/companies/page.tsx
         icon: Handshake,
@@ -92,7 +93,7 @@ export const sidebarMenuItems: MenuItem[] = [
         children: [
           // Tambahkan sub-menu untuk perusahaan
           {
-            title: "Daftar Perusahaan",
+            title: "List Perusahaan",
             href: "/companies",
             icon: Building,
           },
@@ -105,13 +106,13 @@ export const sidebarMenuItems: MenuItem[] = [
         ],
       },
       {
-        title: "Manajemen Kendaraan", // Ganti "Armada"
-        href: "/vehicles", // Sesuai dengan src/app/(main)/vehicles/page.tsx
+        title: "Kendaraan", // Ganti "Armada"
+        href: "",
         icon: Car,
         roles: ["SuperAdmin", "AdminUser", "FLEET_PIC", "SERVICE_ADVISOR"],
         children: [
           {
-            title: "Daftar Kendaraan",
+            title: "List Kendaraan",
             href: "/vehicles",
             icon: Truck, // Menggunakan Truck untuk daftar kendaraan
           },
@@ -123,8 +124,8 @@ export const sidebarMenuItems: MenuItem[] = [
         ],
       },
       {
-        title: "Manajemen Work Order", // Ganti dari "Operational" ke "Manajemen Work Order"
-        href: "/work-orders", // Sesuai dengan src/app/(main)/work-orders/page.tsx
+        title: "Work Order", // Ganti dari "Operational" ke "Manajemen Work Order"
+        href: "", // Sesuai dengan src/app/(main)/work-orders/page.tsx
         icon: ClipboardList,
         roles: [
           "SuperAdmin",
@@ -136,7 +137,7 @@ export const sidebarMenuItems: MenuItem[] = [
         notification: 2,
         children: [
           {
-            title: "Daftar Work Order",
+            title: "Work Order",
             href: "/work-orders",
             icon: ClipboardList,
           },
@@ -200,7 +201,7 @@ export const sidebarMenuItems: MenuItem[] = [
         notification: 8,
       },
       {
-        title: "Manajemen Pajak",
+        title: "Pajak",
         href: "/tax/dashboard", // Asumsi ada dashboard pajak
         icon: Scale,
         roles: ["SuperAdmin", "FINANCE_STAFF", "ACCOUNTING_MANAGER"],
@@ -229,14 +230,25 @@ export const sidebarMenuItems: MenuItem[] = [
     groupTitle: true,
     children: [
       {
-        title: "Daftar Stok & Spare Part",
-        href: "/spare-parts",
-        icon: Package,
-        roles: ["SuperAdmin", "AdminUser", "WAREHOUSE_STAFF", "MECHANIC"],
-        notification: 1,
+        title: "Gudang",
+        href: "", // Sesuai dengan src/app/(main)/warehouses/page.tsx
+        icon: Warehouse,
+        roles: ["SuperAdmin", "WAREHOUSE_STAFF", "WAREHOUSE_MANAGER"], // Menambahkan role manager
         children: [
           {
-            title: "Daftar Spare Part",
+            title: "List Gudang",
+            href: "/warehouse",
+            icon: Warehouse,
+          },
+          // Jika ada fitur tambah gudang melalui halaman terpisah
+          {
+            title: "Tambah Gudang",
+            href: "/warehouse/create", // Asumsi ada route ini
+            icon: PlusCircle,
+            roles: ["SuperAdmin", "WAREHOUSE_MANAGER"],
+          },
+          {
+            title: "List Spare Part",
             href: "/spare-parts",
             icon: Package,
           },
@@ -249,27 +261,7 @@ export const sidebarMenuItems: MenuItem[] = [
         ],
       },
       {
-        title: "Gudang",
-        href: "", // Sesuai dengan src/app/(main)/warehouses/page.tsx
-        icon: Warehouse,
-        roles: ["SuperAdmin", "WAREHOUSE_STAFF", "WAREHOUSE_MANAGER"], // Menambahkan role manager
-        children: [
-          {
-            title: "Daftar Gudang",
-            href: "/warehouse",
-            icon: Warehouse,
-          },
-          // Jika ada fitur tambah gudang melalui halaman terpisah
-          {
-            title: "Tambah Gudang",
-            href: "/warehouse/create", // Asumsi ada route ini
-            icon: PlusCircle,
-            roles: ["SuperAdmin", "WAREHOUSE_MANAGER"],
-          },
-        ],
-      },
-      {
-        title: "Manajemen Vendor",
+        title: "Vendor",
         href: "/vendors", // Sesuai dengan src/app/(main)/vendors/page.tsx
         icon: Factory,
         roles: [
@@ -308,7 +300,7 @@ export const sidebarMenuItems: MenuItem[] = [
     groupTitle: true,
     children: [
       {
-        title: "Manajemen Karyawan", // Mengacu pada daftar karyawan GLOBAL
+        title: "Karyawan", // Mengacu pada daftar karyawan GLOBAL
         href: "/employees", // Sesuai dengan src/app/(main)/employees/page.tsx
         icon: Users,
         roles: ["SuperAdmin", "AdminUser"],
@@ -326,24 +318,12 @@ export const sidebarMenuItems: MenuItem[] = [
           },
         ],
       },
-      // Manajemen Perusahaan sudah dipindahkan ke grup "Operasional", ini dihapus jika duplikat
-      // Jika "Manajemen Perusahaan" di sini adalah untuk admin mengelola *akses* perusahaan (bukan data master), bisa dipertahankan
-      // {
-      //   title: "Manajemen Perusahaan (Admin)",
-      //   href: "/admin-dashboard/companies", // Ini bisa jadi halaman admin khusus
-      //   icon: Building,
-      //   roles: ["SuperAdmin"],
-      //   notification: 0,
-      //   children: [
-      //     { title: "Daftar Perusahaan (Admin)", href: "/admin-dashboard/companies", icon: Building },
-      //     { title: "Tambah Perusahaan (Admin)", href: "/admin-dashboard/companies/create", icon: PlusCircle },
-      //   ],
-      // },
       {
         title: "Pengaturan Sistem",
         href: "/admin-dashboard/settings", // Sesuai dengan src/app/(main)/admin-dashboard/settings/page.tsx
         icon: Settings,
         roles: ["SuperAdmin"],
+        children: [{ title: "Unit", href: "/units", icon: PencilRuler }],
       },
     ],
   },
@@ -355,12 +335,12 @@ export const sidebarMenuItems: MenuItem[] = [
   // Profil
   // ======================================
   {
-    title: "Akun",
+    title: "Personal",
     groupTitle: true,
     children: [
       {
-        title: "Profil Saya",
-        href: "/profile", // Sesuai dengan src/app/(main)/profile/page.tsx
+        title: "Profil",
+        href: "", // Sesuai dengan src/app/(main)/profile/page.tsx
         icon: User,
         roles: [
           "SuperAdmin",

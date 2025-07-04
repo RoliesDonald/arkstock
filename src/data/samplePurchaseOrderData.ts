@@ -1,141 +1,108 @@
 // src/data/samplePurchaseOrderData.ts
-import {
-  PurchaseOrder,
-  PurchaseOrderStatus,
-  PurchaseOrderItem,
-} from "@/types/purchaseOrder";
-import { TransactionPartDetails, PartVariant } from "@/types/sparepart";
 import { v4 as uuidv4 } from "uuid";
+import { PurchaseOrder, PurchaseOrderStatus } from "@/types/purchaseOrder";
 
-// Asumsi ID dari data dummy Company, User, SparePart
-const supplierId2 = "CVA-002"; // CV. Jaya Abadi (Vendor)
-const supplierId6 = "UDBP-006"; // UD. Baja Perkasa (Supplier)
+// --- Asumsi ID dari data dummy yang sudah ada ---
+// Pastikan ID ini sesuai dengan data Anda di `sampleCompanyData.ts`, `sampleEmployeeData.ts`, dan `sampleSparePartData.ts`
+const VENDOR_BENGKEL_PRIMA_ID = "comp-vendor-001"; // ID dari CompanyType.VENDOR
+const VENDOR_SOLUSI_LOGISTIK_ID = "comp-sm-001"; // ID dari CompanyType.SUPPLIER (jika juga vendor)
 
-const requestedById1 = "d8c7b6a5-e4d3-c2b1-a0e9-f8d7c6b5a4e3"; // Indra Pratama (Warehouse Manager)
-const approvedById1 = "b2a1c0d9-e8f7-6a5b-4c3d-2e1f0a9b8c7d"; // Joko Wijoyo (Accounting Manager)
+const EMPLOYEE_WAREHOUSE_STAFF_ID = "emp-warehouse-001"; // ID karyawan dengan role WAREHOUSE_STAFF
+const EMPLOYEE_WAREHOUSE_MANAGER_ID = "emp-manager-001"; // ID karyawan dengan role WAREHOUSE_MANAGER
 
-const sparePartId1 = "6f8c7b9a-1d2e-4f5c-b6f8-c7b9a1d2e4f5"; // Kampas Rem Depan Avanza
-const sparePartId2 = "c1b2d3e4-f5a6-7b8c-9d0e-f1a2b3c4d5e6"; // Oli Mesin Full Sintetik 4L
-const sparePartId3 = "ac1d2e3f-4b5c-6d7e-8f9a-0b1c2d3e4f5a"; // Filter Udara Toyota Yaris
+const SP_FILTER_OLI_BRIO_ID = "31a2b1c2-d3e4-5f67-8901-234567890123"; // ID Filter Oli Mesin Honda Brio
+const SP_BUSI_ERTIGA_ID = "41a2b1c2-d3e4-5f67-8901-234567890123"; // ID Busi Mobil Suzuki Ertiga
+const SP_KAMPAS_KOPLING_CANTER_ID = "61a2b1c2-d3e4-5f67-8901-234567890123"; // ID Kampas Kopling Mitsubishi Canter
+const SP_AKI_NS40Z_ID = "51a2b1c2-d3e4-5f67-8901-234567890123"; // ID Aki Kering NS40Z
 
-const poPartItem1: TransactionPartDetails = {
-  partId: sparePartId1,
-  partNumber: "BRK-PAD-FRT-AVZ",
-  partName: "Kampas Rem Depan Avanza",
-  variant: PartVariant.OEM,
-  unit: "Set",
-  quantity: 10,
-  unitPrice: 300000,
-  totalPrice: 3000000,
-};
-
-const poPartItem2: TransactionPartDetails = {
-  partId: sparePartId2,
-  partNumber: "OIL-ENG-SYN-4L",
-  partName: "Oli Mesin Full Sintetik 4L",
-  variant: PartVariant.GBOX,
-  unit: "Liter",
-  quantity: 50,
-  unitPrice: 250000,
-  totalPrice: 12500000,
-};
-
-const poPartItem3: TransactionPartDetails = {
-  partId: sparePartId3,
-  partNumber: "AIR-FILT-YARIS",
-  partName: "Filter Udara Toyota Yaris",
-  variant: PartVariant.AFTERMARKET,
-  unit: "Pcs",
-  quantity: 20,
-  unitPrice: 70000,
-  totalPrice: 1400000,
-};
-
+// Data dummy Purchase Order
 export const purchaseOrderData: PurchaseOrder[] = [
   {
     id: uuidv4(),
-    poNum: "PO-JAYA-2024-001",
-    poDate: new Date("2024-06-05T10:00:00Z"),
-    supplierId: supplierId2, // CV. Jaya Abadi
-    deliveryAddress: "Gudang Utama Bengkel Prima",
-    subtotal: poPartItem1.totalPrice,
-    tax: poPartItem1.totalPrice * 0.11, // 11% PPN
-    totalAmount: poPartItem1.totalPrice * 1.11, // 3000000 * 1.11 = 3330000
-    deliveryDate: new Date("2024-06-12T00:00:00Z"),
-    status: PurchaseOrderStatus.RECEIVED,
-    requestedById: requestedById1,
-    approvedById: approvedById1,
-    remark: "Pembelian kampas rem reguler.",
-    createdAt: new Date("2024-06-05T10:00:00Z"),
-    updatedAt: new Date("2024-06-12T10:00:00Z"),
-    orderItems: [
-      {
-        id: uuidv4(),
-        poId: "",
-        sparePartId: poPartItem1.partId,
-        quantity: poPartItem1.quantity,
-        unitPrice: poPartItem1.unitPrice,
-        totalPrice: poPartItem1.totalPrice,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ],
-  },
-  {
-    id: uuidv4(),
-    poNum: "PO-JAYA-2024-002",
-    poDate: new Date("2024-06-10T14:00:00Z"),
-    supplierId: supplierId2, // CV. Jaya Abadi
-    deliveryAddress: "Gudang Utama Bengkel Prima",
-    subtotal: poPartItem2.totalPrice + poPartItem3.totalPrice,
-    tax: (poPartItem2.totalPrice + poPartItem3.totalPrice) * 0.11,
-    totalAmount: (poPartItem2.totalPrice + poPartItem3.totalPrice) * 1.11, // (12.5jt + 1.4jt) * 1.11 = 15.429.000
-    deliveryDate: new Date("2024-06-17T00:00:00Z"),
-    status: PurchaseOrderStatus.ORDERED,
-    requestedById: requestedById1,
-    approvedById: approvedById1,
-    remark: "Pembelian oli dan filter udara stok rutin.",
-    createdAt: new Date("2024-06-10T14:00:00Z"),
-    updatedAt: new Date("2024-06-10T14:00:00Z"),
-    orderItems: [
-      {
-        id: uuidv4(),
-        poId: "",
-        sparePartId: poPartItem2.partId,
-        quantity: poPartItem2.quantity,
-        unitPrice: poPartItem2.unitPrice,
-        totalPrice: poPartItem2.totalPrice,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        poId: "",
-        sparePartId: poPartItem3.partId,
-        quantity: poPartItem3.quantity,
-        unitPrice: poPartItem3.unitPrice,
-        totalPrice: poPartItem3.totalPrice,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ],
-  },
-  {
-    id: uuidv4(),
-    poNum: "PO-BAJA-2024-001",
-    poDate: new Date("2024-06-11T09:00:00Z"),
-    supplierId: supplierId6, // UD. Baja Perkasa
-    deliveryAddress: "Gudang Utama Bengkel Prima",
-    subtotal: 5000000,
-    tax: 5000000 * 0.11,
-    totalAmount: 5000000 * 1.11, // 5.550.000
-    deliveryDate: new Date("2024-06-25T00:00:00Z"),
+    poNumber: "PO/2024/07/00001",
+    date: new Date("2024-07-01T10:00:00Z"),
+    vendorId: VENDOR_BENGKEL_PRIMA_ID,
+    requestedById: EMPLOYEE_WAREHOUSE_STAFF_ID,
+    approvedById: null,
+    rejectionReason: null,
     status: PurchaseOrderStatus.PENDING_APPROVAL,
-    requestedById: requestedById1,
-    approvedById: undefined,
-    remark: "Pengadaan khusus shock absorber.",
-    createdAt: new Date("2024-06-11T09:00:00Z"),
-    updatedAt: new Date("2024-06-11T09:00:00Z"),
-    orderItems: [], // Akan diisi setelah disetujui
+    remark: "Pembelian rutin suku cadang fast-moving.",
+    items: [
+      {
+        id: uuidv4(),
+        sparePartId: SP_FILTER_OLI_BRIO_ID,
+        itemName: "Filter Oli Mesin Honda Brio",
+        partNumber: "OIL-FIL-BRIO001",
+        quantity: 10,
+        unit: "Pcs", // <-- DITAMBAHKAN
+        unitPrice: 85000,
+        totalPrice: 850000,
+      },
+      {
+        id: uuidv4(),
+        sparePartId: SP_BUSI_ERTIGA_ID,
+        itemName: "Busi Mobil Suzuki Ertiga",
+        partNumber: "SPK-PLG-ERT001",
+        quantity: 20,
+        unit: "Pcs", // <-- DITAMBAHKAN
+        unitPrice: 25000,
+        totalPrice: 500000,
+      },
+    ],
+    totalAmount: 1350000,
+    createdAt: new Date("2024-07-01T10:00:00Z"),
+    updatedAt: new Date("2024-07-01T10:00:00Z"),
+  },
+  {
+    id: uuidv4(),
+    poNumber: "PO/2024/07/00002",
+    date: new Date("2024-07-02T11:30:00Z"),
+    vendorId: VENDOR_BENGKEL_PRIMA_ID,
+    requestedById: EMPLOYEE_WAREHOUSE_STAFF_ID,
+    approvedById: EMPLOYEE_WAREHOUSE_MANAGER_ID,
+    rejectionReason: null,
+    status: PurchaseOrderStatus.APPROVED,
+    remark: "Pembelian mendesak untuk perbaikan truk.",
+    items: [
+      {
+        id: uuidv4(),
+        sparePartId: SP_KAMPAS_KOPLING_CANTER_ID,
+        itemName: "Kampas Kopling Mitsubishi Canter 125PS",
+        partNumber: "ME515796",
+        quantity: 2,
+        unit: "Set", // <-- DITAMBAHKAN
+        unitPrice: 1200000,
+        totalPrice: 2400000,
+      },
+    ],
+    totalAmount: 2400000,
+    createdAt: new Date("2024-07-02T11:30:00Z"),
+    updatedAt: new Date("2024-07-02T14:00:00Z"),
+  },
+  {
+    id: uuidv4(),
+    poNumber: "PO/2024/07/00003",
+    date: new Date("2024-07-03T09:00:00Z"),
+    vendorId: VENDOR_SOLUSI_LOGISTIK_ID,
+    requestedById: EMPLOYEE_WAREHOUSE_STAFF_ID,
+    approvedById: EMPLOYEE_WAREHOUSE_MANAGER_ID,
+    rejectionReason: "Stok masih cukup di gudang lain.",
+    status: PurchaseOrderStatus.CANCELED,
+    remark: "Pengadaan ban cadangan.",
+    items: [
+      {
+        id: uuidv4(),
+        sparePartId: SP_AKI_NS40Z_ID,
+        itemName: "Aki Kering NS40Z",
+        partNumber: "BAT-DRY-NS40Z",
+        quantity: 5,
+        unit: "Pcs", // <-- DITAMBAHKAN
+        unitPrice: 700000,
+        totalPrice: 3500000,
+      },
+    ],
+    totalAmount: 3500000,
+    createdAt: new Date("2024-07-03T09:00:00Z"),
+    updatedAt: new Date("2024-07-03T10:30:00Z"),
   },
 ];

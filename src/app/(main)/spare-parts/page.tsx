@@ -2,9 +2,7 @@
 "use client";
 
 import TableMain from "@/components/common/table/TableMain";
-import { useAppSelector } from "@/store/hooks";
-import { useMemo, useState } from "react";
-import { ColumnDef } from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -13,34 +11,99 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { MoreVertical, ChevronDown } from "lucide-react";
+
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import {
+  fetchSpareParts,
+  createSparePart,
+  updateSparePart,
+  deleteSparePart,
+} from "@/store/slices/sparePartSlice";
+import { fetchUnits } from "@/store/slices/unitSlice"; // <-- PERUBAHAN 1: Import fetchUnits
+
+import { SparePart, SparePartFormValues, PartVariant } from "@/types/sparepart";
+
+import { ColumnDef } from "@tanstack/react-table";
+import { MoreVertical } from "lucide-react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-
-// Import tipe SparePart dan data dummy
-import { SparePart, SparePartFormValues, PartVariant } from "@/types/sparepart"; // Pastikan SparePartFormValues
-import { sparePartData as initialSparePartData } from "@/data/sampleSparePartData";
-
-// Import komponen dialog suku cadang
 import SparePartDialog from "@/components/dialog/sparePartDialog/SparePartDialog";
-import { v4 as uuidv4 } from "uuid";
+import { useRouter } from "next/navigation";
 
-export default function SparePartsPage() {
+export default function SparePartListPage() {
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
-  const [allSpareParts, setAllSpareParts] =
-    useState<SparePart[]>(initialSparePartData);
-  const [activeTab, setActiveTab] = useState<string>("all"); // Default tab 'all'
+  const dispatch = useAppDispatch();
+  const router = useRouter();
 
-  // State untuk dialog penambahan/edit suku cadang
-  const [isSparePartDialogOpen, setIsSparePartDialogOpen] = useState(false);
-  const [sparePartToEdit, setSparePartToEdit] = useState<
+  const allSpareParts = useAppSelector((state) => state.spareParts.spareParts);
+  const sparePartStatus = useAppSelector((state) => state.spareParts.status);
+  const sparePartError = useAppSelector((state) => state.spareParts.error);
+
+  const unitStatus = useAppSelector((state) => state.units.status); // <-- PERUBAHAN 2: Ambil status unit dari Redux store
+
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const [isSparePartDialogOpen, setIsSparePartDialogOpen] =
+    useState<boolean>(false);
+  const [editSparePartData, setEditSparePartData] = useState<
     SparePartFormValues | undefined
   >(undefined);
-  // State untuk menyimpan ID suku cadang yang sedang diedit
-  const [editingId, setEditingId] = useState<string | undefined>(undefined);
 
-  // Definisi kolom untuk Suku Cadang
+  const handleDetailSparePart = useCallback(
+    (sparepart: SparePart) => {
+      router.push(`/spare-parts/${sparepart.id}`);
+    },
+    [router]
+  );
+  useEffect(() => {
+    if (sparePartStatus === "idle") {
+      dispatch(fetchSpareParts());
+    }
+    if (unitStatus === "idle") {
+      // <-- PERUBAHAN 3: Dispatch fetchUnits saat komponen dimuat
+      dispatch(fetchUnits());
+    }
+  }, [dispatch, sparePartStatus, unitStatus]);
+
+  const handleEditSparePart = useCallback((sparePart: SparePart) => {
+    setEditSparePartData(sparePart);
+    setIsSparePartDialogOpen(true);
+  }, []);
+
+  const handleSaveSparePart = useCallback(
+    async (values: SparePartFormValues) => {
+      if (values.id) {
+        const existingSparePart = allSpareParts.find(
+          (sp) => sp.id === values.id
+        );
+        if (existingSparePart) {
+          const fullUpdatedSparePart: SparePart = {
+            ...existingSparePart,
+            ...values,
+            updatedAt: new Date(),
+          };
+          await dispatch(updateSparePart(fullUpdatedSparePart));
+        }
+      } else {
+        await dispatch(createSparePart(values));
+      }
+      setIsSparePartDialogOpen(false);
+      setEditSparePartData(undefined);
+    },
+    [dispatch, allSpareParts]
+  );
+
+  const handleDeleteSparePart = useCallback(
+    async (sparePartId: string) => {
+      if (
+        window.confirm("Apakah Anda yakin ingin menghapus suku cadang ini?")
+      ) {
+        await dispatch(deleteSparePart(sparePartId));
+      }
+    },
+    [dispatch]
+  );
+
   const sparePartColumns: ColumnDef<SparePart>[] = useMemo(
     () => [
       {
@@ -67,61 +130,33 @@ export default function SparePartsPage() {
         enableSorting: false,
         enableHiding: false,
       },
-      { accessorKey: "sku", header: "SKU" },
       { accessorKey: "name", header: "Nama Suku Cadang" },
       { accessorKey: "partNumber", header: "Nomor Part" },
-      { accessorKey: "brand", header: "Merek (Brand)" },
+      { accessorKey: "unit", header: "Satuan" }, // <-- PERUBAHAN 4: Menambahkan kolom "Satuan"
+      { accessorKey: "price", header: "Harga Satuan" },
+      { accessorKey: "brand", header: "Merek" },
       { accessorKey: "manufacturer", header: "Produsen" },
-      { accessorKey: "unit", header: "Satuan" },
-      { accessorKey: "stock", header: "Stok Saat Ini" },
-      { accessorKey: "minStock", header: "Stok Min." },
+      { accessorKey: "variant", header: "Varian" },
       {
-        accessorKey: "price",
-        header: "Harga",
-        cell: ({ row }) => `Rp${row.original.price.toLocaleString("id-ID")}`,
-      },
-      {
-        accessorKey: "variant",
-        header: "Varian",
-        cell: ({ row }) => row.original.variant.replace(/_/g, " "),
-      },
-      {
-        accessorKey: "compatibility",
-        header: "Kompatibilitas",
+        accessorKey: "createdAt",
+        header: "Dibuat Pada",
         cell: ({ row }) => {
-          const compatibilityList = row.original.compatibility;
-          if (compatibilityList && compatibilityList.length > 0) {
-            const firstThree = compatibilityList
-              .slice(0, 3)
-              .map((comp) => {
-                let compatibilityString = `${comp.vehicleMake} ${comp.model}`;
-                if (comp.trimLevel)
-                  compatibilityString += ` (${comp.trimLevel})`;
-                if (comp.modelYear) compatibilityString += ` ${comp.modelYear}`;
-                return compatibilityString;
-              })
-              .join(", ");
-            return (
-              <span
-                title={compatibilityList
-                  .map((comp) => {
-                    let compatibilityString = `${comp.vehicleMake} ${comp.model}`;
-                    if (comp.trimLevel)
-                      compatibilityString += ` (${comp.trimLevel})`;
-                    if (comp.modelYear)
-                      compatibilityString += ` ${comp.modelYear}`;
-                    return compatibilityString;
-                  })
-                  .join(", ")}
-              >
-                {firstThree}
-                {compatibilityList.length > 3
-                  ? ` dan ${compatibilityList.length - 3} lainnya...`
-                  : ""}
-              </span>
-            );
+          const date = row.original.createdAt;
+          if (date instanceof Date) {
+            return format(date, "dd-MM-yyyy HH:mm", { locale: id });
           }
-          return "-";
+          return "N/A";
+        },
+      },
+      {
+        accessorKey: "updatedAt",
+        header: "Diperbarui Pada",
+        cell: ({ row }) => {
+          const date = row.original.updatedAt;
+          if (date instanceof Date) {
+            return format(date, "dd-MM-yyyy HH:mm", { locale: id });
+          }
+          return "N/A";
         },
       },
       {
@@ -129,31 +164,6 @@ export default function SparePartsPage() {
         enableHiding: false,
         cell: ({ row }) => {
           const sparePart = row.original;
-
-          const handleEditClick = () => {
-            setEditingId(sparePart.id); // Set ID yang sedang diedit
-            setSparePartToEdit({
-              sku: sparePart.sku,
-              name: sparePart.name,
-              partNumber: sparePart.partNumber,
-              description: sparePart.description || "",
-              unit: sparePart.unit,
-              initialStock: sparePart.stock, // Stock dari SparePart menjadi initialStock untuk form
-              minStock: sparePart.minStock ?? 0, // Pastikan 0 jika null
-              price: sparePart.price,
-              variant: sparePart.variant,
-              brand: sparePart.brand,
-              manufacturer: sparePart.manufacturer,
-              compatibility: sparePart.compatibility.map((comp) => ({
-                vehicleMake: comp.vehicleMake,
-                model: comp.model,
-                trimLevel: comp.trimLevel ?? null,
-                modelYear: comp.modelYear ?? null,
-              })),
-            });
-            setIsSparePartDialogOpen(true);
-          };
-
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -163,17 +173,19 @@ export default function SparePartsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                 <DropdownMenuItem
-                  onClick={() => alert(`Lihat detail ${sparePart.name}`)}
+                  onClick={() => handleDetailSparePart(sparePart)}
                 >
                   Lihat Detail
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleEditClick}>
+                <DropdownMenuItem
+                  onClick={() => handleEditSparePart(sparePart)}
+                >
                   Edit Suku Cadang
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => alert(`Hapus ${sparePart.name}`)}
+                  onClick={() => handleDeleteSparePart(sparePart.id)}
                   className="text-red-600"
                 >
                   Hapus Suku Cadang
@@ -184,54 +196,30 @@ export default function SparePartsPage() {
         },
       },
     ],
-    []
+    [handleEditSparePart, handleDeleteSparePart, handleDetailSparePart]
   );
 
   const filteredSpareParts = useMemo(() => {
     let currentSpareParts = allSpareParts;
 
     if (activeTab !== "all") {
-      if (
-        Object.values(PartVariant).some((v) => v.toLowerCase() === activeTab)
-      ) {
-        return currentSpareParts.filter(
-          (part) => part.variant.toLowerCase() === activeTab
-        );
-      }
-      if (activeTab === "low_stock") {
-        return currentSpareParts.filter(
-          (part) => part.stock <= (part.minStock || 0)
-        );
-      }
+      currentSpareParts = currentSpareParts.filter(
+        (sp) => sp.variant.toLowerCase() === activeTab
+      );
     }
 
     if (searchQuery) {
       const lowerCaseQuery = searchQuery.toLowerCase();
-      currentSpareParts = currentSpareParts.filter(
-        (part) =>
-          Object.values(part).some(
-            (value) =>
-              (typeof value === "string" &&
-                value.toLowerCase().includes(lowerCaseQuery)) ||
-              (typeof value === "number" &&
-                value.toString().includes(lowerCaseQuery)) ||
-              (Array.isArray(value) &&
-                value.some(
-                  (comp) =>
-                    typeof comp === "object" &&
-                    "vehicleMake" in comp &&
-                    "model" in comp &&
-                    `${comp.vehicleMake} ${comp.model} ${
-                      comp.trimLevel || ""
-                    } ${comp.modelYear || ""}`
-                      .toLowerCase()
-                      .includes(lowerCaseQuery)
-                ))
-          ) ||
-          part.sku?.toLowerCase().includes(lowerCaseQuery) ||
-          part.partNumber.toLowerCase().includes(lowerCaseQuery) ||
-          part.brand.toLowerCase().includes(lowerCaseQuery) ||
-          part.manufacturer.toLowerCase().includes(lowerCaseQuery)
+      currentSpareParts = currentSpareParts.filter((sparePart) =>
+        Object.values(sparePart).some(
+          (value) =>
+            (typeof value === "string" &&
+              value.toLowerCase().includes(lowerCaseQuery)) ||
+            (value instanceof Date &&
+              format(value, "dd-MM-yyyy").includes(lowerCaseQuery)) ||
+            (typeof value === "number" &&
+              value.toString().includes(lowerCaseQuery))
+        )
       );
     }
     return currentSpareParts;
@@ -239,108 +227,75 @@ export default function SparePartsPage() {
 
   const sparePartTabItems = useMemo(() => {
     const allCount = allSpareParts.length;
-    const tabItems = [{ value: "all", label: "All", count: allCount }];
+    const tabItems = [
+      { value: "all", label: "Semua Suku Cadang", count: allCount },
+    ];
 
     Object.values(PartVariant).forEach((variant) => {
       tabItems.push({
         value: variant.toLowerCase(),
-        label: variant.replace(/_/g, " "),
-        count: allSpareParts.filter((part) => part.variant === variant).length,
+        label: variant,
+        count: allSpareParts.filter((sp) => sp.variant === variant).length,
       });
-    });
-
-    tabItems.push({
-      value: "low_stock",
-      label: "Stok Rendah",
-      count: allSpareParts.filter((part) => part.stock <= (part.minStock || 0))
-        .length,
     });
 
     return tabItems;
   }, [allSpareParts]);
 
-  const handleAddOrEditSparePartSubmit = (values: SparePartFormValues) => {
-    // Gunakan editingId untuk menentukan mode edit/tambah
-    if (editingId) {
-      setAllSpareParts((prev) =>
-        prev.map((part) =>
-          part.id === editingId // <-- PERBAIKAN DI SINI: Gunakan editingId
-            ? {
-                ...part,
-                ...values,
-                sku: values.sku!,
-                stock: values.initialStock,
-                description: values.description ?? null,
-                minStock: values.minStock ?? null,
-                // PERBAIKAN: Pastikan compatibility selalu array
-                compatibility: values.compatibility ?? [],
-                updatedAt: new Date(),
-              }
-            : part
-        )
-      );
-      alert("Suku Cadang berhasil diperbarui!");
-    } else {
-      const newSparePart: SparePart = {
-        id: uuidv4(),
-        ...values,
-        sku: values.sku!,
-        stock: values.initialStock,
-        description: values.description ?? null,
-        minStock: values.minStock ?? null,
-        compatibility: values.compatibility ?? [], // <-- PERBAIKAN DI SINI: Default ke array kosong
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setAllSpareParts((prev) => [...prev, newSparePart]);
-      alert("Suku Cadang berhasil ditambahkan!");
-    }
-    setIsSparePartDialogOpen(false);
-    setSparePartToEdit(undefined);
-    setEditingId(undefined); // Reset editingId setelah selesai
-  };
+  if (sparePartStatus === "loading" || unitStatus === "loading") {
+    return (
+      <div className="text-center py-8">
+        Memuat data suku cadang dan satuan...
+      </div>
+    );
+  }
 
-  const handleDialogClose = () => {
-    setIsSparePartDialogOpen(false);
-    setSparePartToEdit(undefined);
-    setEditingId(undefined); // Reset editingId saat dialog ditutup
-  };
-
-  const handleOpenAddDialog = () => {
-    setSparePartToEdit(undefined);
-    setEditingId(undefined); // Pastikan editingId undefined saat tambah baru
-    setIsSparePartDialogOpen(true);
-  };
+  if (sparePartStatus === "failed") {
+    return (
+      <div className="text-center py-8 text-red-500">
+        Error: {sparePartError}
+      </div>
+    );
+  }
+  if (unitStatus === "failed") {
+    return (
+      <div className="text-center py-8 text-red-500">
+        Error: Gagal memuat satuan.
+      </div>
+    );
+  }
 
   return (
-    <>
-      <TableMain<SparePart>
-        searchQuery={searchQuery}
-        data={filteredSpareParts}
-        columns={sparePartColumns}
-        tabItems={sparePartTabItems}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        showAddButton={true}
-        onAddButtonClick={handleOpenAddDialog}
-        showDownloadPrintButtons={true}
-        emptyMessage="Tidak ada suku cadang ditemukan."
-        isDialogOpen={isSparePartDialogOpen}
-        onOpenChange={setIsSparePartDialogOpen}
-        dialogContent={
-          <SparePartDialog
-            onSubmitSparePart={handleAddOrEditSparePartSubmit}
-            onClose={handleDialogClose}
-            initialData={sparePartToEdit}
-          />
-        }
-        dialogTitle={editingId ? "Edit Suku Cadang" : "Tambah Suku Cadang Baru"}
-        dialogDescription={
-          editingId
-            ? "Perbarui detail suku cadang yang ada."
-            : "Isi detail suku cadang baru untuk ditambahkan ke inventaris."
-        }
-      />
-    </>
+    <TableMain<SparePart>
+      searchQuery={searchQuery}
+      data={filteredSpareParts}
+      columns={sparePartColumns}
+      tabItems={sparePartTabItems}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      showAddButton={true}
+      showDownloadPrintButtons={true}
+      emptyMessage="Tidak ada suku cadang ditemukan."
+      isDialogOpen={isSparePartDialogOpen}
+      onOpenChange={setIsSparePartDialogOpen}
+      dialogContent={
+        <SparePartDialog
+          onClose={() => {
+            setIsSparePartDialogOpen(false);
+            setEditSparePartData(undefined);
+          }}
+          onSubmitSparePart={handleSaveSparePart}
+          initialData={editSparePartData}
+        />
+      }
+      dialogTitle={
+        editSparePartData ? "Edit Suku Cadang" : "Tambahkan Suku Cadang Baru"
+      }
+      dialogDescription={
+        editSparePartData
+          ? "Ubah detail suku cadang ini."
+          : "Isi detail suku cadang untuk menambah data suku cadang baru ke sistem."
+      }
+    />
   );
 }

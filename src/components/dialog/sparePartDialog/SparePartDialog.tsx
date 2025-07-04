@@ -1,9 +1,11 @@
 // src/components/sparePartDialog/SparePartDialog.tsx
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useMemo, useEffect, useCallback } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +17,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,28 +28,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DialogFooter } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Import tipe dan skema SparePart
 import {
   SparePartFormValues,
   sparePartFormSchema,
   PartVariant,
-  SparePartCompatibility,
 } from "@/types/sparepart";
+import { SparePartCompatibility } from "@/types/sparepart";
 
-// Import data kendaraan untuk dropdown kompatibilitas
-import {
-  getUniqueVehicleMake,
-  getModelsByMake,
-} from "@/data/sampleVehicleData";
-import { generateSku } from "@/lib/skuFormatter";
+// Redux
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { fetchUnits } from "@/store/slices/unitSlice"; // Import fetchUnits
+
+// Data dummy (akan diganti dengan Redux store di masa depan)
+import { vehicleData } from "@/data/sampleVehicleData";
+import { DialogFooter } from "@/components/ui/dialog";
 
 interface SparePartDialogProps {
   onClose: () => void;
   onSubmitSparePart: (values: SparePartFormValues) => void;
-  initialData?: SparePartFormValues; // Untuk mode edit
+  initialData?: SparePartFormValues; // Data awal untuk mode edit
 }
 
 const SparePartDialog: React.FC<SparePartDialogProps> = ({
@@ -54,35 +56,38 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
   onSubmitSparePart,
   initialData,
 }) => {
+  const dispatch = useAppDispatch();
+  const availableUnits = useAppSelector((state) => state.units.units); // Ambil unit dari Redux store
+  const unitStatus = useAppSelector((state) => state.units.status);
+
+  useEffect(() => {
+    if (unitStatus === "idle") {
+      dispatch(fetchUnits()); // Fetch unit saat komponen dimuat
+    }
+  }, [dispatch, unitStatus]);
+
   const form = useForm<SparePartFormValues>({
     resolver: zodResolver(sparePartFormSchema),
     defaultValues: useMemo(() => {
-      // Pastikan nilai default untuk trimLevel dan modelYear di compatibility
-      const defaultCompatibility =
-        initialData?.compatibility?.map((comp) => ({
-          ...comp,
-          // Pastikan ada atau null untuk properti baru
-          trimLevel: comp.trimLevel ?? null,
-          modelYear: comp.modelYear ?? null,
-        })) || [];
-
       return initialData
         ? {
             ...initialData,
-            compatibility: defaultCompatibility,
+            description: initialData.description ?? null,
+            minStock: initialData.minStock ?? null,
+            compatibility: initialData.compatibility || [],
           }
         : {
             sku: "",
             name: "",
             partNumber: "",
-            description: "",
-            unit: "Pcs",
+            description: null,
+            unit: "", // Default unit kosong
             initialStock: 0,
-            minStock: 0,
+            minStock: null,
             price: 0,
-            variant: PartVariant.AFTERMARKET,
-            brand: "", // Inisialisasi properti brand
-            manufacturer: "", // Inisialisasi properti manufacturer
+            variant: PartVariant.OEM,
+            brand: "",
+            manufacturer: "",
             compatibility: [],
           };
     }, [initialData]),
@@ -97,46 +102,22 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
     name: "compatibility",
   });
 
-  const uniqueVehicleMakes = useMemo(() => getUniqueVehicleMake(), []);
+  const availableVehicleMakes = useMemo(() => {
+    const makes = new Set<string>();
+    vehicleData.forEach((v) => makes.add(v.vehicleMake));
+    return Array.from(makes);
+  }, []);
 
-  // Watch partNumber, brand, dan variant untuk auto-generate SKU
-  const watchedPartNumber = form.watch("partNumber");
-  const watchedVariant = form.watch("variant");
-  const watchedBrand = form.watch("brand"); // Mengamati brand juga
-
-  // useEffect untuk auto-generate SKU
-  useEffect(() => {
-    // Pastikan partNumber, brand, dan variant tersedia sebelum generate SKU
-    // Gunakan '!' untuk memastikan bahwa brand bukan undefined atau null saat diteruskan ke generateSku
-    if (
-      watchedPartNumber &&
-      watchedVariant &&
-      watchedBrand !== undefined &&
-      watchedBrand !== null
-    ) {
-      // PERBAIKAN: Secara eksplisit mengubah 'null' menjadi 'undefined' sebelum diteruskan.
-      // Ini adalah workaround untuk masalah TypeScript yang aneh.
-      const newSku = generateSku(
-        watchedPartNumber,
-        watchedVariant,
-        watchedBrand
-      );
-      form.setValue("sku", newSku, { shouldValidate: false }); // Set SKU tanpa validasi langsung
-    } else {
-      form.setValue("sku", "", { shouldValidate: false }); // Kosongkan SKU jika data belum lengkap
-    }
-  }, [watchedPartNumber, watchedVariant, watchedBrand, form]); // Tambahkan watchedBrand ke dependensi
+  const getModelsByMake = useCallback((make: string) => {
+    const models = new Set<string>();
+    vehicleData
+      .filter((v) => v.vehicleMake === make)
+      .forEach((v) => models.add(v.model));
+    return Array.from(models);
+  }, []);
 
   const onSubmit = async (values: SparePartFormValues) => {
-    if (!values.sku) {
-      form.setError("sku", {
-        type: "manual",
-        message:
-          "SKU wajib diisi. Pastikan Nomor Part, Merek, dan Varian telah dipilih.",
-      });
-      return;
-    }
-    console.log("Mengirim Data Suku Cadang:", values);
+    console.log("Mengirim data suku cadang:", values);
     onSubmitSparePart(values);
     onClose();
     form.reset();
@@ -148,41 +129,21 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
         onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4"
       >
-        {/* Informasi Dasar Suku Cadang */}
         <Card>
           <CardHeader>
-            <CardTitle>Informasi Dasar Suku Cadang</CardTitle>
+            <CardTitle>Detail Suku Cadang</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Field SKU (Auto-generated dan Disabled) */}
             <FormField
               control={form.control}
               name="sku"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>SKU</FormLabel>
+                  <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="SKU akan otomatis terisi"
-                      {...field}
-                      disabled
-                    />
+                    <Input placeholder="Contoh: SKU-001" {...field} />
                   </FormControl>
-                  {form.formState.errors.sku && !field.value ? (
-                    <FormMessage>
-                      {form.formState.errors.sku.message}
-                    </FormMessage>
-                  ) : (
-                    !field.value &&
-                    (!watchedPartNumber ||
-                      !watchedVariant ||
-                      !watchedBrand) && ( // Sesuaikan kondisi panduan
-                      <p className="text-sm text-gray-500 mt-1">
-                        SKU akan terisi otomatis setelah mengisi Nomor Part,
-                        Merek, dan Varian.
-                      </p>
-                    )
-                  )}
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -193,7 +154,7 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 <FormItem>
                   <FormLabel>Nama Suku Cadang</FormLabel>
                   <FormControl>
-                    <Input placeholder="Kampas Rem Depan" {...field} />
+                    <Input placeholder="Contoh: Kampas Rem Depan" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -206,13 +167,12 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 <FormItem>
                   <FormLabel>Nomor Part</FormLabel>
                   <FormControl>
-                    <Input placeholder="BRK-PAD-FRT-AVZ001" {...field} />
+                    <Input placeholder="Contoh: 45022-TGL-T00" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {/* Field Brand (Merek) - BARU */}
             <FormField
               control={form.control}
               name="brand"
@@ -220,13 +180,12 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 <FormItem>
                   <FormLabel>Merek (Brand)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Contoh: Denso, Akebono" {...field} />
+                    <Input placeholder="Contoh: Honda, Brembo" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {/* Field Manufacturer (Produsen) - BARU */}
             <FormField
               control={form.control}
               name="manufacturer"
@@ -235,22 +194,9 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                   <FormLabel>Produsen</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Contoh: PT. Astra Otoparts, Bosch"
+                      placeholder="Contoh: PT Astra Honda Motor"
                       {...field}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="col-span-1 md:col-span-2">
-                  <FormLabel>Deskripsi (Opsional)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Detail suku cadang..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -262,16 +208,29 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Satuan</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Pcs, Set, Liter" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih satuan..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availableUnits.map((unit) => (
+                        <SelectItem key={unit.id} value={unit.name}>
+                          {" "}
+                          {/* <-- Menggunakan unit.name sebagai value */}
+                          {unit.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <FormField
               control={form.control}
-              name="initialStock" // PERBAIKAN TYPO
+              name="initialStock"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Stok Awal</FormLabel>
@@ -279,12 +238,8 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                     <Input
                       type="number"
                       placeholder="0"
-                      {...{ ...field, value: field.value ?? "" }}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : Number(e.target.value)
-                        )
-                      }
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />
@@ -293,7 +248,7 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
             />
             <FormField
               control={form.control}
-              name="minStock" // PERBAIKAN TYPO
+              name="minStock"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Stok Minimum (Opsional)</FormLabel>
@@ -302,11 +257,10 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                       type="number"
                       placeholder="0"
                       {...{ ...field, value: field.value ?? "" }}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : Number(e.target.value)
-                        )
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value === "" ? null : Number(value));
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -318,17 +272,13 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
               name="price"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Harga Satuan</FormLabel>
+                  <FormLabel>Harga (Satuan)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       placeholder="0"
-                      {...{ ...field, value: field.value ?? "" }}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : Number(e.target.value)
-                        )
-                      }
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />
@@ -341,10 +291,7 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Varian</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih varian..." />
@@ -353,11 +300,28 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                     <SelectContent>
                       {Object.values(PartVariant).map((variant) => (
                         <SelectItem key={variant} value={variant}>
-                          {variant.replace(/_/g, " ")}
+                          {variant}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem className="col-span-1 md:col-span-2">
+                  <FormLabel>Deskripsi (Opsional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Deskripsi lengkap suku cadang..."
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -373,7 +337,6 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
               type="button"
               variant="outline"
               size="sm"
-              // PERBAIKAN: Sertakan trimLevel dan modelYear sebagai null/undefined saat menambah baru
               onClick={() =>
                 appendCompatibility({
                   vehicleMake: "",
@@ -387,13 +350,7 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            {compatibilityFields.length === 0 && (
-              <p className="text-center text-muted-foreground text-sm">
-                Belum ada kompatibilitas ditambahkan.
-              </p>
-            )}
             {compatibilityFields.map((field, index) => (
-              // PERBAIKAN: Tambahkan grid-cols untuk trimLevel dan modelYear
               <div
                 key={field.id}
                 className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end border-b pb-4"
@@ -401,24 +358,12 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 <FormField
                   control={form.control}
                   name={`compatibility.${index}.vehicleMake`}
-                  render={({ field: makeField }) => (
+                  render={({ field: compatField }) => (
                     <FormItem>
                       <FormLabel>Merek Kendaraan</FormLabel>
                       <Select
-                        onValueChange={(value) => {
-                          makeField.onChange(value);
-                          form.setValue(`compatibility.${index}.model`, "");
-                          // PERBAIKAN: Reset juga trimLevel dan modelYear saat merek berubah
-                          form.setValue(
-                            `compatibility.${index}.trimLevel`,
-                            null
-                          );
-                          form.setValue(
-                            `compatibility.${index}.modelYear`,
-                            null
-                          );
-                        }}
-                        value={makeField.value}
+                        onValueChange={compatField.onChange}
+                        value={compatField.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -426,7 +371,7 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {uniqueVehicleMakes.map((make) => (
+                          {availableVehicleMakes.map((make) => (
                             <SelectItem key={make} value={make}>
                               {make}
                             </SelectItem>
@@ -440,88 +385,76 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 <FormField
                   control={form.control}
                   name={`compatibility.${index}.model`}
-                  render={({ field: modelField }) => {
-                    const selectedMake = form.watch(
-                      `compatibility.${index}.vehicleMake`
-                    );
-                    const availableModels = selectedMake
-                      ? getModelsByMake(selectedMake)
-                      : [];
-                    return (
-                      <FormItem>
-                        <FormLabel>Model Kendaraan</FormLabel>
-                        <Select
-                          onValueChange={modelField.onChange}
-                          value={modelField.value}
-                          disabled={!selectedMake}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Pilih model..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {availableModels.map((model) => (
-                              <SelectItem key={model} value={model}>
-                                {model}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
+                  render={({ field: compatField }) => (
+                    <FormItem>
+                      <FormLabel>Model Kendaraan</FormLabel>
+                      <Select
+                        onValueChange={compatField.onChange}
+                        value={compatField.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih model..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {getModelsByMake(
+                            form.watch(`compatibility.${index}.vehicleMake`)
+                          ).map((model) => (
+                            <SelectItem key={model} value={model}>
+                              {model}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {/* BARU: Field untuk Trim Level */}
                 <FormField
                   control={form.control}
                   name={`compatibility.${index}.trimLevel`}
-                  render={({ field: trimField }) => (
+                  render={({ field: compatField }) => (
                     <FormItem>
                       <FormLabel>Varian (Opsional)</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Contoh: G, E, RS"
-                          {...trimField}
-                          value={trimField.value ?? ""} // Handle null/undefined
-                          onChange={(e) =>
-                            trimField.onChange(
-                              e.target.value === "" ? null : e.target.value
-                            )
-                          }
+                          placeholder="Contoh: G, E, S"
+                          {...compatField}
+                          value={compatField.value ?? ""}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {/* BARU: Field untuk Model Year */}
                 <FormField
                   control={form.control}
                   name={`compatibility.${index}.modelYear`}
-                  render={({ field: yearField }) => (
+                  render={({ field: compatField }) => (
                     <FormItem>
                       <FormLabel>Tahun Model (Opsional)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Contoh: 2020"
-                          {...{ ...yearField, value: yearField.value ?? "" }} // Handle null/undefined
-                          onChange={(e) =>
-                            yearField.onChange(
-                              e.target.value === ""
-                                ? null
-                                : Number(e.target.value)
-                            )
-                          }
+                          placeholder="2020"
+                          {...{
+                            ...compatField,
+                            value: compatField.value ?? "",
+                          }}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            compatField.onChange(
+                              value === "" ? null : Number(value)
+                            );
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <div className="col-span-1 flex justify-end items-center">
+                <div className="col-span-full flex justify-end">
                   <Button
                     type="button"
                     variant="ghost"
@@ -534,6 +467,11 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 </div>
               </div>
             ))}
+            {compatibilityFields.length === 0 && (
+              <p className="text-center text-muted-foreground text-sm">
+                Belum ada kompatibilitas ditambahkan.
+              </p>
+            )}
           </CardContent>
         </Card>
 
