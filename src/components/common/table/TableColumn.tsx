@@ -1,6 +1,6 @@
 import React from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { WoPriorityType, WorkOrder } from "@/lib/sampleTableData";
+import { WoPriorityType, WorkOrder } from "@/lib/sampleTableDataa";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";

@@ -3,10 +3,10 @@ import { WorkOrder, WoProgresStatus, WoPriorityType } from "@/types/workOrder";
 import { v4 as uuidv4 } from "uuid";
 
 // Company IDs (dari sampleCompanyData.ts)
-const companyId1 = "6df3ee3b-8515-41e9-9188-752119154a49"; // PT. Maju Bersama (Customer) - Contoh UUID
-const companyId3 = "12e7f86f-2b5d-4f0e-a9c1-54c3e2d1f0a9"; // PT. Transportasi Cepat (Car User) - Contoh UUID
+const companyId1 = "PT. Maju Bersama"; // PT. Maju Bersama (Customer) - Contoh UUID
+const companyId3 = "PT. Transportasi Cepat"; // PT. Transportasi Cepat (Car User) - Contoh UUID
 const companyId4 = "0a9b8c7d-e6f5-4a3b-2c1d-0e9f8a7b6c5d"; // Bengkel Prima (Vendor/Internal) - Contoh UUID
-const companyId7 = "f7e6d5c4-b3a2-1e0f-9d8c-7b6a5e4d3c2b"; // PT. Global Engineering (Customer) - Contoh UUID
+const companyId7 = "PT. Global Engineering"; // PT. Global Engineering (Customer) - Contoh UUID
 const companyId9 = "2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e"; // PT. Armada Wisata (Car User) - Contoh UUID
 // Pastikan semua Company IDs yang digunakan di bawah ini didefinisikan di sini.
 

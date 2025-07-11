@@ -16,9 +16,6 @@ import { MoreVertical, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 
-// IMPOR KOMPONEN DIALOG WO (InvDialog)
-// import InvDialog from "@/components/invDialog/InvDialog";
-
 import {
   WorkOrder,
   WoProgresStatus,

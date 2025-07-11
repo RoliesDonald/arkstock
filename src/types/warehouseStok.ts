@@ -18,7 +18,7 @@ export interface WarehouseStock {
 
 // untuk update manual
 export const warehouseStockFormSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().uuid().optional(),
   sparePartId: z.string().uuid({ message: "ID Spare Part wajib diisi." }),
   warehouseId: z.string().uuid({ message: "ID Gudang wajib diisi." }),
   currentStock: z.coerce
@@ -30,3 +30,15 @@ export const warehouseStockFormSchema = z.object({
 });
 
 export type WarehouseStockFormValues = z.infer<typeof warehouseStockFormSchema>;
+
+// Tipe untuk input create
+export type WarehouseStockCreateInput = Omit<
+  WarehouseStock,
+  "id" | "createdAt" | "updatedAt" | "sparePart" | "warehouse"
+>;
+
+// Tipe untuk update
+export type WarehouseStockUpdateInput = Omit<
+  WarehouseStock,
+  "createdAt" | "updatedAt" | "sparePart" | "warehouse" | "id"
+>;

@@ -30,13 +30,14 @@ import { v4 as uuidv4 } from "uuid";
 import { useRouter } from "next/navigation";
 
 export default function CompanyListPage() {
-  // --- PERBAIKAN: Typo seachQuery menjadi searchQuery ---
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
   const [allCompanies, setAllCompanies] = useState<Company[]>(companyData);
-  // --- PERBAIKAN: Typo acticeTab menjadi activeTab ---
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isCompanyDialogOpen, setIsCompanyDialogOpen] =
     useState<boolean>(false);
+  const [editCompanyData, setEditCompanyData] = useState<Company | undefined>(
+    undefined
+  );
 
   const route = useRouter();
 
@@ -46,6 +47,11 @@ export default function CompanyListPage() {
     },
     [route]
   );
+
+  const handleEditCompany = useCallback((company: Company) => {
+    setEditCompanyData(company);
+    setIsCompanyDialogOpen(true);
+  }, []);
 
   const companyColumns: ColumnDef<Company>[] = useMemo(
     () => [
@@ -172,9 +178,7 @@ export default function CompanyListPage() {
                 <DropdownMenuItem onClick={() => handleDetailCompany(company)}>
                   Lihat Detail
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => alert(`Edit ${company.companyName}`)}
-                >
+                <DropdownMenuItem onClick={() => handleEditCompany(company)}>
                   Edit Perusahaan
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -189,7 +193,7 @@ export default function CompanyListPage() {
         },
       },
     ],
-    [handleDetailCompany]
+    [handleDetailCompany, handleEditCompany]
   );
 
   const filteredCompanies = useMemo(() => {
@@ -327,11 +331,11 @@ export default function CompanyListPage() {
 
   return (
     <TableMain<Company>
-      searchQuery={searchQuery} // --- PERBAIKAN: Menggunakan searchQuery ---
+      searchQuery={searchQuery}
       data={filteredCompanies}
       columns={companyColumns}
       tabItems={companyTabItems}
-      activeTab={activeTab} // --- PERBAIKAN: Menggunakan activeTab ---
+      activeTab={activeTab}
       onTabChange={setActiveTab}
       showAddButton={true}
       showDownloadPrintButtons={true}
@@ -340,7 +344,11 @@ export default function CompanyListPage() {
       onOpenChange={setIsCompanyDialogOpen}
       dialogContent={
         <CompanyDialog
-          onClose={() => setIsCompanyDialogOpen(false)}
+          onClose={() => {
+            setIsCompanyDialogOpen(false);
+            setEditCompanyData(undefined);
+          }}
+          initialData={editCompanyData}
           onSubmit={handleAddCompanySubmit}
         />
       }

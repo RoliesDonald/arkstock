@@ -1,4 +1,3 @@
-// src/types/location.ts
 import * as z from "zod";
 
 export const locationFormSchema = z.object({

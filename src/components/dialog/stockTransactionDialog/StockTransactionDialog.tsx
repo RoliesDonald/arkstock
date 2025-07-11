@@ -42,8 +42,6 @@ import {
   stockTransactionFormSchema,
   TransactionType,
 } from "@/types/stockTransaction";
-import { SparePart } from "@/types/sparepart";
-import { Warehouse } from "@/types/warehouse";
 
 // Data dummy (akan diganti dengan Redux store di masa depan)
 import { sparePartData } from "@/data/sampleSparePartData";
@@ -146,7 +144,7 @@ const StockTransactionDialog: React.FC<StockTransactionDialogProps> = ({
               control={form.control}
               name="date"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem className="">
                   <FormLabel>Tanggal Transaksi</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>

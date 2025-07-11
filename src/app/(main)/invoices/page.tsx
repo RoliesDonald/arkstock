@@ -1,7 +1,6 @@
-// src/app/invoices/page.tsx
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -17,11 +16,13 @@ import { format } from "date-fns";
 
 // --- IMPORT DATA DARI sampleDataInvoice.ts ---
 // --- IMPORT TYPE DARI types/invoice.ts ---
-import { Invoice, InvoiceStatus } from "@/types/invoice";
+import { Invoice, InvoiceFormValues, InvoiceStatus } from "@/types/invoice";
 import { useAppSelector } from "@/store/hooks";
 import TableMain from "@/components/common/table/TableMain";
-import InvDialog from "@/components/dialog/invDialog/_component/page";
 import { invoiceData } from "@/data/sampleInvoiceData";
+import InvoiceDialog from "@/components/dialog/invoiceDialog/InvoiceDialog";
+import { WorkOrder } from "@/types/workOrder";
+import { useRouter } from "next/navigation";
 
 // TableMain tampaknya tidak digunakan atau digantikan oleh TablesArea.
 // Jika Anda memang ingin menggunakan TablesArea, import TableMain ini bisa dihapus.
@@ -33,6 +34,33 @@ export default function InvoicePage() {
   const [allInvoices] = useState<Invoice[]>(invoiceData);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isNewInvoiceDialogOpen, setIsNewInvoiceDialogOpen] = useState(false);
+
+  const router = useRouter();
+
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(
+    null
+  );
+
+  const handleOpenInvoiceDialog = (wo: WorkOrder) => {
+    setSelectedWorkOrder(wo);
+    setIsNewInvoiceDialogOpen(true);
+  };
+
+  const handleDetailInvoice = useCallback(
+    (invoice: Invoice) => {
+      router.push(`/invoices/${invoice.id}`);
+    },
+    [router]
+  );
+
+  const handleSubmitInvoice = (values: InvoiceFormValues) => {
+    // Simpan invoice baru ke backend atau state
+    setIsNewInvoiceDialogOpen(false);
+  };
+
+  const handleDialogClose = () => {
+    setIsNewInvoiceDialogOpen(false);
+  };
 
   const invoiceColumns: ColumnDef<Invoice>[] = useMemo(
     () => [
@@ -79,7 +107,7 @@ export default function InvoicePage() {
         accessorKey: "finished", // Menggunakan 'finished' sebagai Due Date sementara
         header: "Due Date",
         cell: ({ row }) =>
-          format(new Date(row.original.finishedDate), "dd/MM/yyyy"),
+          format(new Date(row.original.finished), "dd/MM/yyyy"),
       },
       {
         accessorKey: "status",
@@ -93,8 +121,8 @@ export default function InvoicePage() {
               statusColor = "bg-green-500 text-white";
               break;
             case InvoiceStatus.PENDING:
-            case InvoiceStatus.SENT:
-            case InvoiceStatus.PARTIALLY_PAID:
+            case InvoiceStatus.CANCELED:
+            case InvoiceStatus.PAID:
               statusColor = "bg-yellow-500 text-black";
               break;
             case InvoiceStatus.OVERDUE:
@@ -103,7 +131,7 @@ export default function InvoicePage() {
             case InvoiceStatus.DRAFT:
               statusColor = "bg-blue-300 text-blue-800";
               break;
-            case InvoiceStatus.CANCELLED:
+            case InvoiceStatus.CANCELED:
               statusColor = "bg-gray-500 text-white";
               break;
             case InvoiceStatus.REJECTED:
@@ -135,11 +163,11 @@ export default function InvoicePage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Create Invoice</DropdownMenuLabel>
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuItem
-                  onClick={
-                    () => {} // memanggil InvDialog dan otomatis menarik data yang ada sesuai dengan kebutuhan kolom invoice dari kolom atau data dari WO yg di pilih
-                  }
+                  onClick={() => {
+                    handleDetailInvoice(invoiceData);
+                  }}
                 >
                   View Invoice
                 </DropdownMenuItem>
@@ -149,7 +177,7 @@ export default function InvoicePage() {
         },
       },
     ],
-    []
+    [handleDetailInvoice]
   );
 
   const filteredInvoices = useMemo(() => {
@@ -166,7 +194,7 @@ export default function InvoicePage() {
         if (activeTab === "overdue")
           return inv.status === InvoiceStatus.OVERDUE;
         if (activeTab === "cancelled")
-          return inv.status === InvoiceStatus.CANCELLED;
+          return inv.status === InvoiceStatus.CANCELED;
         if (activeTab === "rejected")
           return inv.status === InvoiceStatus.REJECTED;
         return true;
@@ -223,7 +251,7 @@ export default function InvoicePage() {
         value: "cancelled",
         label: "Cancelled",
         count: allInvoices.filter(
-          (inv) => inv.status === InvoiceStatus.CANCELLED
+          (inv) => inv.status === InvoiceStatus.CANCELED
         ).length,
       },
       {
@@ -235,10 +263,6 @@ export default function InvoicePage() {
       },
     ];
   }, [allInvoices]);
-
-  const handleDialogClose = () => {
-    setIsNewInvoiceDialogOpen(false);
-  };
 
   return (
     <TableMain<Invoice>
@@ -253,7 +277,15 @@ export default function InvoicePage() {
       emptyMessage="No invoices found."
       isDialogOpen={isNewInvoiceDialogOpen}
       onOpenChange={setIsNewInvoiceDialogOpen}
-      dialogContent={<InvDialog onClose={handleDialogClose} />}
+      dialogContent={
+        selectedWorkOrder && (
+          <InvoiceDialog
+            onClose={handleDialogClose}
+            initialWoData={selectedWorkOrder}
+            onSubmitInvoice={handleSubmitInvoice}
+          />
+        )
+      }
       dialogTitle="Create New Invoice"
       dialogDescription="Fill in the details to create a new invoice."
     />

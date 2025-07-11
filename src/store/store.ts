@@ -13,6 +13,8 @@ import userReducer from "./slices/userSlices";
 import appReducer from "./slices/appSlice";
 import tableSearchSlice from "./slices/tableSearchSlice";
 import employeeReducer from "./slices/employeeSlice";
+import serviceReducer from "./slices/serviceSlice";
+import estimationReducer from "./slices/estimationSlice";
 
 export const store = configureStore({
   reducer: {
@@ -29,6 +31,8 @@ export const store = configureStore({
     spareParts: sparePartsReducer,
     tableSearch: tableSearchSlice,
     employee: employeeReducer,
+    services: serviceReducer,
+    estimations: estimationReducer,
   },
   // Middleware untuk menangani objek Date agar tidak diserialisasi
   middleware: (getDefaultMiddleware) =>
@@ -52,6 +56,9 @@ export const store = configureStore({
           "units.units",
           "units.units.createdAt",
           "units.units.updatedAt",
+          "services.services", // Untuk array services
+          "services.services.createdAt",
+          "services.services.updatedAt",
           // Tambahkan path lain jika ada objek Date di state Redux Anda
           // Misalnya untuk Purchase Order jika sudah ada slice-nya
           // 'purchaseOrders.purchaseOrders',

@@ -1,4 +1,9 @@
 import * as z from "zod";
+import { Vehicle } from "./vehicle";
+import { Company } from "./companies";
+import { Employee } from "./employee";
+import { Invoice } from "./invoice";
+import { Estimation } from "./estimation";
 
 export enum WoProgresStatus {
   DRAFT = "DRAFT",
@@ -30,7 +35,7 @@ export const workOrderFormSchema = z.object({
     .nullable()
     .optional(),
   remark: z.string().min(1, { message: "Keluhan/kerusakan wajib diisi." }),
-  schedule: z.date().optional(),
+  schedule: z.date().optional().nullable(),
   serviceLocation: z.string().min(1, { message: "Lokasi servis wajib diisi." }),
   notes: z.string().optional().nullable(),
   vehicleMake: z.string().min(1, { message: "Merk kendaraan wajib diisi." }), // Ini mungkin redundan jika vehicleId ada
@@ -54,40 +59,40 @@ export type WorkOrderFormValues = z.infer<typeof workOrderFormSchema>;
 
 export interface WorkOrder {
   id: string; // UUID
-  woNumber: string;
-  woMaster: string;
+  workOrderNumber: string;
+  workOrderMaster: string;
   date: Date;
   settledOdo: number | null;
   remark: string;
-  schedule?: Date;
+  schedule?: Date | null;
   serviceLocation: string;
   notes?: string | null;
   vehicleMake: string; // Bisa diambil dari relasi Vehicle
   progresStatus: WoProgresStatus;
   priorityType: WoPriorityType;
-  vehicleId: string; // FK
-  customerId: string; // FK
-  carUserId: string; // FK
-  vendorId: string; // FK
-  mechanicId?: string | null; // FK
-  driverId?: string | null; // FK
+  vehicleId: string;
+  customerId: string;
+  carUserId: string;
+  vendorId: string;
+  mechanicId?: string | null;
+  driverId?: string | null;
   driverContact?: string | null;
-  approvedById?: string | null; // FK
-  requestedById?: string | null; // FK
-  locationId?: string | null; // FK
+  approvedById?: string | null;
+  requestedById?: string | null;
+  locationId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 
   // Relasi (tidak diisi di form, hanya di entitas lengkap)
-  // vehicle?: Vehicle;
-  // customer?: Company;
-  // carUser?: Company;
-  // vendor?: Company;
-  // mechanic?: User;
-  // driver?: User;
-  // approvedBy?: User;
-  // requestedBy?: User;
-  // invoice?: Invoice;
-  // estimation?: Estimation;
-  // Location?: Location;
+  vehicle?: Vehicle;
+  customer?: Company;
+  carUser?: Company;
+  vendor?: Company;
+  mechanic?: Employee;
+  driver?: Employee;
+  approvedBy?: Employee;
+  requestedBy?: Employee;
+  invoice?: Invoice;
+  estimation?: Estimation;
+  location?: Location;
 }

@@ -5,12 +5,13 @@ import { v4 as uuidv4 } from "uuid";
 export const sparePartData: SparePart[] = [
   {
     id: "21a2b1c2-d3e4-5f67-8901-234567890123",
-    sku: "SKU-KRM-AVZ-001",
+    sku: "BRK-PAD-FRT-AVZ-TOY-OEM",
     name: "Kampas Rem Depan Avanza",
     partNumber: "BRK-PAD-FRT-AVZ",
     description: "Kampas rem depan untuk Toyota Avanza tahun 2012-2020.",
     unit: "Set",
-    // stock: 50, // <-- HAPUS BARIS INI JIKA ADA
+    stock: 50, // <-- DITAMBAHKAN
+    initialStock: 50, // <-- DITAMBAHKAN
     minStock: 10,
     price: 300000,
     variant: PartVariant.OEM,
@@ -27,12 +28,13 @@ export const sparePartData: SparePart[] = [
   },
   {
     id: "31a2b1c2-d3e4-5f67-8901-234567890123",
-    sku: "SKU-FIL-OLI-BRIO-001",
+    sku: "OIL-FIL-BRIO001-SAK-AM",
     name: "Filter Oli Mesin Honda Brio",
     partNumber: "OIL-FIL-BRIO001",
     description: "Filter oli mesin untuk Honda Brio semua tahun.",
     unit: "Pcs",
-    // stock: 100, // <-- HAPUS BARIS INI JIKA ADA
+    stock: 100, // <-- DITAMBAHKAN
+    initialStock: 100, // <-- DITAMBAHKAN
     minStock: 20,
     price: 85000,
     variant: PartVariant.AFTERMARKET,
@@ -48,12 +50,13 @@ export const sparePartData: SparePart[] = [
   },
   {
     id: "41a2b1c2-d3e4-5f67-8901-234567890123",
-    sku: "SKU-BUSI-ERT-001",
+    sku: "SPK-PLG-ERT001-NGK-OEM",
     name: "Busi Mobil Suzuki Ertiga",
     partNumber: "SPK-PLG-ERT001",
     description: "Busi standar untuk Suzuki Ertiga.",
     unit: "Pcs",
-    // stock: 75, // <-- HAPUS BARIS INI JIKA ADA
+    stock: 75, // <-- DITAMBAHKAN
+    initialStock: 75, // <-- DITAMBAHKAN
     minStock: 15,
     price: 25000,
     variant: PartVariant.OEM,
@@ -68,12 +71,13 @@ export const sparePartData: SparePart[] = [
   },
   {
     id: "51a2b1c2-d3e4-5f67-8901-234567890123",
-    sku: "SKU-AKI-NS40Z-001",
+    sku: "BAT-DRY-NS40Z-YUA-AM",
     name: "Aki Kering NS40Z",
     partNumber: "BAT-DRY-NS40Z",
     description: "Aki kering bebas perawatan NS40Z.",
     unit: "Pcs",
-    // stock: 20, // <-- HAPUS BARIS INI JIKA ADA
+    stock: 20, // <-- DITAMBAHKAN
+    initialStock: 20, // <-- DITAMBAHKAN
     minStock: 5,
     price: 700000,
     variant: PartVariant.AFTERMARKET,
@@ -85,12 +89,13 @@ export const sparePartData: SparePart[] = [
   },
   {
     id: "61a2b1c2-d3e4-5f67-8901-234567890123",
-    sku: "SKU-KOP-CANTER-001",
+    sku: "ME515796-MIT-OEM",
     name: "Kampas Kopling Mitsubishi Canter 125PS",
     partNumber: "ME515796",
     description: "Kampas kopling untuk truk Mitsubishi Canter 125PS.",
     unit: "Set",
-    // stock: 15, // <-- HAPUS BARIS INI JIKA ADA
+    stock: 15, // <-- DITAMBAHKAN
+    initialStock: 15, // <-- DITAMBAHKAN
     minStock: 3,
     price: 1200000,
     variant: PartVariant.OEM,

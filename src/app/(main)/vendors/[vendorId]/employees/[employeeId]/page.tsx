@@ -1,6 +1,6 @@
 "use client";
 import TableMain from "@/components/common/table/TableMain";
-import { userData } from "@/lib/sampleTableData";
+import { userData } from "@/lib/sampleTableDataa";
 import { useAppSelector } from "@/store/hooks";
 import { User, UserStatus } from "@/types/user";
 import { useMemo, useState } from "react";

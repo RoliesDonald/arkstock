@@ -1,13 +1,14 @@
-// src/components/sparePartDialog/SparePartDialog.tsx
 "use client";
 
 import React, { useMemo, useEffect, useCallback } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import {
+  useForm,
+  useFieldArray,
+  useWatch,
+  SubmitHandler,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { id as localeId } from "date-fns/locale";
 import { PlusCircle, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,15 +36,16 @@ import {
   sparePartFormSchema,
   PartVariant,
 } from "@/types/sparepart";
-import { SparePartCompatibility } from "@/types/sparepart";
 
 // Redux
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { fetchUnits } from "@/store/slices/unitSlice"; // Import fetchUnits
+import { fetchUnits } from "@/store/slices/unitSlice";
 
 // Data dummy (akan diganti dengan Redux store di masa depan)
 import { vehicleData } from "@/data/sampleVehicleData";
-import { DialogFooter } from "@/components/ui/dialog";
+
+// Import SKU formatter
+import { generateSku } from "@/lib/skuFormatter";
 
 interface SparePartDialogProps {
   onClose: () => void;
@@ -57,12 +59,12 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
   initialData,
 }) => {
   const dispatch = useAppDispatch();
-  const availableUnits = useAppSelector((state) => state.units.units); // Ambil unit dari Redux store
+  const availableUnits = useAppSelector((state) => state.units.units);
   const unitStatus = useAppSelector((state) => state.units.status);
 
   useEffect(() => {
     if (unitStatus === "idle") {
-      dispatch(fetchUnits()); // Fetch unit saat komponen dimuat
+      dispatch(fetchUnits());
     }
   }, [dispatch, unitStatus]);
 
@@ -72,16 +74,18 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
       return initialData
         ? {
             ...initialData,
-            description: initialData.description ?? null,
-            minStock: initialData.minStock ?? null,
+            description:
+              initialData.description === null ? null : initialData.description,
+            minStock:
+              initialData.minStock === null ? null : initialData.minStock,
             compatibility: initialData.compatibility || [],
           }
         : {
-            sku: "",
+            sku: "", // Akan diisi otomatis
             name: "",
             partNumber: "",
             description: null,
-            unit: "", // Default unit kosong
+            unit: "",
             initialStock: 0,
             minStock: null,
             price: 0,
@@ -102,6 +106,21 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
     name: "compatibility",
   });
 
+  // Watch fields for SKU generation
+  const watchedPartNumber = form.watch("partNumber");
+  const watchedVariant = form.watch("variant");
+  const watchedBrand = form.watch("brand");
+
+  // Effect to generate SKU automatically
+  useEffect(() => {
+    const generatedSku = generateSku(
+      watchedPartNumber,
+      watchedVariant,
+      watchedBrand
+    );
+    form.setValue("sku", generatedSku, { shouldValidate: true });
+  }, [watchedPartNumber, watchedVariant, watchedBrand, form]);
+
   const availableVehicleMakes = useMemo(() => {
     const makes = new Set<string>();
     vehicleData.forEach((v) => makes.add(v.vehicleMake));
@@ -116,7 +135,7 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
     return Array.from(models);
   }, []);
 
-  const onSubmit = async (values: SparePartFormValues) => {
+  const onSubmit: SubmitHandler<SparePartFormValues> = async (values) => {
     console.log("Mengirim data suku cadang:", values);
     onSubmitSparePart(values);
     onClose();
@@ -141,9 +160,17 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 <FormItem>
                   <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Contoh: SKU-001" {...field} />
+                    <Input
+                      placeholder="Akan otomatis terisi"
+                      {...field}
+                      disabled
+                    />
                   </FormControl>
                   <FormMessage />
+                  <FormDescription>
+                    SKU akan otomatis terisi berdasarkan Nomor Part, Varian, dan
+                    Merek.
+                  </FormDescription>
                 </FormItem>
               )}
             />
@@ -217,8 +244,6 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                     <SelectContent>
                       {availableUnits.map((unit) => (
                         <SelectItem key={unit.id} value={unit.name}>
-                          {" "}
-                          {/* <-- Menggunakan unit.name sebagai value */}
                           {unit.name}
                         </SelectItem>
                       ))}
@@ -475,14 +500,15 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
           </CardContent>
         </Card>
 
-        <DialogFooter className="pt-6">
+        {/* <-- KOREKSI: Ganti DialogFooter dengan div biasa */}
+        <div className="flex justify-end gap-2 pt-6">
           <Button type="button" variant="outline" onClick={onClose}>
             Batal
           </Button>
           <Button type="submit">
             {initialData ? "Simpan Perubahan" : "Tambah Suku Cadang"}
           </Button>
-        </DialogFooter>
+        </div>
       </form>
     </Form>
   );

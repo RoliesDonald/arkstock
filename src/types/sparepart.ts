@@ -11,16 +11,18 @@ export enum PartVariant {
 
 // Interface untuk kompatibilitas suku cadang dengan kendaraan tertentu
 export interface SparePartCompatibility {
-  vehicleMake: string; // Merek kendaraan (contoh: Toyota, Honda)
-  model: string; // Model kendaraan (contoh: Avanza, Civic)
-  trimLevel?: string | null; // Varian atau tipe model kendaraan (Opsional & Nullable)
+  sparePartId: string; // Merek kendaraan (contoh: Toyota, Honda)
+  vehicleMake: string; // Model kendaraan (contoh: Avanza, Civic)
+  vehicleModel: string; // Varian atau tipe model kendaraan (Opsional & Nullable)
+  trimLevel?: string | null; // Level trim kendaraan (Opsional & Nullable)
   modelYear?: number | null; // Tahun model kendaraan (Opsional & Nullable)
 }
 
 // Skema Zod untuk SparePartCompatibility
 export const sparePartCompatibilitySchema = z.object({
-  vehicleMake: z.string().min(1, { message: "Merek kendaraan wajib diisi." }),
-  model: z.string().min(1, { message: "Model kendaraan wajib diisi." }),
+  sparePartId: z.string().min(1, { message: "Merek kendaraan wajib diisi." }),
+  vehicleMake: z.string().min(1, { message: "Model kendaraan wajib diisi." }),
+  vehicleModel: z.string().min(1, { message: "Varian kendaraan wajib diisi." }),
   trimLevel: z.string().nullable().optional(),
   modelYear: z.coerce.number().int().nullable().optional(),
 });
@@ -28,21 +30,21 @@ export const sparePartCompatibilitySchema = z.object({
 // Skema Zod untuk form penambahan/edit SparePart
 export const sparePartFormSchema = z.object({
   id: z.string().optional(), // Opsional untuk kasus edit
-  sku: z.string().optional(),
-  name: z
+  sku: z.string().optional(), // SKU akan di-generate otomatis, jadi opsional di form input
+  partName: z
     .string()
     .min(2, { message: "Nama suku cadang wajib diisi (minimal 2 karakter)." }),
   partNumber: z
     .string()
     .min(3, { message: "Nomor part wajib diisi (minimal 3 karakter)." }),
-  description: z.string().optional(), // Deskripsi opsional
+  description: z.string().nullable().optional(), // Deskripsi opsional
   unit: z
     .string()
     .min(1, { message: "Satuan wajib diisi (contoh: Pcs, Set, Liter)." }),
   initialStock: z.coerce
     .number()
     .int()
-    .min(0, { message: "Stok awal tidak boleh negatif." }), // Ini hanya untuk inisialisasi awal
+    .min(0, { message: "Stok awal tidak boleh negatif." }), // Ini untuk nilai stok awal saat dibuat
   minStock: z.coerce
     .number()
     .int()
@@ -55,41 +57,52 @@ export const sparePartFormSchema = z.object({
   }),
   brand: z
     .string()
-    .min(1, { message: "Merek (brand) suku cadang wajib diisi." }),
+    .min(1, { message: "Merek (brand) suku cadang wajib diisi." })
+    .optional()
+    .nullable(),
   manufacturer: z
     .string()
-    .min(1, { message: "Produsen suku cadang wajib diisi." }),
+    .min(1, { message: "Produsen suku cadang wajib diisi." })
+    .optional()
+    .nullable(),
   compatibility: z.array(sparePartCompatibilitySchema).optional(),
 });
 
 export type SparePartFormValues = z.infer<typeof sparePartFormSchema>;
 
-// Interface untuk data SparePart lengkap (termasuk ID dan timestamp)
 export interface SparePart {
   id: string; // UUID
-  sku: string;
-  name: string;
+  sku?: string | null;
+  partName: string;
   partNumber: string;
   description?: string | null;
   unit: string;
-  // HAPUS BARIS INI: stock: number; // <-- Ini yang menyebabkan error. Stok dikelola di WarehouseStock
+  stock: number; //
   minStock?: number | null;
+  initialStock: number;
   price: number;
   variant: PartVariant;
-  brand: string;
-  manufacturer: string;
-  compatibility: SparePartCompatibility[];
+  brand?: string | null;
+  manufacturer?: string | null;
+  SparePartSuitableVehicles?: SparePartCompatibility[];
   createdAt: Date;
   updatedAt: Date;
+
+  invoiceItems?: any[];
+  estimationItems?: any[];
+  purchaseOrderItems?: any[];
 }
 
 // Skema untuk item spare part dalam transaksi (InvoiceItem, EstimationItem)
 export const transactionPartDetailsSchema = z.object({
-  sparePartId: z.string().optional(),
-  itemName: z.string().min(1, { message: "Nama item wajib diisi." }),
+  sparePartId: z.string().min(1, { message: "ID suku cadang wajib diisi." }),
+  partName: z.string().min(1, { message: "Nama item wajib diisi." }),
   partNumber: z.string().min(1, { message: "Nomor part wajib diisi." }),
   quantity: z.coerce.number().int().min(1).default(1),
   unit: z.string().min(1, { message: "Satuan wajib diisi." }),
+  variant: z.nativeEnum(PartVariant, {
+    errorMap: () => ({ message: "Varian suku cadang wajib dipilih." }),
+  }),
   unitPrice: z.coerce
     .number()
     .min(0.01, { message: "Harga satuan harus lebih dari 0." }),

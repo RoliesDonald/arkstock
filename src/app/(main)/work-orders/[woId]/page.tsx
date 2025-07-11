@@ -1,4 +1,3 @@
-// src/app/(main)/work-orders/[woId]/page.tsx
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -31,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import WoDialog from "@/components/dialog/woDialog/_components/WoDialog";
+import { Separator } from "@/components/ui/separator";
 
 export default function WorkOrderDetailPage() {
   const params = useParams();
@@ -88,7 +88,7 @@ export default function WorkOrderDetailPage() {
     (companyId: string | null | undefined) => {
       if (!companyId) return "N/A";
       const company = allCompanies.find((c: Company) => c.id === companyId);
-      return company ? company.companyName : "Tidak Dikenal";
+      return company ? company.companyName : "Tidak Dikenal Coy";
     },
     [allCompanies]
   );
@@ -189,7 +189,7 @@ export default function WorkOrderDetailPage() {
     );
   }
 
-  // PERBAIKAN RUNTIME ERROR: Pastikan currentWorkOrder ada sebelum merender detailnya
+  // Pastikan currentWorkOrder ada sebelum merender detailnya
   if (!currentWorkOrder) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -202,144 +202,270 @@ export default function WorkOrderDetailPage() {
 
   // Jika sampai sini, currentWorkOrder dijamin ada
   return (
-    <div className="container mx-auto py-8 space-y-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            {/* Tidak perlu lagi '!' karena sudah dipastikan di atas */}
-            <CardTitle className="text-3xl font-bold">
-              {currentWorkOrder.woNumber}
+    <div>
+      <div className="flex space-x-4 justify-between pr-4 mr-1">
+        <h2 className="text-lg text-arkBg-500 font-bold ">
+          {currentWorkOrder.woNumber}
+        </h2>
+        <div className="flex space-x-4">
+          <Button variant={"outline"} onClick={handleBackToList}>
+            Back
+          </Button>
+          <Button onClick={handleEditClick}>Edit Work Order</Button>
+        </div>
+      </div>
+      <Card className="w-full shadow-md rounded-md overflow-hidden my-2 p-2">
+        <CardHeader className="pb-4 border-b border-arkBlue-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <span className="text-2xl font-extrabold text-arkBlue-700">
+                Logo Customer
+              </span>
+            </div>
+            <CardTitle className="text-2xl font-semibold text-arkBg-100 border px-4 py-2 rounded-2xl bg-arkBlue-600">
+              Surat Perintah Kerja
             </CardTitle>
-            <CardDescription className="text-gray-600">
-              Detail Lengkap Work Order
-            </CardDescription>
           </div>
-          <div className="flex space-x-4">
-            <Button variant={"outline"} onClick={handleBackToList}>
-              Back
-            </Button>
-            <Button onClick={handleEditClick}>Edit Work Order</Button>
+          <div className="flex items-end justify-between">
+            <div className="text-sm text-arkBg-700 mb-4">
+              <p className="font-semibold">{currentWorkOrder.customerId}</p>
+              <p>{getCompanyNameById(currentWorkOrder.locationId)}</p>
+              <p>JAKARTA 10270</p>
+              <p>{getCompanyNameById(currentWorkOrder.driverContact)}</p>
+            </div>
+            <div className="flex flex-col items-end justify-end">
+              <p className="mb-3 items-end bg-arkBlue-100 rounded-lg">
+                <span className="p-4 font-semibold ">
+                  {currentWorkOrder.priorityType}
+                </span>
+              </p>
+
+              <div className="flex flex-col items-end border-red-200 border-2 px-2 py-1 rounded-lg">
+                <p className="text-sm">
+                  No. WO :
+                  <span className="font-semibold ">
+                    {currentWorkOrder.woNumber}
+                  </span>
+                </p>
+                <p className="text-sm">
+                  WO. Customer :
+                  <span className="font-semibold ">
+                    {currentWorkOrder.woMaster}
+                  </span>
+                </p>
+              </div>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg">
-          {/* Kolom Kiri */}
-          <div className="space-y-3 p-4 ">
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Nomor WO</p>
-              <p>: {currentWorkOrder.woNumber}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">WO Master</p>
-              <p>: {currentWorkOrder.woMaster}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Tanggal WO</p>
-              <p>
-                :
-                {format(currentWorkOrder.date, "dd MMMM yyyy", {
-                  locale: localeId,
-                })}
-              </p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Odometer</p>
-              <p>: {currentWorkOrder.settledOdo ?? "N/A"} KM</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Keluhan</p>
-              <p>: {currentWorkOrder.remark}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Jadwal</p>
-              <p>
-                :{" "}
-                {currentWorkOrder.schedule
-                  ? format(currentWorkOrder.schedule, "dd MMMM yyyy", {
-                      locale: localeId,
-                    })
-                  : "N/A"}
-              </p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Lokasi Servis</p>
-              <p>: {currentWorkOrder.serviceLocation}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Catatan</p>
-              <p>: {currentWorkOrder.notes || "N/A"}</p>
+        <CardContent className="pt-6">
+          {/* Detail Kepada */}
+          <div className="mb-6 border-b pb-4">
+            <h3 className="text-lg font-semibold mb-2 text-arkBg-800">
+              Kepada:
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-arkBg-700">
+              <div className="flex">
+                <span className="w-24 font-medium">Nama:</span>
+                <span className="text-arkBlue-800 font-semibold">
+                  {currentWorkOrder.vendorId}
+                </span>
+              </div>
+              <div className="flex">
+                <span className="w-24 font-medium">UP:</span>
+                <span>{getEmployeeNameById(currentWorkOrder.carUserId)}</span>
+              </div>
+              <div className="flex">
+                <span className="w-24 font-medium">Alamat:</span>
+                <span>{currentWorkOrder.locationId}</span>
+              </div>
+              <div className="flex">
+                <span className="w-24 font-medium">Telp:</span>
+                <span>{currentWorkOrder.carUserId}</span>
+              </div>
             </div>
           </div>
-          {/* Kolom Kanan */}
-          <div className="space-y-3 p-4 ">
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Plat Nomor Kendaraan</p>
-              <p>: {getLicensePlateById(currentWorkOrder.vehicleId)}</p>
+          {/* Detail Kendaraan*/}
+          <div className="mb-6 border-b pb-4">
+            <h3 className="text-lg font-semibold mb-2 text-arkBg-800">
+              Data Kendaraan:
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-arkBg-700">
+              <div className="flex">
+                <span className="w-24 font-medium">No. Polisi:</span>
+                <span>{}</span>
+              </div>
+              <div className="flex">
+                <span className="w-24 font-medium">Merk / Type:</span>
+                <span>{currentWorkOrder.vehicleMake}</span>
+              </div>
+              <div className="flex">
+                <span className="w-24 font-medium">Tahun / Warna:</span>
+                <span></span>
+              </div>
+              <div className="flex">
+                <span className="w-24 font-medium">No. Rangka:</span>
+                <span></span>
+              </div>
+              <div className="flex">
+                <span className="w-24 font-medium">No. Mesin:</span>
+                <span></span>
+              </div>
+              <div className="flex">
+                <span className="w-24 font-medium">Actual KM:</span>
+                <span>{currentWorkOrder.settledOdo ?? "N/A"}</span>
+              </div>
             </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Merk Kendaraan</p>
-              <p>: {currentWorkOrder.vehicleMake}</p>
+          </div>
+          <div className="mb-6 border-b pb-4 text-sm text-arkBg-700">
+            <p>
+              Remark: <span>{currentWorkOrder.remark}</span>
+            </p>
+
+            <p>
+              Request pengerjaan pada tanggal:{" "}
+              <span className="font-semibold">
+                {format(currentWorkOrder.schedule ?? new Date(), "dd/MM/yyyy", {
+                  locale: localeId,
+                })}
+              </span>
+            </p>
+          </div>
+
+          {/* Daftar Jasa */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3 text-arkBg-800">Jasa:</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-arkBg-200 rounded-md">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-2 px-4 text-left text-xs font-medium text-arkBg-500 uppercase tracking-wider border-b">
+                      No
+                    </th>
+                    <th className="py-2 px-4 text-left text-xs font-medium text-arkBg-500 uppercase tracking-wider border-b">
+                      Jasa
+                    </th>
+                    <th className="py-2 px-4 text-left text-xs font-medium text-arkBg-500 uppercase tracking-wider border-b">
+                      Quantity
+                    </th>
+                  </tr>
+                </thead>
+                {/* <tbody className="divide-y divide-gray-200">
+                  {currentWorkOrder.services.length > 0 ? (
+                    workOrder.services.map((service, index) => (
+                      <tr key={index}>
+                        <td className="py-2 px-4 whitespace-nowrap text-sm text-gray-800">
+                          {index + 1}
+                        </td>
+                        <td className="py-2 px-4 whitespace-nowrap text-sm text-gray-800">
+                          {service.name}
+                        </td>
+                        <td className="py-2 px-4 whitespace-nowrap text-sm text-gray-800">
+                          {service.quantity}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="py-4 px-4 text-center text-sm text-gray-500"
+                      >
+                        Tidak ada jasa yang terdaftar.
+                      </td>
+                    </tr>
+                  )}
+                </tbody> */}
+              </table>
             </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Customer</p>
-              <p>: {getCompanyNameById(currentWorkOrder.customerId)}</p>
+          </div>
+
+          {/* Daftar Item (Suku Cadang) */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3 text-gray-800">
+              Item (Suku Cadang):
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200 rounded-md">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+                      No
+                    </th>
+                    <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+                      Item
+                    </th>
+                    <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">
+                      Quantity
+                    </th>
+                  </tr>
+                </thead>
+                {/* <tbody className="divide-y divide-gray-200">
+                  {workOrder.items.length > 0 ? (
+                    workOrder.items.map((item, index) => (
+                      <tr key={index}>
+                        <td className="py-2 px-4 whitespace-nowrap text-sm text-gray-800">
+                          {index + 1}
+                        </td>
+                        <td className="py-2 px-4 whitespace-nowrap text-sm text-gray-800">
+                          {item.name}
+                        </td>
+                        <td className="py-2 px-4 whitespace-nowrap text-sm text-gray-800">
+                          {item.quantity}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="py-4 px-4 text-center text-sm text-gray-500"
+                      >
+                        Tidak ada item suku cadang yang terdaftar.
+                      </td>
+                    </tr>
+                  )}
+                </tbody> */}
+              </table>
             </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Pengguna Kendaraan</p>
-              <p>: {getCompanyNameById(currentWorkOrder.carUserId)}</p>
+          </div>
+          <Separator className="my-6" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 text-sm text-gray-700">
+            <div>
+              <p className="font-medium">SPK NO:</p>
+              <p>{}</p>
             </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Vendor (Bengkel)</p>
-              <p>: {getCompanyNameById(currentWorkOrder.vendorId)}</p>
+            <div>
+              <p className="font-medium">Cabang:</p>
+              <p>{}</p>
             </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Mekanik</p>
-              <p>: {getEmployeeNameById(currentWorkOrder.mechanicId)}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Driver</p>
-              <p>: {getEmployeeNameById(currentWorkOrder.driverId)}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Kontak Driver</p>
-              <p>: {currentWorkOrder.driverContact || "N/A"}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Disetujui Oleh</p>
-              <p>: {getEmployeeNameById(currentWorkOrder.approvedById)}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Diminta Oleh</p>
-              <p>: {getEmployeeNameById(currentWorkOrder.requestedById)}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Lokasi Kendaraan</p>
-              <p>: {currentWorkOrder.locationId || "N/A"}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Status Progres</p>
-              <p>: {currentWorkOrder.progresStatus.replace(/_/g, " ")}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Tipe Prioritas</p>
-              <p>: {currentWorkOrder.priorityType.replace(/_/g, " ")}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Dibuat Pada</p>
+            <div>
+              <p className="font-medium">Tanggal:</p>
               <p>
-                :{" "}
-                {format(currentWorkOrder.createdAt, "dd MMMM yyyy HH:mm", {
+                {format(currentWorkOrder.date, "dd/MM/yyyy", {
                   locale: localeId,
                 })}
               </p>
             </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Terakhir Diperbarui</p>
-              <p>
-                :{" "}
-                {format(currentWorkOrder.updatedAt, "dd MMMM yyyy HH:mm", {
-                  locale: localeId,
-                })}
-              </p>
+          </div>
+
+          {/* Catatan */}
+          <div className="mb-6 text-sm text-gray-700">
+            <p className="font-semibold mb-2">Catatan:</p>
+            <p className="italic text-gray-600">{}</p>
+          </div>
+
+          {/* Catatan Invoice Penagihan */}
+          <div className="mb-6 text-sm text-gray-700">
+            <p className="font-semibold mb-2">Catatan Invoice Penagihan:</p>
+            <p className="italic text-gray-600">{}</p>
+          </div>
+
+          {/* Tanda Tangan */}
+          <div className="text-right mt-8">
+            <p className="font-semibold text-gray-800">PT. DIPO STAR FINANCE</p>
+            <div className="mt-12 mb-2">
+              <p className="font-bold text-gray-800">{}</p>
+              <p className="text-sm text-gray-600">()</p>
             </div>
           </div>
         </CardContent>

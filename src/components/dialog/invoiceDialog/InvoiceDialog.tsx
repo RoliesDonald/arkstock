@@ -1,4 +1,3 @@
-// src/components/invoiceDialog/InvoiceDialog.tsx
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from "react";
@@ -63,7 +62,7 @@ import { vehicleData } from "@/data/sampleVehicleData";
 import { v4 as uuidv4 } from "uuid"; // Untuk generate ID Invoice
 
 interface InvoiceDialogProps {
-  onClose?: () => void;
+  onClose: () => void;
   initialWoData: WorkOrder; // Work Order data untuk pre-fill, sekarang WAJIB
   onSubmitInvoice: (values: InvoiceFormValues) => void; // Callback untuk submit invoice
 }
@@ -73,7 +72,7 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
   initialWoData,
   onSubmitInvoice,
 }) => {
-  const defaultValues = useMemo(() => {
+  const defaultValues: InvoiceFormValues = useMemo(() => {
     const generatedInvNum = `INV/${new Date().getFullYear()}/${(
       new Date().getMonth() + 1
     )
@@ -85,7 +84,7 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       date: new Date(),
       requestOdo: initialWoData.settledOdo ?? null, // Menggunakan null untuk konsistensi dengan skema
       actualOdo: initialWoData.settledOdo ?? null, // Menggunakan null untuk konsistensi dengan skema
-      remark: initialWoData.remark,
+      remark: initialWoData.remark ?? "",
       finished: new Date(),
       totalAmount: 0, // Ini akan dihitung, tapi default awal adalah 0
       status: InvoiceStatus.DRAFT,

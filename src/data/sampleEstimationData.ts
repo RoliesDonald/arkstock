@@ -1,7 +1,6 @@
-// src/data/sampleEstimationData.ts
-import { Estimation } from "@/types/estimation";
+import { Estimation, EstimationStatus } from "@/types/estimation";
 import { PartVariant, TransactionPartDetails } from "@/types/sparepart";
-import { TransactionServiceDetails } from "@/types/service";
+import { TransactionServiceDetails } from "@/types/services";
 import { v4 as uuidv4 } from "uuid";
 
 // Asumsi ID dari data dummy WorkOrder, Vehicle, User, SparePart, Service
@@ -21,9 +20,9 @@ const serviceId2 = "f1g2h3i4-j5k6-7l8m-9n0o-p1q2r3s4t5u6"; // Servis Rem Depan
 const serviceId6 = "b7c8d9e0-f1a2-3b4c-5d6e-7f8a9b0c1d2e"; // Perbaikan AC
 
 const estPartItem1: TransactionPartDetails = {
-  partId: sparePartId1,
+  sparePartId: sparePartId1,
   partNumber: "BRK-PAD-FRT-AVZ",
-  partName: "Kampas Rem Depan Avanza",
+  itemName: "Kampas Rem Depan Avanza",
   variant: PartVariant.OEM,
   unit: "Set",
   quantity: 1,
@@ -32,9 +31,9 @@ const estPartItem1: TransactionPartDetails = {
 };
 
 const estPartItem2: TransactionPartDetails = {
-  partId: sparePartId10,
+  sparePartId: sparePartId10,
   partNumber: "AC-FILTER-HRV",
-  partName: "Filter AC Honda HR-V",
+  itemName: "Filter AC Honda HR-V",
   variant: PartVariant.AFTERMARKET,
   unit: "Pcs",
   quantity: 1,
@@ -80,7 +79,7 @@ export const estimationData: Estimation[] = [
       {
         id: uuidv4(),
         estimationId: "",
-        sparePartId: estPartItem1.partId,
+        sparePartId: estPartItem1.sparePartId || "",
         quantity: estPartItem1.quantity,
         unitPrice: estPartItem1.unitPrice,
         totalPrice: estPartItem1.totalPrice,
@@ -97,8 +96,10 @@ export const estimationData: Estimation[] = [
         totalPrice: estServiceItem1.totalPrice,
         createdAt: new Date(),
         updatedAt: new Date(),
+        unitPrice: 0,
       },
     ],
+    estStatus: EstimationStatus.DRAFT,
   },
   {
     id: uuidv4(),
@@ -119,7 +120,7 @@ export const estimationData: Estimation[] = [
       {
         id: uuidv4(),
         estimationId: "",
-        sparePartId: estPartItem2.partId,
+        sparePartId: estPartItem2.sparePartId || "",
         quantity: estPartItem2.quantity,
         unitPrice: estPartItem2.unitPrice,
         totalPrice: estPartItem2.totalPrice,
@@ -136,8 +137,10 @@ export const estimationData: Estimation[] = [
         totalPrice: estServiceItem2.totalPrice,
         createdAt: new Date(),
         updatedAt: new Date(),
+        unitPrice: 0,
       },
     ],
+    estStatus: EstimationStatus.DRAFT,
   },
   {
     id: uuidv4(),
@@ -156,5 +159,6 @@ export const estimationData: Estimation[] = [
     updatedAt: new Date("2024-06-05T09:00:00Z"),
     estimationItems: [],
     estimationServices: [],
+    estStatus: EstimationStatus.DRAFT,
   },
 ];

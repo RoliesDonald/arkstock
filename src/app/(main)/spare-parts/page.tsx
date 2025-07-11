@@ -1,4 +1,3 @@
-// src/app/(main)/spare-parts/page.tsx
 "use client";
 
 import TableMain from "@/components/common/table/TableMain";
@@ -19,7 +18,7 @@ import {
   updateSparePart,
   deleteSparePart,
 } from "@/store/slices/sparePartSlice";
-import { fetchUnits } from "@/store/slices/unitSlice"; // <-- PERUBAHAN 1: Import fetchUnits
+import { fetchUnits } from "@/store/slices/unitSlice";
 
 import { SparePart, SparePartFormValues, PartVariant } from "@/types/sparepart";
 
@@ -29,38 +28,30 @@ import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import SparePartDialog from "@/components/dialog/sparePartDialog/SparePartDialog";
-import { useRouter } from "next/navigation";
 
 export default function SparePartListPage() {
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
   const dispatch = useAppDispatch();
-  const router = useRouter();
 
+  // Memastikan akses yang benar ke state Redux
   const allSpareParts = useAppSelector((state) => state.spareParts.spareParts);
   const sparePartStatus = useAppSelector((state) => state.spareParts.status);
   const sparePartError = useAppSelector((state) => state.spareParts.error);
 
-  const unitStatus = useAppSelector((state) => state.units.status); // <-- PERUBAHAN 2: Ambil status unit dari Redux store
+  const unitStatus = useAppSelector((state) => state.units.status);
 
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isSparePartDialogOpen, setIsSparePartDialogOpen] =
     useState<boolean>(false);
   const [editSparePartData, setEditSparePartData] = useState<
-    SparePartFormValues | undefined
+    SparePart | undefined
   >(undefined);
 
-  const handleDetailSparePart = useCallback(
-    (sparepart: SparePart) => {
-      router.push(`/spare-parts/${sparepart.id}`);
-    },
-    [router]
-  );
   useEffect(() => {
     if (sparePartStatus === "idle") {
       dispatch(fetchSpareParts());
     }
     if (unitStatus === "idle") {
-      // <-- PERUBAHAN 3: Dispatch fetchUnits saat komponen dimuat
       dispatch(fetchUnits());
     }
   }, [dispatch, sparePartStatus, unitStatus]);
@@ -132,7 +123,7 @@ export default function SparePartListPage() {
       },
       { accessorKey: "name", header: "Nama Suku Cadang" },
       { accessorKey: "partNumber", header: "Nomor Part" },
-      { accessorKey: "unit", header: "Satuan" }, // <-- PERUBAHAN 4: Menambahkan kolom "Satuan"
+      { accessorKey: "unit", header: "Satuan" },
       { accessorKey: "price", header: "Harga Satuan" },
       { accessorKey: "brand", header: "Merek" },
       { accessorKey: "manufacturer", header: "Produsen" },
@@ -175,7 +166,9 @@ export default function SparePartListPage() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                 <DropdownMenuItem
-                  onClick={() => handleDetailSparePart(sparePart)}
+                  onClick={() =>
+                    alert(`Lihat detail suku cadang ${sparePart.name}`)
+                  }
                 >
                   Lihat Detail
                 </DropdownMenuItem>
@@ -196,7 +189,7 @@ export default function SparePartListPage() {
         },
       },
     ],
-    [handleEditSparePart, handleDeleteSparePart, handleDetailSparePart]
+    [handleEditSparePart, handleDeleteSparePart]
   );
 
   const filteredSpareParts = useMemo(() => {

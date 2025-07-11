@@ -10,17 +10,17 @@ export enum CompanyType {
   SERVICE_MAINTENANCE = "SERVICE_MAINTENANCE", // Perusahaan penyedia jasa servis/perawatan
   RENTAL_COMPANY = "RENTAL_COMPANY", // Alias atau spesifikasi lebih lanjut untuk perusahaan rental
   CAR_USER = "CAR_USER", // Pengguna kendaraan (customer penyewa)
-  CHILD_COMPANY = "CHILD_COMPANY", // Pastikan underscore
   OTHER = "OTHER", // Tambahkan kembali jika ini diperlukan di aplikasi Anda
+  SUPPLIER = "SUPPLIER", // Pemasok atau vendor yang menyediakan barang/jasa
 }
 
 // Enum tambahan untuk UI (tidak ada di Prisma)
 export enum CompanyStatus {
-  ACTIVE = "Active",
-  INACTIVE = "Inactive",
-  PROSPECT = "Prospect",
-  BLACKLISTED = "Blacklisted",
-  ON_HOLD = "On Hold",
+  ACTIVE = "ACTIVE", // Menggunakan casing yang sama dengan Prisma
+  INACTIVE = "INACTIVE",
+  PROSPECT = "PROSPECT",
+  SUSPENDED = "SUSPENDED", // <-- DITAMBAHKAN: Menggantikan BLACKLISTED
+  ON_HOLD = "ON_HOLD",
 }
 
 // Skema Zod untuk validasi form Company
@@ -32,16 +32,17 @@ export const companyFormSchema = z.object({
     .string()
     .email({ message: "Format email tidak valid." })
     .optional()
+    .nullable()
     .or(z.literal("")),
   logo: z
     .string()
     .url({ message: "Format URL logo tidak valid." })
     .optional()
+    .nullable()
     .or(z.literal("")),
-  contact: z.string().min(1, { message: "Nomor telepon wajib diisi." }),
-  address: z.string().min(1, { message: "Alamat wajib diisi." }),
-  city: z.string().min(1, { message: "Kota wajib diisi." }),
-  phone: z.string().min(1, { message: "Nomor telepon wajib diisi." }),
+  contact: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
   taxRegistered: z.boolean(),
   companyType: z.nativeEnum(CompanyType, {
     required_error: "Tipe perusahaan wajib dipilih.",
@@ -66,7 +67,19 @@ export interface Company {
   phone?: string | null;
   taxRegistered: boolean;
   companyType: CompanyType;
-  status?: CompanyStatus;
-  createdAt: string;
-  updatedAt: string;
+  status: CompanyStatus;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relasi
+  parentCompanyId?: string | null;
+  parentCompany?: Company | null;
+  childCompanies?: Company[] | null; // Relasi satu ke banyak
+  vehiclesOwnned?: any[]; // Relasi ke kendaraan yang dimiliki
+  vehiclesUsed?: any[]; // Ganti 'any' dengan tipe Vehicle[] jika sudah ada
+  employees?: any[]; // Ganti 'any' dengan tipe Employee[] jika sudah ada
+  customerWorkOrders?: any[]; // Ganti 'any' dengan tipe WorkOrder[] jika sudah ada
+  carUserWorkOrders?: any[]; // Ganti 'any' dengan tipe WorkOrder[] jika sudah ada
+  vendorWorkOrders?: any[]; // Ganti 'any' dengan tipe WorkOrder[] jika sudah ada
+  suppliedPurchaseOrders?: any[]; // Ganti 'any' dengan tipe PurchaseOrder[] jika sudah ada
 }

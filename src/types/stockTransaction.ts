@@ -13,7 +13,7 @@ export interface StockTransaction {
   sparePartId: string;
   quantity: number;
   transactionType: TransactionType;
-  sourceWarehouseId: string;
+  originWarehouseId: string;
   targetWarehouseId?: string | null;
   remark?: string | null;
   createdAt: Date;
@@ -31,7 +31,7 @@ export const stockTransactionFormSchema = z.object({
   transactionType: z.nativeEnum(TransactionType, {
     errorMap: () => ({ message: "Tipe transaksi wajib dipilih" }),
   }),
-  sourceWarehouseId: z.string().uuid({ message: "Gudang asal wajib dipilih" }),
+  originWarehouseId: z.string().uuid({ message: "Gudang asal wajib dipilih" }),
   targetWarehouseId: z
     .string()
     .uuid({ message: "Gudang tujuan wajib dipilih" })

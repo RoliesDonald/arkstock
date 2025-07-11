@@ -16,9 +16,11 @@ import { useAppSelector } from "@/store/hooks";
 import { Estimation, EstimationStatus } from "@/types/estimation";
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreVertical } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import React, { useCallback, useMemo, useState } from "react";
 
 export default function EstimationListPage() {
+  const router = useRouter();
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
   const [allEstimation, setAllEstimation] =
     useState<Estimation[]>(estimationData);
@@ -29,7 +31,12 @@ export default function EstimationListPage() {
   const currentVendor = "BP";
   const today = new Date();
   const newWoNumber = formatWoNumber(nextSequence, currentVendor, today);
-
+  const handleDetailEstimation = useCallback(
+    (estimation: Estimation) => {
+      router.push(`/estimations/${estimation.id}`);
+    },
+    [router]
+  );
   const estimationColumns: ColumnDef<Estimation>[] = useMemo(
     () => [
       {
@@ -92,20 +99,17 @@ export default function EstimationListPage() {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuItem
-                  onClick={
-                    () => alert(`View Invoice ${estimationData.estNum}`) // Menggunakan invNum
-                  }
+                  onClick={() => handleDetailEstimation(estimationData)}
                 >
-                  View Invoice
+                  Detail Quotation
                 </DropdownMenuItem>
-                <DropdownMenuItem>Mark as Paid</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           );
         },
       },
     ],
-    []
+    [handleDetailEstimation]
   );
   const filteredEstimation = useMemo(() => {
     let currenntEstimation = allEstimation;

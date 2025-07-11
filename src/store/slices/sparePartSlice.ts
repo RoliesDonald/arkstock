@@ -3,6 +3,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { SparePart, SparePartFormValues } from "@/types/sparepart";
 import { sparePartData as initialSparePartData } from "@/data/sampleSparePartData"; // Menggunakan data dummy
 import { v4 as uuidv4 } from "uuid"; // Untuk menghasilkan ID unik
+import { generateSku } from "@/lib/skuFormatter"; // <-- DITAMBAHKAN: Import generateSku
 
 interface SparePartState {
   spareParts: SparePart[];
@@ -11,7 +12,7 @@ interface SparePartState {
 }
 
 const initialState: SparePartState = {
-  spareParts: [],
+  spareParts: initialSparePartData,
   status: "idle",
   error: null,
 };
@@ -29,7 +30,6 @@ const simulateApiCall = <T>(data: T, delay = 500): Promise<T> => {
 export const fetchSpareParts = createAsyncThunk(
   "spareParts/fetchSpareParts",
   async () => {
-    // Dalam aplikasi nyata, ini akan menjadi panggilan API ke backend Anda
     const response = await simulateApiCall(initialSparePartData);
     return response;
   }
@@ -38,13 +38,25 @@ export const fetchSpareParts = createAsyncThunk(
 export const createSparePart = createAsyncThunk(
   "spareParts/createSparePart",
   async (newSparePartData: SparePartFormValues) => {
+    // Pastikan SKU selalu string. Jika newSparePartData.sku undefined, generate ulang.
+    // Ini penting karena SparePart interface memerlukan SKU sebagai string.
+    const finalSku =
+      newSparePartData.sku ||
+      generateSku(
+        newSparePartData.partNumber,
+        newSparePartData.variant,
+        newSparePartData.brand
+      );
+
     const newSparePart: SparePart = {
       ...newSparePartData,
-      id: uuidv4(), // Generate unique ID for new spare part
+      sku: finalSku, // <-- KOREKSI: Secara eksplisit set SKU
+      id: uuidv4(),
+      stock: newSparePartData.initialStock, // Set stock awal dari initialStock
+      compatibility: newSparePartData.compatibility || [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    // Dalam aplikasi nyata, ini akan menjadi panggilan API POST ke backend Anda
     const response = await simulateApiCall(newSparePart);
     return response;
   }
@@ -53,7 +65,6 @@ export const createSparePart = createAsyncThunk(
 export const updateSparePart = createAsyncThunk(
   "spareParts/updateSparePart",
   async (updatedSparePart: SparePart) => {
-    // Dalam aplikasi nyata, ini akan menjadi panggilan API PUT/PATCH ke backend Anda
     const response = await simulateApiCall({
       ...updatedSparePart,
       updatedAt: new Date(),
@@ -65,8 +76,7 @@ export const updateSparePart = createAsyncThunk(
 export const deleteSparePart = createAsyncThunk(
   "spareParts/deleteSparePart",
   async (sparePartId: string) => {
-    // Dalam aplikasi nyata, ini akan menjadi panggilan API DELETE ke backend Anda
-    await simulateApiCall(null); // Simulate deletion
+    await simulateApiCall(null);
     return sparePartId;
   }
 );

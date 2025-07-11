@@ -21,7 +21,8 @@ import {
   Handshake,
   HelpCircle,
   LucideIcon,
-  PencilRuler, // Menambahkan HelpCircle jika ingin menggunakannya
+  PencilRuler,
+  FileKey2, // Menambahkan HelpCircle jika ingin menggunakannya
 } from "lucide-react"; // Import ikon dari Lucide Icons
 import { title } from "process";
 
@@ -97,12 +98,12 @@ export const sidebarMenuItems: MenuItem[] = [
             href: "/companies",
             icon: Building,
           },
-          {
-            title: "Tambah Perusahaan",
-            href: "/companies/create",
-            icon: PlusCircle,
-            roles: ["SuperAdmin", "AdminUser"], // Hanya admin yang bisa menambah
-          },
+          // {
+          //   title: "Tambah Perusahaan",
+          //   href: "/companies/create",
+          //   icon: PlusCircle,
+          //   roles: ["SuperAdmin", "AdminUser"], // Hanya admin yang bisa menambah
+          // },
         ],
       },
       {
@@ -116,11 +117,11 @@ export const sidebarMenuItems: MenuItem[] = [
             href: "/vehicles",
             icon: Truck, // Menggunakan Truck untuk daftar kendaraan
           },
-          {
-            title: "Tambah Kendaraan",
-            href: "/vehicles/create", // Sesuai dengan src/app/(main)/vehicles/create/page.tsx
-            icon: PlusCircle,
-          },
+          // {
+          //   title: "Tambah Kendaraan",
+          //   href: "/vehicles/create", // Sesuai dengan src/app/(main)/vehicles/create/page.tsx
+          //   icon: PlusCircle,
+          // },
         ],
       },
       {
@@ -141,11 +142,11 @@ export const sidebarMenuItems: MenuItem[] = [
             href: "/work-orders",
             icon: ClipboardList,
           },
-          {
-            title: "Buat Work Order",
-            href: "/work-orders/create", // Sesuai dengan src/app/(main)/work-orders/create/page.tsx
-            icon: PlusCircle,
-          },
+          // {
+          //   title: "Buat Work Order",
+          //   href: "/work-orders/create", // Sesuai dengan src/app/(main)/work-orders/create/page.tsx
+          //   icon: PlusCircle,
+          // },
         ],
       },
       {
@@ -241,23 +242,23 @@ export const sidebarMenuItems: MenuItem[] = [
             icon: Warehouse,
           },
           // Jika ada fitur tambah gudang melalui halaman terpisah
-          {
-            title: "Tambah Gudang",
-            href: "/warehouse/create", // Asumsi ada route ini
-            icon: PlusCircle,
-            roles: ["SuperAdmin", "WAREHOUSE_MANAGER"],
-          },
+          // {
+          //   title: "Tambah Gudang",
+          //   href: "/warehouse/create", // Asumsi ada route ini
+          //   icon: PlusCircle,
+          //   roles: ["SuperAdmin", "WAREHOUSE_MANAGER"],
+          // },
           {
             title: "List Spare Part",
             href: "/spare-parts",
             icon: Package,
           },
-          {
-            title: "Tambah Spare Part",
-            href: "/spare-parts/create", // Sesuai dengan src/app/(main)/spare-parts/create/page.tsx
-            icon: PlusCircle,
-            roles: ["SuperAdmin", "WAREHOUSE_STAFF"],
-          },
+          // {
+          //   title: "Tambah Spare Part",
+          //   href: "/spare-parts/create", // Sesuai dengan src/app/(main)/spare-parts/create/page.tsx
+          //   icon: PlusCircle,
+          //   roles: ["SuperAdmin", "WAREHOUSE_STAFF"],
+          // },
         ],
       },
       {
@@ -278,12 +279,12 @@ export const sidebarMenuItems: MenuItem[] = [
             href: "/vendors",
             icon: Factory,
           },
-          {
-            title: "Tambah Vendor",
-            href: "/vendors/create", // Sesuai dengan src/app/(main)/vendors/create/page.tsx
-            icon: PlusCircle,
-            roles: ["SuperAdmin", "PURCHASING_STAFF"], // Hanya admin dan purchasing staff yang bisa menambah
-          },
+          // {
+          //   title: "Tambah Vendor",
+          //   href: "/vendors/create", // Sesuai dengan src/app/(main)/vendors/create/page.tsx
+          //   icon: PlusCircle,
+          //   roles: ["SuperAdmin", "PURCHASING_STAFF"], // Hanya admin dan purchasing staff yang bisa menambah
+          // },
         ],
       },
     ],
@@ -311,11 +312,11 @@ export const sidebarMenuItems: MenuItem[] = [
             href: "/employees",
             icon: Users,
           },
-          {
-            title: "Tambah Karyawan", // Menambahkan opsi tambah karyawan di sidebar admin
-            href: "/employees/create", // Sesuai dengan src/app/(main)/employees/create/page.tsx
-            icon: PlusCircle,
-          },
+          // {
+          //   title: "Tambah Karyawan", // Menambahkan opsi tambah karyawan di sidebar admin
+          //   href: "/employees/create", // Sesuai dengan src/app/(main)/employees/create/page.tsx
+          //   icon: PlusCircle,
+          // },
         ],
       },
       {
@@ -323,7 +324,10 @@ export const sidebarMenuItems: MenuItem[] = [
         href: "/admin-dashboard/settings", // Sesuai dengan src/app/(main)/admin-dashboard/settings/page.tsx
         icon: Settings,
         roles: ["SuperAdmin"],
-        children: [{ title: "Unit", href: "/units", icon: PencilRuler }],
+        children: [
+          { title: "Unit", href: "/units", icon: PencilRuler },
+          { title: "Paket Service", href: "/services", icon: FileKey2 },
+        ],
       },
     ],
   },
