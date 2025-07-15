@@ -39,6 +39,10 @@ WORKDIR /app
 
 COPY package.json yarn.lock* package-lock.json* ./
 
+COPY . .
+
+RUN npx prisma generate
+
 RUN npm install --frozen-lockfile
 
 EXPOSE 3000

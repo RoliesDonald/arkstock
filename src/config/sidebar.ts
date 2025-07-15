@@ -1,4 +1,3 @@
-// src/config/sidebar.ts
 import {
   LayoutDashboard,
   Users,

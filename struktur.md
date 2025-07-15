@@ -155,3 +155,7 @@
 │       ├── bengkelService.ts                   # Service untuk interaksi API Bengkel
 │       ├── rentalCompanyService.ts             # Service untuk interaksi API Perusahaan Rental
 │       └── customerRentalService.ts            # Service untuk interaksi API Customer Perusahaan Rental
+
+
+superadmin@arkstok.com
+passwordaman123

@@ -1,10 +1,11 @@
-import "./globals.css"; // Global CSS Anda
+import "./globals.css";
 import React from "react";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import { ReduxProvider } from "@/providers/ReduxProvider"; // Impor Redux Provider
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { Toaster } from "@/components/ui/toaster"; // Import Toaster dari shadcn/ui
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -13,7 +14,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Ark Power Dashboard",
+  title: "A Power Dashboard",
   description: "Fleet Maintenance",
 };
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
             disableTransitionOnChange
           >
             {children}
+            <Toaster />
           </ThemeProvider>
         </ReduxProvider>
       </body>

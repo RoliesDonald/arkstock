@@ -1,95 +1,112 @@
-// src/store/slices/companySlice.ts
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
-import { Company, CompanyFormValues } from "@/types/companies"; // Pastikan path ke types/company benar
-import { companyData as initialCompanyData } from "@/data/sampleCompanyData"; // Data awal
-import { v4 as uuidv4 } from "uuid"; // Untuk ID baru
+import { Company, CompanyFormValues, CompanyStatus } from "@/types/companies";
+import { api } from "@/lib/utils/api";
 
-// Definisikan interface untuk state perusahaan
 interface CompanyState {
   companies: Company[];
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
 }
 
-// Inisialisasi state awal
 const initialState: CompanyState = {
-  companies: initialCompanyData, // Menggunakan data dummy sebagai state awal
+  companies: [],
   status: "idle",
   error: null,
 };
 
 export const fetchCompanies = createAsyncThunk(
   "companies/fetchCompanies",
-  async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    //fetch ke API nyata:
-    // const response = await api.get('/companies');
-    // return response.data;
-    return initialCompanyData; // Untuk saat ini, kembalikan data dummy
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get<Company[]>(
+        "http://localhost:3000/api/companies"
+      );
+      const formattedData = response.map((company) => ({
+        ...company,
+        createdAt: new Date(company.createdAt),
+        updatedAt: new Date(company.updatedAt),
+      }));
+      return formattedData;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.message || "Gagal memuat daftar perusahaan."
+      );
+    }
   }
 );
 
-// Async Thunk untuk menambahkan perusahaan baru
+// NEW: Async Thunk untuk mengambil satu perusahaan berdasarkan ID
+export const fetchCompanyById = createAsyncThunk(
+  "companies/fetchCompanyById",
+  async (companyId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get<Company>(
+        `http://localhost:3000/api/companies/${companyId}`
+      );
+      // Konversi string tanggal ke objek Date
+      return {
+        ...response,
+        createdAt: new Date(response.createdAt),
+        updatedAt: new Date(response.updatedAt),
+      } as Company;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.message ||
+          `Gagal memuat detail perusahaan dengan ID ${companyId}.`
+      );
+    }
+  }
+);
+
 export const createCompany = createAsyncThunk(
   "companies/createCompany",
   async (newCompanyData: CompanyFormValues, { rejectWithValue }) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulasi API call
-      const newCompany: Company = {
-        ...(newCompanyData as Company),
-        id: uuidv4(), // Generate UUID baru
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        taxRegistered: newCompanyData.taxRegistered ?? false,
-        status: newCompanyData.status ?? "Active",
-        companyEmail: newCompanyData.companyEmail || null,
-        logo: newCompanyData.logo || null,
-        contact: newCompanyData.contact || null,
-        address: newCompanyData.address || null,
-        city: newCompanyData.city || null,
-        phone: newCompanyData.phone || null,
-      };
-      // POST ke API nyata:
-      // const response = await api.post('/companies', newCompany);
-      // return response.data;
-      return newCompany; // Untuk saat ini, kembalikan objek perusahaan baru
+      const response = await api.post<Company>(
+        "http://localhost:3000/api/companies",
+        newCompanyData
+      );
+      return {
+        ...response,
+        createdAt: new Date(response.createdAt),
+        updatedAt: new Date(response.updatedAt),
+      } as Company;
     } catch (error: any) {
-      return rejectWithValue(error.message || "Gagal membuat perusahaan baru");
+      return rejectWithValue(error.message || "Gagal membuat perusahaan baru.");
     }
   }
 );
 
-// Async Thunk untuk memperbarui perusahaan
 export const updateCompany = createAsyncThunk(
   "companies/updateCompany",
-  async (updatedCompanyData: Company, { rejectWithValue }) => {
-    // Menerima Company lengkap
+  async (updatedCompanyData: CompanyFormValues, { rejectWithValue }) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulasi API call
-      //  PUT/PATCH ke API nyata:
-      // const response = await api.put(`/companies/${updatedCompanyData.id}`, updatedCompanyData);
-      // return response.data;
+      if (!updatedCompanyData.id) {
+        throw new Error("ID perusahaan tidak ditemukan untuk pembaruan.");
+      }
+      const response = await api.put<Company>(
+        `http://localhost:3000/api/companies/${updatedCompanyData.id}`,
+        updatedCompanyData
+      );
       return {
-        ...updatedCompanyData,
-        updatedAt: new Date().toISOString(),
-      } as Company; // Perbarui updatedAt
+        ...response,
+        createdAt: new Date(response.createdAt),
+        updatedAt: new Date(response.updatedAt),
+      } as Company;
     } catch (error: any) {
-      return rejectWithValue(error.message || "Gagal mengupdate perusahaan");
+      return rejectWithValue(error.message || "Gagal mengupdate perusahaan.");
     }
   }
 );
 
-// Async Thunk untuk menghapus perusahaan
 export const deleteCompany = createAsyncThunk(
   "companies/deleteCompany",
   async (companyId: string, { rejectWithValue }) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulasi API call
-      // DELETE ke API nyata:
-      // await api.delete(`/companies/${companyId}`);
-      return companyId; // Untuk saat ini, kembalikan ID perusahaan yang dihapus
+      await api.delete(`http://localhost:3000/api/companies/${companyId}`);
+      return companyId;
     } catch (error: any) {
-      return rejectWithValue(error.message || "Gagal menghapus perusahaan");
+      return rejectWithValue(error.message || "Gagal menghapus perusahaan.");
     }
   }
 );
@@ -98,7 +115,6 @@ const companySlice = createSlice({
   name: "companies",
   initialState,
   reducers: {
-    // Reducer sinkron jika diperlukan (misalnya untuk mereset status)
     resetCompanyStatus: (state) => {
       state.status = "idle";
       state.error = null;
@@ -106,7 +122,6 @@ const companySlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Fetch Companies
       .addCase(fetchCompanies.pending, (state) => {
         state.status = "loading";
       })
@@ -114,14 +129,38 @@ const companySlice = createSlice({
         fetchCompanies.fulfilled,
         (state, action: PayloadAction<Company[]>) => {
           state.status = "succeeded";
-          state.companies = action.payload; // Perbarui state dengan data yang diambil
+          state.companies = action.payload;
         }
       )
       .addCase(fetchCompanies.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.error.message || "Gagal memuat daftar perusahaan";
+        state.error =
+          (action.payload as string) || "Gagal memuat daftar perusahaan.";
       })
-      // Create Company
+      // NEW: Handle fetchCompanyById
+      .addCase(fetchCompanyById.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(
+        fetchCompanyById.fulfilled,
+        (state, action: PayloadAction<Company>) => {
+          state.status = "succeeded";
+          // Jika perusahaan sudah ada di state, perbarui. Jika tidak, tambahkan.
+          const index = state.companies.findIndex(
+            (c) => c.id === action.payload.id
+          );
+          if (index !== -1) {
+            state.companies[index] = action.payload;
+          } else {
+            state.companies.push(action.payload);
+          }
+        }
+      )
+      .addCase(fetchCompanyById.rejected, (state, action) => {
+        state.status = "failed";
+        state.error =
+          (action.payload as string) || "Gagal memuat detail perusahaan.";
+      })
       .addCase(createCompany.pending, (state) => {
         state.status = "loading";
       })
@@ -129,14 +168,13 @@ const companySlice = createSlice({
         createCompany.fulfilled,
         (state, action: PayloadAction<Company>) => {
           state.status = "succeeded";
-          state.companies.unshift(action.payload); // Tambahkan perusahaan baru ke depan array
+          state.companies.unshift(action.payload);
         }
       )
       .addCase(createCompany.rejected, (state, action) => {
         state.status = "failed";
-        state.error = (action.payload as string) || "Gagal membuat perusahaan";
+        state.error = (action.payload as string) || "Gagal membuat perusahaan.";
       })
-      // Update Company
       .addCase(updateCompany.pending, (state) => {
         state.status = "loading";
       })
@@ -148,16 +186,15 @@ const companySlice = createSlice({
             (c) => c.id === action.payload.id
           );
           if (index !== -1) {
-            state.companies[index] = action.payload; // Perbarui objek perusahaan
+            state.companies[index] = action.payload;
           }
         }
       )
       .addCase(updateCompany.rejected, (state, action) => {
         state.status = "failed";
         state.error =
-          (action.payload as string) || "Gagal mengupdate perusahaan";
+          (action.payload as string) || "Gagal mengupdate perusahaan.";
       })
-      // Delete Company
       .addCase(deleteCompany.pending, (state) => {
         state.status = "loading";
       })
@@ -167,13 +204,13 @@ const companySlice = createSlice({
           state.status = "succeeded";
           state.companies = state.companies.filter(
             (c) => c.id !== action.payload
-          ); // Hapus perusahaan dari state
+          );
         }
       )
       .addCase(deleteCompany.rejected, (state, action) => {
         state.status = "failed";
         state.error =
-          (action.payload as string) || "Gagal menghapus perusahaan";
+          (action.payload as string) || "Gagal menghapus perusahaan.";
       });
   },
 });

@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   db:
@@ -13,30 +12,24 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data # Referensi ke volume db_data
 
-  app: # Layanan untuk aplikasi Next.js Anda
+  app:
     build:
-      context: . # Direktori tempat Dockerfile berada (root proyek)
+      context: . 
       dockerfile: Dockerfile
     restart: always
     ports:
       - "3000:3000" # Map port 3000 dari container ke port 3000 di host
     environment:
-      # DATABASE_URL untuk aplikasi saat berjalan di Docker Compose
-      # Gunakan nama layanan 'db' sebagai host
       DATABASE_URL: "postgresql://arkstokuser:arkstokpassword@db:5432/arkstokdb?schema=public"
-      # Tambahkan variabel lingkungan Next.js lainnya jika ada (misal: NEXT_PUBLIC_API_URL)
-      # NEXT_PUBLIC_API_URL: "http://localhost:3000/api" # Contoh
+    env_file:
+      - .env
     depends_on:
-      - db # Memastikan layanan 'db' dimulai sebelum 'app'
+      - db 
     volumes:
-      # Bind mount kode aplikasi dari host ke container
       - .:/app
-      # Volume anonim untuk node_modules agar tidak menimpa node_modules di dalam container
       - /app/node_modules
-      # Volume anonim untuk folder .next agar Next.js bisa menulis cache build di dalam container
       - /app/.next
 
-# Bagian ini harus sejajar dengan 'services:'
 volumes:
   db_data:
     driver: local

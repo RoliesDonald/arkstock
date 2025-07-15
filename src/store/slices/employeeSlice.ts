@@ -1,4 +1,3 @@
-// src/store/slices/employeeSlice.ts
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 import { Employee, EmployeeFormValues } from "@/types/employee"; // Pastikan path ke types/employee benar
 import { employeeData as initialEmployeeData } from "@/data/sampleEmployeeData"; // Data awal
@@ -37,7 +36,7 @@ export const createEmployee = createAsyncThunk(
         id: uuidv4(), // Generate UUID baru
         name: newEmployeeData.name,
         email: newEmployeeData.email || null, // Pastikan email adalah string atau null
-        phoneNumber: newEmployeeData.phoneNumber,
+        phone: newEmployeeData.phone,
         address: newEmployeeData.address,
         position: newEmployeeData.position,
         role: newEmployeeData.role,

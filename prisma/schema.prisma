@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -13,16 +14,14 @@ datasource db {
 // =================================================================
 /// Enum untuk tipe perusahaan
 enum CompanyType {
-  RENTAL
   CUSTOMER
   VENDOR
-  INTERNAL
-  FLEET_COMPANY
-  SERVICE_MAINTENANCE
   RENTAL_COMPANY
+  SERVICE_MAINTENANCE
+  FLEET_COMPANY
+  INTERNAL
   CAR_USER
   CHILD_COMPANY
-  OTHER
   SUPPLIER
 }
 
@@ -217,7 +216,7 @@ enum WarehouseType {
 // =================================================================
 
 model Company {
-  id            String        @id @default(uuid()) /// UUID untuk ID publik
+  id            String        @id @default(uuid()) @map("id") /// UUID untuk ID publik
   companyId     String        @unique @map("company_id") /// ID perusahaan dalam sistem (contoh: kode perusahaan)
   companyName   String        @map("company_name") /// Nama perusahaan")
   companyEmail  String?       @map("company_email") /// Email perusahaan
@@ -307,6 +306,7 @@ model Employee {
   userId           String?        @unique @map("user_id") /// ID karyawan internal (opsional jika UUID sudah cukup)
   name             String
   email            String?        @unique
+  password         String?        @map("password")
   photo            String? /// URL foto
   phone            String?        @map("phone_number")
   address          String?        @map("address")

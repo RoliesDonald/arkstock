@@ -3,13 +3,13 @@
 import { useParams } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchCompanies, updateCompany } from "@/store/slices/companySlice";
+import { fetchCompanyById, updateCompany } from "@/store/slices/companySlice"; // Import fetchCompanyById
 import {
   Company,
   CompanyFormValues,
   CompanyStatus,
   CompanyType,
-} from "@/types/companies"; // Import semua tipe yang diperlukan
+} from "@/types/companies";
 import {
   Card,
   CardContent,
@@ -19,15 +19,20 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { id as localeId } from "date-fns/locale"; // Menggunakan alias untuk menghindari konflik
-import CompanyDialog from "@/components/dialog/companyDialog/_component/CompanyDialog"; // Import CompanyDialog Anda
+import { id as localeId } from "date-fns/locale";
+import CompanyDialog from "@/components/dialog/companyDialog/_component/CompanyDialog";
+import { useToast } from "@/hooks/use-toast"; // Import useToast
 
 export default function CompanyDetailPage() {
   const params = useParams();
   const companyId = params.companyId as string;
-  const dispatch = useAppDispatch();
 
-  // Ambil data perusahaan dan status dari Redux store
+  console.log("CompanyDetailPage: useParams() result:", params);
+  console.log("CompanyDetailPage: Extracted companyId", companyId);
+
+  const dispatch = useAppDispatch();
+  const { toast } = useToast();
+
   const allCompanies = useAppSelector((state) => state.companies.companies);
   const companyStatus = useAppSelector((state) => state.companies.status);
   const companyError = useAppSelector((state) => state.companies.error);
@@ -37,42 +42,71 @@ export default function CompanyDetailPage() {
   const [editCompanyData, setEditCompanyData] = useState<Company | undefined>(
     undefined
   );
+  const [localCompany, setLocalCompany] = useState<Company | undefined>(
+    undefined
+  ); // State lokal untuk perusahaan ini
 
-  // Cari perusahaan yang cocok dengan ID dari URL
-  const currentCompany = allCompanies.find((comp) => comp.id === companyId);
+  // Cari perusahaan di Redux store
+  const companyFromStore = allCompanies.find((comp) => comp.id === companyId);
 
-  // Dispatch fetchCompanies saat komponen dimuat atau jika status idle
   useEffect(() => {
-    if (companyStatus === "idle") {
-      dispatch(fetchCompanies());
+    if (companyFromStore) {
+      setLocalCompany(companyFromStore); // Jika ada di store, gunakan itu
+    } else if (companyId && companyStatus !== "loading") {
+      // Jika tidak ada di store DAN bukan sedang loading, fetch dari API
+      dispatch(fetchCompanyById(companyId))
+        .unwrap() // Unwrap the promise to handle success/failure directly
+        .then((company) => {
+          setLocalCompany(company);
+        })
+        .catch((error) => {
+          toast({
+            title: "Error",
+            description: error.message || "Gagal memuat detail perusahaan.",
+            variant: "destructive",
+          });
+        });
+    } else if (!companyId) {
+      toast({
+        title: "Error",
+        description: "ID perusahaan tidak ditemukan.",
+        variant: "destructive",
+      });
+      console.log("CompanyDetailPage: companyId tidak ditemukan.");
     }
-  }, [dispatch, companyStatus]);
+  }, [companyId, companyFromStore, dispatch, companyStatus, toast]);
 
   const handleEditClick = useCallback(() => {
-    if (currentCompany) {
-      setEditCompanyData(currentCompany);
+    if (localCompany) {
+      // Gunakan localCompany
+      setEditCompanyData(localCompany);
       setIsCompanyDialogOpen(true);
     }
-  }, [currentCompany]);
+  }, [localCompany]);
 
   const handleSaveCompany = useCallback(
     async (values: CompanyFormValues) => {
       if (values.id) {
-        // Pastikan ada ID untuk operasi update
-        const existingCompany = allCompanies.find((c) => c.id === values.id);
-        if (existingCompany) {
-          const fullUpdatedCompany: Company = {
-            ...existingCompany,
-            ...values, // Timpa nilai yang ada dengan nilai dari form
-            updatedAt: new Date().toISOString(), // Pastikan updatedAt diupdate sebagai string ISO
-          };
-          await dispatch(updateCompany(fullUpdatedCompany));
+        try {
+          // Dispatch updateCompany, dan tunggu hasilnya
+          await dispatch(updateCompany(values)).unwrap();
+          toast({
+            title: "Sukses",
+            description: "Perusahaan berhasil diperbarui.",
+          });
+          dispatch(fetchCompanyById(values.id));
+        } catch (error: any) {
+          toast({
+            title: "Error",
+            description: error.message || "Gagal memperbarui perusahaan.",
+            variant: "destructive",
+          });
         }
       }
       setIsCompanyDialogOpen(false);
-      setEditCompanyData(undefined); // Clear edit data
+      setEditCompanyData(undefined);
     },
-    [dispatch, allCompanies]
+    [dispatch, toast]
   );
 
   const handleDialogClose = useCallback(() => {
@@ -80,31 +114,36 @@ export default function CompanyDetailPage() {
     setEditCompanyData(undefined);
   }, []);
 
-  if (companyStatus === "loading") {
+  // Kondisi loading dan error
+  if (companyStatus === "loading" && !localCompany) {
+    // Tampilkan loading hanya jika belum ada data lokal
     return (
       <div className="flex justify-center items-center h-full">
-        <p className="text-lg text-gray-600">Memuat detail perusahaan...</p>
+        <p className=" text-arkBg-400">Memuat detail perusahaan...</p>
       </div>
     );
   }
 
-  if (companyStatus === "failed") {
+  if (companyStatus === "failed" && !localCompany) {
+    // Tampilkan error hanya jika belum ada data lokal
     return (
       <div className="flex justify-center items-center h-full">
-        <p className="text-lg text-red-500">Error: {companyError}</p>
+        <p className=" text-arkRed-500">Error: {companyError}</p>
       </div>
     );
   }
 
-  // Penting: Pastikan currentCompany tidak undefined sebelum melanjutkan render detail
-  // Jika currentCompany undefined, kita sudah return pesan "Perusahaan tidak ditemukan." di atas
-  if (!currentCompany) {
+  // Jika tidak ada perusahaan ditemukan setelah loading selesai
+  if (!localCompany) {
     return (
       <div className="flex justify-center items-center h-full">
-        <p className="text-lg text-gray-600">Perusahaan tidak ditemukan.</p>
+        <p className=" text-arkBg-600">Perusahaan tidak ditemukan.</p>
       </div>
     );
   }
+
+  // Gunakan localCompany untuk menampilkan data
+  const displayCompany = localCompany;
 
   return (
     <div className="container mx-auto py-8 space-y-3 ">
@@ -112,7 +151,7 @@ export default function CompanyDetailPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-2xl font-bold">
-              {currentCompany.companyName}
+              {displayCompany.companyName}
             </CardTitle>
             <CardDescription className="text-arkBg-600">
               Detail Lengkap Perusahaan
@@ -125,7 +164,7 @@ export default function CompanyDetailPage() {
           <div className="space-y-3 text-sm">
             <div className="grid grid-cols-[180px_1fr] items-baseline">
               <p className="font-bold">ID Perusahaan</p>
-              <p>: {currentCompany.companyId}</p>
+              <p>: {displayCompany.companyId}</p>
             </div>
 
             <div className="grid grid-cols-[180px_1fr] items-baseline">
@@ -133,19 +172,19 @@ export default function CompanyDetailPage() {
               <p>
                 :
                 <span className="px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
-                  {currentCompany.companyType.replace(/_/g, " ")}
+                  {displayCompany.companyType.replace(/_/g, " ")}
                 </span>
               </p>
             </div>
 
             <div className="grid grid-cols-[180px_1fr] items-baseline">
               <p className="font-bold">Kontak Utama</p>
-              <p>: {currentCompany.contact || "N/A"}</p>
+              <p>: {displayCompany.contact || "N/A"}</p>
             </div>
 
             <div className="grid grid-cols-[180px_1fr] items-baseline">
               <p className="font-bold">Email Perusahaan</p>
-              <p>: {currentCompany.companyEmail || "N/A"}</p>
+              <p>: {displayCompany.companyEmail || "N/A"}</p>
             </div>
 
             <div className="grid grid-cols-[180px_1fr] items-baseline">
@@ -153,16 +192,16 @@ export default function CompanyDetailPage() {
               <p>
                 :
                 <span
-                  className={`px-3 py-1 rounded-full text-sm font-semibold 
+                  className={`px-3 py-1 rounded-full text-sm font-semibold
                 ${
-                  currentCompany.status === CompanyStatus.ACTIVE
+                  displayCompany.status === CompanyStatus.ACTIVE
                     ? "bg-green-100 text-green-800"
-                    : currentCompany.status === CompanyStatus.INACTIVE
+                    : displayCompany.status === CompanyStatus.INACTIVE
                     ? "bg-red-100 text-red-800"
                     : "bg-gray-100 text-gray-800"
                 }`}
                 >
-                  {currentCompany.status?.replace(/_/g, " ")}
+                  {displayCompany.status?.replace(/_/g, " ")}
                 </span>
               </p>
             </div>
@@ -171,22 +210,25 @@ export default function CompanyDetailPage() {
           <div className="space-y-3 text-sm">
             <div className="grid grid-cols-[180px_1fr] items-baseline">
               <p className="font-bold">Alamat</p>
-              <p>: {currentCompany.address || "N/A"}</p>
+              <p>: {displayCompany.address || "N/A"}</p>
             </div>
 
             <div className="grid grid-cols-[180px_1fr] items-baseline">
               <p className="font-bold">Kota</p>
-              <p>: {currentCompany.city || "N/A"}</p>
+              <p>: {displayCompany.city || "N/A"}</p>
             </div>
 
+            {/* Perhatikan: field 'phone' tidak ada di model Company Prisma Anda,
+                 gunakan 'contact' sebagai nomor telepon */}
             <div className="grid grid-cols-[180px_1fr] items-baseline">
               <p className="font-bold">Telepon</p>
-              <p>: {currentCompany.phone || "N/A"}</p>
+              <p>: {displayCompany.contact || "N/A"}</p>{" "}
+              {/* Menggunakan contact */}
             </div>
 
             <div className="grid grid-cols-[180px_1fr] items-baseline">
               <p className="font-bold">Terdaftar Pajak?</p>
-              <p>: {currentCompany.taxRegistered ? "Ya" : "Tidak"}</p>
+              <p>: {displayCompany.taxRegistered ? "Ya" : "Tidak"}</p>
             </div>
 
             <div className="grid grid-cols-[180px_1fr] items-baseline">
@@ -194,20 +236,19 @@ export default function CompanyDetailPage() {
               <p>
                 :
                 {format(
-                  new Date(currentCompany.createdAt),
-                  "dd MMMM yyyy HH:mm", // Format disesuaikan dengan gambar
+                  new Date(displayCompany.createdAt),
+                  "dd MMMM yyyy HH:mm",
                   { locale: localeId }
                 )}
               </p>
             </div>
-            {/* Di Update pada */}
             <div className="grid grid-cols-[180px_1fr] items-baseline">
               <p className="font-bold">Di Update pada</p>
               <p>
                 :
                 {format(
-                  new Date(currentCompany.updatedAt),
-                  "dd MMMM yyyy HH:mm", // Format disesuaikan dengan gambar
+                  new Date(displayCompany.updatedAt),
+                  "dd MMMM yyyy HH:mm",
                   { locale: localeId }
                 )}
               </p>
@@ -219,9 +260,9 @@ export default function CompanyDetailPage() {
         <CardContent>
           {isCompanyDialogOpen && (
             <CompanyDialog
-              onSubmit={handleSaveCompany}
               onClose={handleDialogClose}
               initialData={editCompanyData}
+              onSubmit={handleSaveCompany}
             />
           )}
         </CardContent>

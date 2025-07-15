@@ -1,4 +1,9 @@
 import * as z from "zod";
+import { Company } from "./companies";
+import { Estimation } from "./estimation";
+import { Invoice } from "./invoice";
+import { WorkOrder } from "./workOrder";
+import { PurchaseOrder } from "./purchaseOrder";
 
 export enum EmployeeStatus {
   ACTIVE = "ACTIVE",
@@ -41,6 +46,9 @@ export const employeeFormSchema = z.object({
     .email({ message: "Email tidak valid." })
     .nullable()
     .optional(),
+  password: z
+    .string()
+    .min(6, { message: "Password harus minimal 6 karakter." }),
   photo: z
     .string()
     .url({ message: "Format URL foto tidak valid." })
@@ -82,6 +90,7 @@ export interface Employee {
   userId?: string | null;
   name: string;
   email?: string | null;
+  password?: string | null;
   photo?: string | null;
   phone?: string | null;
   address?: string | null;
@@ -96,16 +105,16 @@ export interface Employee {
   updatedAt: Date;
 
   // Relasi (jika ingin disertakan di type ini untuk frontend)
-  company?: any[];
-  mechanicWorkOrders?: any[];
-  driverWorkOrders?: any[];
-  approvedWorkOrders?: any[];
-  requestedWorkOrders?: any[];
-  accountingInvoices?: any[];
-  approvedInvoices?: any[];
-  mechanicEstimations?: any[];
-  approvedEstimations?: any[];
-  estimationAccountants?: any[];
-  requestedPurchaseOrders?: any[];
-  approvedPurchaseOrders?: any[];
+  company?: Company[];
+  mechanicWorkOrders?: WorkOrder[];
+  driverWorkOrders?: WorkOrder[];
+  approvedWorkOrders?: WorkOrder[];
+  requestedWorkOrders?: WorkOrder[];
+  accountingInvoices?: Invoice[];
+  approvedInvoices?: Invoice[];
+  mechanicEstimations?: Estimation[];
+  approvedEstimations?: Estimation[];
+  estimationAccountants?: Estimation[];
+  requestedPurchaseOrders?: PurchaseOrder[];
+  approvedPurchaseOrders?: PurchaseOrder[];
 }

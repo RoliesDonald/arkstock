@@ -105,9 +105,19 @@ export const vehicleFormSchema = z.object({
   fuelType: z.nativeEnum(VehicleFuelType),
   transmissionType: z.nativeEnum(VehicleTransmissionType),
   lastOdometer: z.number().int().min(0),
-  lastServiceDate: z.date(),
-  ownerId: z.string().min(1, { message: "Pemilik wajib dipilih." }), // ID Perusahaan Rental
-  carUserId: z.string().nullable().optional(), // ID Pengguna Kendaraan (opsional)
+  lastServiceDate: z
+    .string()
+    .datetime("tanggal servis tidak valid.")
+    .nullable(),
+  ownerId: z
+    .string()
+    .uuid("ID pemilik tidak valid")
+    .min(1, { message: "Pemilik wajib dipilih." }), // ID Perusahaan Rental
+  carUserId: z
+    .string()
+    .uuid("ID pengguna kendaraan tidak valid")
+    .nullable()
+    .optional(), // ID Pengguna Kendaraan (opsional)
   // UPDATED: Status kendaraan menggunakan enum VehicleStatus
   status: z.nativeEnum(VehicleStatus, {
     required_error: "Status kendaraan wajib dipilih.",
@@ -135,13 +145,13 @@ export interface Vehicle {
   fuelType: VehicleFuelType;
   transmissionType: VehicleTransmissionType;
   lastOdometer: number; // Odometer terakhir tercatat (KM)
-  lastServiceDate: Date; // Tanggal servis terakhir
+  lastServiceDate: string; // Tanggal servis terakhir
   ownerId: string; // ID perusahaan pemilik (Perusahaan Rental)
   carUserId: string | null; // ID perusahaan yang menggunakan/menyewa (Pelanggan/Penyewa)
   status: VehicleStatus; // Status operasional kendaraan (e.g., Active, In Maintenance, Rented, Sold)
   notes: string | null; // Catatan tambahan
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   // Relasi:
   owner?: Company; // Objek perusahaan pemilik (jika di-populate)
   carUser?: Company; // Objek pengguna kendaraan (jika di-populate)

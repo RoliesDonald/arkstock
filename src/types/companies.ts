@@ -1,25 +1,28 @@
 import * as z from "zod";
+import { Vehicle } from "./vehicle";
+import { Employee } from "./employee";
+import { WorkOrder } from "./workOrder";
+import { PurchaseOrder } from "./purchaseOrder";
 
 // Enum sesuai Prisma
 export enum CompanyType {
-  RENTAL = "RENTAL", // Perusahaan Rental Kendaraan
   CUSTOMER = "CUSTOMER", // Pelanggan Umum
   VENDOR = "VENDOR", // Pemasok/Vendor (misal: suku cadang, servis)
   INTERNAL = "INTERNAL", // Perusahaan internal (jika ada struktur multi-entitas)
   FLEET_COMPANY = "FLEET_COMPANY", // Perusahaan dengan armada sendiri (selain rental)
   SERVICE_MAINTENANCE = "SERVICE_MAINTENANCE", // Perusahaan penyedia jasa servis/perawatan
-  RENTAL_COMPANY = "RENTAL_COMPANY", // Alias atau spesifikasi lebih lanjut untuk perusahaan rental
+  RENTAL_COMPANY = "RENTAL_COMPANY", // Perusahaan Rental Kendaraan
   CAR_USER = "CAR_USER", // Pengguna kendaraan (customer penyewa)
-  OTHER = "OTHER", // Tambahkan kembali jika ini diperlukan di aplikasi Anda
+  CHILD_COMPANY = "CHILD_COMPANY", // anak perusahaan
   SUPPLIER = "SUPPLIER", // Pemasok atau vendor yang menyediakan barang/jasa
 }
 
 // Enum tambahan untuk UI (tidak ada di Prisma)
 export enum CompanyStatus {
-  ACTIVE = "ACTIVE", // Menggunakan casing yang sama dengan Prisma
+  ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
   PROSPECT = "PROSPECT",
-  SUSPENDED = "SUSPENDED", // <-- DITAMBAHKAN: Menggantikan BLACKLISTED
+  SUSPENDED = "SUSPENDED", // atau status BLACKLISTED
   ON_HOLD = "ON_HOLD",
 }
 
@@ -50,6 +53,7 @@ export const companyFormSchema = z.object({
   status: z.nativeEnum(CompanyStatus, {
     required_error: "Status perusahaan wajib dipilih.",
   }),
+  parentCompanyId: z.string().uuid().optional().nullable(),
 });
 
 export type CompanyFormValues = z.infer<typeof companyFormSchema>;
@@ -75,11 +79,11 @@ export interface Company {
   parentCompanyId?: string | null;
   parentCompany?: Company | null;
   childCompanies?: Company[] | null; // Relasi satu ke banyak
-  vehiclesOwnned?: any[]; // Relasi ke kendaraan yang dimiliki
-  vehiclesUsed?: any[]; // Ganti 'any' dengan tipe Vehicle[] jika sudah ada
-  employees?: any[]; // Ganti 'any' dengan tipe Employee[] jika sudah ada
-  customerWorkOrders?: any[]; // Ganti 'any' dengan tipe WorkOrder[] jika sudah ada
-  carUserWorkOrders?: any[]; // Ganti 'any' dengan tipe WorkOrder[] jika sudah ada
-  vendorWorkOrders?: any[]; // Ganti 'any' dengan tipe WorkOrder[] jika sudah ada
-  suppliedPurchaseOrders?: any[]; // Ganti 'any' dengan tipe PurchaseOrder[] jika sudah ada
+  vehiclesOwnned?: Vehicle[];
+  vehiclesUsed?: Vehicle[];
+  employees?: Employee[];
+  customerWorkOrders?: WorkOrder[];
+  carUserWorkOrders?: WorkOrder[];
+  vendorWorkOrders?: WorkOrder[];
+  suppliedPurchaseOrders?: PurchaseOrder[];
 }
