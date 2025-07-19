@@ -1,7 +1,7 @@
-import { PrismaClient } from "@/generated/prisma";
 import { authenticateToken, authorizeRoles } from "@/lib/auth";
 import { companyFormSchema } from "@/types/companies";
 import { EmployeeRole } from "@/types/employee";
+import { PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 const prisma = new PrismaClient();

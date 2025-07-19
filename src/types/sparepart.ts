@@ -1,3 +1,4 @@
+// src/types/sparepart.ts
 import * as z from "zod";
 
 // Enum untuk varian suku cadang
@@ -11,11 +12,11 @@ export enum PartVariant {
 
 // Interface untuk kompatibilitas suku cadang dengan kendaraan tertentu
 export interface SparePartCompatibility {
-  sparePartId: string; // Merek kendaraan (contoh: Toyota, Honda)
-  vehicleMake: string; // Model kendaraan (contoh: Avanza, Civic)
-  vehicleModel: string; // Varian atau tipe model kendaraan (Opsional & Nullable)
-  trimLevel?: string | null; // Level trim kendaraan (Opsional & Nullable)
-  modelYear?: number | null; // Tahun model kendaraan (Opsional & Nullable)
+  sparePartId: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  trimLevel?: string | null;
+  modelYear?: number | null;
 }
 
 // Skema Zod untuk SparePartCompatibility
@@ -29,22 +30,22 @@ export const sparePartCompatibilitySchema = z.object({
 
 // Skema Zod untuk form penambahan/edit SparePart
 export const sparePartFormSchema = z.object({
-  id: z.string().optional(), // Opsional untuk kasus edit
-  sku: z.string().optional(), // SKU akan di-generate otomatis, jadi opsional di form input
+  id: z.string().optional(),
+  sku: z.string().optional(),
   partName: z
     .string()
     .min(2, { message: "Nama suku cadang wajib diisi (minimal 2 karakter)." }),
   partNumber: z
     .string()
     .min(3, { message: "Nomor part wajib diisi (minimal 3 karakter)." }),
-  description: z.string().nullable().optional(), // Deskripsi opsional
+  description: z.string().nullable().optional(),
   unit: z
     .string()
     .min(1, { message: "Satuan wajib diisi (contoh: Pcs, Set, Liter)." }),
   initialStock: z.coerce
     .number()
     .int()
-    .min(0, { message: "Stok awal tidak boleh negatif." }), // Ini untuk nilai stok awal saat dibuat
+    .min(0, { message: "Stok awal tidak boleh negatif." }),
   minStock: z.coerce
     .number()
     .int()
@@ -70,6 +71,7 @@ export const sparePartFormSchema = z.object({
 
 export type SparePartFormValues = z.infer<typeof sparePartFormSchema>;
 
+// Interface untuk SparePart di Redux State (tanggal sebagai string)
 export interface SparePart {
   id: string; // UUID
   sku?: string | null;
@@ -77,7 +79,7 @@ export interface SparePart {
   partNumber: string;
   description?: string | null;
   unit: string;
-  stock: number; //
+  stock: number;
   minStock?: number | null;
   initialStock: number;
   price: number;
@@ -85,8 +87,32 @@ export interface SparePart {
   brand?: string | null;
   manufacturer?: string | null;
   SparePartSuitableVehicles?: SparePartCompatibility[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // <-- STRING
+  updatedAt: string; // <-- STRING
+
+  invoiceItems?: any[];
+  estimationItems?: any[];
+  purchaseOrderItems?: any[];
+}
+
+// Interface untuk Raw SparePart ApiResponse (tanggal sebagai Date objek)
+export interface RawSparePartApiResponse {
+  id: string;
+  sku?: string | null;
+  partName: string;
+  partNumber: string;
+  description?: string | null;
+  unit: string;
+  stock: number;
+  minStock?: number | null;
+  initialStock: number;
+  price: number;
+  variant: PartVariant;
+  brand?: string | null;
+  manufacturer?: string | null;
+  SparePartSuitableVehicles?: SparePartCompatibility[]; // Asumsi ini tidak punya Date
+  createdAt: Date; // <-- DATE
+  updatedAt: Date; // <-- DATE
 
   invoiceItems?: any[];
   estimationItems?: any[];

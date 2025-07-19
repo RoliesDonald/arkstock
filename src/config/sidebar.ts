@@ -301,7 +301,7 @@ export const sidebarMenuItems: MenuItem[] = [
     children: [
       {
         title: "Karyawan", // Mengacu pada daftar karyawan GLOBAL
-        href: "/employees", // Sesuai dengan src/app/(main)/employees/page.tsx
+        href: "/", // Sesuai dengan src/app/(main)/employees/page.tsx
         icon: Users,
         roles: ["SuperAdmin", "AdminUser"],
         notification: 0,

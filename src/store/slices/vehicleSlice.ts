@@ -1,6 +1,13 @@
-import { Vehicle, VehicleFormValues } from "@/types/vehicle";
+import {
+  Vehicle,
+  VehicleCategory,
+  VehicleFormValues,
+  VehicleFuelType,
+  VehicleStatus,
+  VehicleTransmissionType,
+  VehicleType,
+} from "@/types/vehicle";
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { vehicleData as initialVehicleData } from "@/data/sampleVehicleData";
 import { v4 as uuidv4 } from "uuid";
 import { api } from "@/lib/utils/api";
 
@@ -16,37 +23,49 @@ const initialState: VehicleState = {
   error: null,
 };
 
+interface RawVehicleApiResponse {
+  id: string;
+  licensePlate: string;
+  vehicleMake: string;
+  model: string;
+  trimLevel: string | null;
+  vinNum: string | null;
+  engineNum: string | null;
+  chassisNum: string | null;
+  yearMade: number;
+  color: string;
+  vehicleType: VehicleType;
+  vehicleCategory: VehicleCategory;
+  fuelType: VehicleFuelType;
+  transmissionType: VehicleTransmissionType;
+  lastOdometer: number;
+  lastServiceDate: Date;
+  status: VehicleStatus;
+  notes: string | null;
+  ownerId: string;
+  carUserId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Helper memformat tanggal dari API menjadi string ISO
 const formatVehicleDates = (vehicle: any): Vehicle => {
   return {
     ...vehicle,
-    // Pastikan properti ini ada sebelum mencoba mengonversi
-    lastOdometer: vehicle.lastOdometer, // Pastikan ini number, bukan string
-    lastServiceDate: vehicle.lastServiceDate
-      ? new Date(vehicle.lastServiceDate).toISOString()
-      : null,
-    createdAt: vehicle.createdAt
-      ? new Date(vehicle.createdAt).toISOString()
-      : new Date().toISOString(), // Fallback jika null
-    updatedAt: vehicle.updatedAt
-      ? new Date(vehicle.updatedAt).toISOString()
-      : new Date().toISOString(), // Fallback jika null
-  } as Vehicle; // Type assertion di sini setelah konversi
+    lastServiceDate: vehicle.lastServiceDate.toISOString(),
+    createdAt: vehicle.createdAt.toISOString(),
+    updatedAt: vehicle.updatedAt.toISOString(),
+  };
 };
 
 export const fetchVehicles = createAsyncThunk(
   "vehicles/fetchVehicles",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get<Vehicle[]>(
+      const response = await api.get<RawVehicleApiResponse[]>(
         "http://localhost:3000/api/vehicles"
       );
-      const formattedData = response.map((vehicle) => ({
-        ...vehicle,
-        lastServiceDate: new Date(vehicle.lastServiceDate).toISOString(),
-        createdAt: new Date(vehicle.createdAt).toISOString(),
-        updatedAt: new Date(vehicle.updatedAt).toISOString(),
-      }));
+      const formattedData = response.map(formatVehicleDates);
       return formattedData;
     } catch (error: any) {
       return rejectWithValue(error.message || "Gagal memuat daftar kendaraan");
@@ -58,15 +77,10 @@ export const fetchVehicleById = createAsyncThunk(
   "vehicles/fetchVehicleById",
   async (vehicleId: string, { rejectWithValue }) => {
     try {
-      const response = await api.get<Vehicle>(
+      const response = await api.get<RawVehicleApiResponse>(
         `http://localhost:3000/api/vehicles/${vehicleId}`
       );
-      return {
-        ...response,
-        lastServiceDate: new Date(response.lastServiceDate).toISOString(),
-        createdAt: new Date(response.createdAt).toISOString(),
-        updatedAt: new Date(response.updatedAt).toISOString(),
-      } as Vehicle;
+      return formatVehicleDates(response);
     } catch (error: any) {
       return rejectWithValue(
         error.message || `Gagal memuat detail kendaraan dengan ID ${vehicleId}.`
@@ -79,7 +93,7 @@ export const createVehicle = createAsyncThunk(
   "vehicles/createVehicle",
   async (newVehicleData: VehicleFormValues, { rejectWithValue }) => {
     try {
-      const response = await api.post<Vehicle>(
+      const response = await api.post<RawVehicleApiResponse>(
         "http://localhost:3000/api/vehicles",
         newVehicleData
       );
@@ -100,7 +114,7 @@ export const updateVehicle = createAsyncThunk(
       if (!updateVehicleData.id) {
         throw new Error("ID kendaraan tidak ditemukan untuk pembaruan.");
       }
-      const response = await api.put<Vehicle>(
+      const response = await api.put<RawVehicleApiResponse>(
         `http://localhost:3000/api/vehicles/${updateVehicleData.id}`,
         updateVehicleData
       );

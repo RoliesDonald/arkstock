@@ -34,7 +34,7 @@ export function MySideBar() {
         }
       >
         <div className="flex items-center justify-center gap-3">
-          <Image src="/bm.png" width={30} height={30} alt="logo"></Image>
+          <Image src="/logo-01.png" width={30} height={30} alt="logo"></Image>
           <span className="hidden lg:block text-sm font-semibold text-arkBlue-900">
             Bung Mekanik
           </span>

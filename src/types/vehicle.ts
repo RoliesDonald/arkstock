@@ -1,8 +1,9 @@
+// src/types/vehicle.ts
 import * as z from "zod";
-import { Company } from "./companies";
-import { WorkOrder } from "./workOrder";
-import { Invoice } from "./invoice";
-import { Estimation } from "./estimation";
+import { Company, RawCompanyApiResponse } from "./companies"; // Import RawCompanyApiResponse
+import { WorkOrder, RawWorkOrderApiResponse } from "./workOrder"; // Import RawWorkOrderApiResponse
+import { Invoice, RawInvoiceApiResponse } from "./invoice"; // Asumsi RawInvoiceApiResponse ada, jika tidak, perlu dibuat
+import { Estimation, RawEstimationApiResponse } from "./estimation"; // Import RawEstimationApiResponse
 
 export enum VehicleType {
   PASSENGER = "PASSENGER",
@@ -106,7 +107,7 @@ export const vehicleFormSchema = z.object({
   transmissionType: z.nativeEnum(VehicleTransmissionType),
   lastOdometer: z.number().int().min(0),
   lastServiceDate: z
-    .string()
+    .string() // <-- Biarkan string jika form mengirim string ISO
     .datetime("tanggal servis tidak valid.")
     .nullable(),
   ownerId: z
@@ -123,12 +124,12 @@ export const vehicleFormSchema = z.object({
     required_error: "Status kendaraan wajib dipilih.",
   }),
   notes: z.string().nullable().optional(),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
+  // createdAt dan updatedAt tidak perlu di form schema karena di-handle backend/slice
 });
 
 export type VehicleFormValues = z.infer<typeof vehicleFormSchema>;
 
+// --- INTERFACE UNTUK REDUX STATE (TANGGAL SEBAGAI STRING) ---
 export interface Vehicle {
   id: string;
   licensePlate: string;
@@ -145,17 +146,49 @@ export interface Vehicle {
   fuelType: VehicleFuelType;
   transmissionType: VehicleTransmissionType;
   lastOdometer: number; // Odometer terakhir tercatat (KM)
-  lastServiceDate: string; // Tanggal servis terakhir
+  lastServiceDate: string; // <-- STRING
   ownerId: string; // ID perusahaan pemilik (Perusahaan Rental)
   carUserId: string | null; // ID perusahaan yang menggunakan/menyewa (Pelanggan/Penyewa)
   status: VehicleStatus; // Status operasional kendaraan (e.g., Active, In Maintenance, Rented, Sold)
   notes: string | null; // Catatan tambahan
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // <-- STRING
+  updatedAt: string; // <-- STRING
   // Relasi:
   owner?: Company; // Objek perusahaan pemilik (jika di-populate)
   carUser?: Company; // Objek pengguna kendaraan (jika di-populate)
   workOrders?: WorkOrder[];
   invoices?: Invoice[];
   estimation?: Estimation[];
+}
+
+// --- INTERFACE UNTUK DATA MENTAH DARI API (TANGGAL SEBAGAI DATE OBJEK) ---
+export interface RawVehicleApiResponse {
+  id: string;
+  licensePlate: string;
+  vehicleMake: string;
+  model: string;
+  trimLevel: string | null;
+  vinNum: string | null;
+  engineNum: string | null;
+  chassisNum: string | null;
+  yearMade: number;
+  color: string;
+  vehicleType: VehicleType;
+  vehicleCategory: VehicleCategory;
+  fuelType: VehicleFuelType;
+  transmissionType: VehicleTransmissionType;
+  lastOdometer: number;
+  lastServiceDate: Date; // <-- DATE
+  ownerId: string;
+  carUserId: string | null;
+  status: VehicleStatus;
+  notes: string | null;
+  createdAt: Date; // <-- DATE
+  updatedAt: Date; // <-- DATE
+  // Relasi:
+  owner?: RawCompanyApiResponse; // <-- RawCompanyApiResponse
+  carUser?: RawCompanyApiResponse; // <-- RawCompanyApiResponse
+  workOrders?: RawWorkOrderApiResponse[]; // <-- RawWorkOrderApiResponse
+  invoices?: RawInvoiceApiResponse[]; // <-- RawInvoiceApiResponse
+  estimation?: RawEstimationApiResponse[]; // <-- RawEstimationApiResponse
 }

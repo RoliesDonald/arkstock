@@ -3,11 +3,11 @@
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": true,
+    "strict": false,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "bundler", // Atau "node" jika Anda menggunakan Next.js versi lama
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -17,17 +17,20 @@
         "name": "next"
       }
     ],
+    "baseUrl": ".", // PASTIKAN ADA INI! Ini adalah root untuk path alias
     "paths": {
-      "@/*": ["./src/*"]
-    },
-    "baseUrl": "."
+      // Alias untuk src/components, src/lib, src/utils, src/app
+      "@/*": ["./src/*"], // Ini adalah alias utama untuk src
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/app/*": ["./src/app/*"],
+
+      // Alias untuk Prisma Client
+      // Ini sangat penting agar Webpack menemukan Prisma Client yang digenerate
+      "@/generated/prisma": ["./node_modules/.prisma/client"]
+    }
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    "src/types/**/*.ts"
-  ],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }

@@ -1,25 +1,38 @@
 import { z } from "zod";
-import { SparePart } from "./sparepart";
-import { InvoiceService } from "./invoice";
-import { EstimationService } from "./estimation";
+import { SparePart, RawSparePartApiResponse } from "./sparepart";
+import { InvoiceService, RawInvoiceServiceApiResponse } from "./invoice";
+import {
+  EstimationService,
+  RawEstimationServiceApiResponse,
+} from "./estimation";
 
-// RequiredSparePart interface
+// RequiredSparePart interface (for Redux State)
 export interface RequiredSparePart {
   serviceId?: string;
   sparePartId: string;
   quantity: number;
-  sparePart?: SparePart;
+  sparePart?: SparePart; // <-- Ini adalah objek SparePart yang sudah diformat (string dates)
 }
 
-// Service schema
+// Raw RequiredSparePart interface (for API Response)
+export interface RawRequiredSparePartApiResponse {
+  serviceId?: string;
+  sparePartId: string;
+  quantity: number;
+  sparePart?: RawSparePartApiResponse; // <-- Ini adalah objek RawSparePartApiResponse (Date objects)
+}
+
+// Service schema (menggunakan serviceName)
 export const serviceSchema = z.object({
   id: z.string().uuid().optional(),
-  name: z.string().min(1, { message: "Nama layanan wajib diisi." }),
+  serviceName: z.string().min(1, { message: "Nama layanan wajib diisi." }), // <-- Diubah dari 'name' ke 'serviceName'
   category: z.string(),
   subCategory: z.string(),
   description: z.string().nullable().optional(),
   price: z.number().min(0.01, { message: "Harga layanan harus lebih dari 0." }),
   tasks: z.array(z.string()),
+  // requiredSpareParts di sini hanya mendefinisikan struktur dasar untuk validasi Zod.
+  // Relasi 'sparePart' yang lengkap akan ditambahkan di interface di bawah.
   requiredSpareParts: z
     .array(
       z.object({
@@ -33,16 +46,25 @@ export const serviceSchema = z.object({
       })
     )
     .nullable()
-    .optional(), // Opsional karena tidak semua service butuh spare part
+    .optional(),
 });
 
-// Main Service type
+// Main Service type (untuk Redux State)
 export type Service = z.infer<typeof serviceSchema> & {
-  createdAt: Date;
-  updatedAt: Date;
-  requiredSpareParts?: RequiredSparePart[];
+  createdAt: string;
+  updatedAt: string;
+  requiredSpareParts?: RequiredSparePart[]; // <-- Menggunakan RequiredSparePart
   invoiceServices?: InvoiceService[];
   estimationServices?: EstimationService[];
+};
+
+// Raw Service ApiResponse (tanggal sebagai Date objek)
+export type RawServiceApiResponse = z.infer<typeof serviceSchema> & {
+  createdAt: Date;
+  updatedAt: Date;
+  requiredSpareParts?: RawRequiredSparePartApiResponse[]; // <-- Menggunakan RawRequiredSparePartApiResponse
+  invoiceServices?: RawInvoiceServiceApiResponse[];
+  estimationServices?: RawEstimationServiceApiResponse[];
 };
 
 // Service form schema (omit id, createdAt, updatedAt)
@@ -52,7 +74,7 @@ export const serviceFormSchema = serviceSchema.omit({
 
 export type ServiceFormValues = z.infer<typeof serviceFormSchema>;
 
-// TransactionServiceDetails schema
+// TransactionServiceDetails schema (sudah menggunakan serviceName)
 export const transactionServiceDetailsSchema = z.object({
   id: z.string().optional(),
   serviceId: z.string().uuid(),

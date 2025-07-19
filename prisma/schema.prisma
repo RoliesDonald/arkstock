@@ -1,12 +1,11 @@
-generator client {
-  provider      = "prisma-client-js"
-  output        = "../src/generated/prisma"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 // =================================================================
@@ -32,6 +31,11 @@ enum CompanyStatus {
   PROSPECT
   SUSPENDED
   ON_HOLD
+}
+
+enum CompanyRole {
+  MAIN_COMPANY
+  CHILD_COMPANY
 }
 
 /// Enum untuk tipe kendaraan
@@ -228,8 +232,10 @@ model Company {
   companyType   CompanyType /// tipe perusahaan : CUSTOMER, VENDOR, CAR_USER, SUPPLIER, INTERNAL
   status        CompanyStatus @default(ACTIVE) /// Status perusahaan : ACTIVE, INACTIVE, PROSPECT, SUSPENDED, ON_HOLD
 
-  /// Relasi untuk parent-child company
+  // Company Role
+  companyRole CompanyRole
 
+  /// Relasi untuk parent-child company
   parentCompanyId String?   @map("parent_company_id") /// ID perusahaan induk (jika ada)
   parentCompany   Company?  @relation("ChildCompany", fields: [parentCompanyId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   childCompanies  Company[] @relation("ChildCompany") /// Perusahaan anak (jika ada)

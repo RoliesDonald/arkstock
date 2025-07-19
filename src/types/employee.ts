@@ -1,6 +1,6 @@
 import * as z from "zod";
-import { Company } from "./companies";
-import { Estimation } from "./estimation";
+import { Company, RawCompanyApiResponse } from "./companies"; // Pastikan import RawCompanyApiResponse
+import { Estimation } from "./estimation"; // Asumsi ini sudah string atau akan difix
 import { Invoice } from "./invoice";
 import { WorkOrder } from "./workOrder";
 import { PurchaseOrder } from "./purchaseOrder";
@@ -14,98 +14,47 @@ export enum EmployeeStatus {
 
 export enum EmployeeRole {
   SUPER_ADMIN = "SUPER_ADMIN",
-  ADMIN = "ADMIN", // KOREKSI: ADMIN_USER menjadi ADMIN
+  ADMIN = "ADMIN",
   FLEET_PIC = "FLEET_PIC",
-  SERVICE_MANAGER = "SERVICE_MANAGER", // DITAMBAHKAN
+  SERVICE_MANAGER = "SERVICE_MANAGER",
   SERVICE_ADVISOR = "SERVICE_ADVISOR",
-  FINANCE_MANAGER = "FINANCE_MANAGER", // DITAMBAHKAN
+  FINANCE_MANAGER = "FINANCE_MANAGER",
   FINANCE_STAFF = "FINANCE_STAFF",
-  SALES_MANAGER = "SALES_MANAGER", // DITAMBAHKAN
+  SALES_MANAGER = "SALES_MANAGER",
   SALES_STAFF = "SALES_STAFF",
   ACCOUNTING_MANAGER = "ACCOUNTING_MANAGER",
-  ACCOUNTING_STAFF = "ACCOUNTING_STAFF", // DITAMBAHKAN
+  ACCOUNTING_STAFF = "ACCOUNTING_STAFF",
   WAREHOUSE_MANAGER = "WAREHOUSE_MANAGER",
   WAREHOUSE_STAFF = "WAREHOUSE_STAFF",
   PURCHASING_MANAGER = "PURCHASING_MANAGER",
-  PURCHASING_STAFF = "PURCHASING_STAFF", // DITAMBAHKAN
+  PURCHASING_STAFF = "PURCHASING_STAFF",
   MECHANIC = "MECHANIC",
-  USER = "USER", // DITAMBAHKAN
-  DRIVER = "DRIVER", // DITAMBAHKAN
-  PIC = "PIC", // DITAMBAHKAN
+  USER = "USER",
+  DRIVER = "DRIVER",
+  PIC = "PIC",
 }
 
-// Skema Zod untuk form Karyawan
-export const employeeFormSchema = z.object({
-  id: z.string().optional(),
-  userId: z.string().nullable().optional(),
-  name: z
-    .string()
-    .min(2, { message: "Nama lengkap wajib diisi (minimal 2 karakter)." }), // namaLengkap -> name
-  email: z
-    .string()
-    .email({ message: "Email tidak valid." })
-    .nullable()
-    .optional(),
-  password: z
-    .string()
-    .min(6, { message: "Password harus minimal 6 karakter." }),
-  photo: z
-    .string()
-    .url({ message: "Format URL foto tidak valid." })
-    .nullable()
-    .optional(),
-  phone: z
-    .string()
-    .min(8, { message: "Nomor telepon wajib diisi (minimal 8 digit)." })
-    .nullable()
-    .optional(),
-  address: z
-    .string()
-    .min(5, { message: "Alamat wajib diisi (minimal 5 karakter)." })
-    .optional()
-    .nullable(),
-  position: z.string().min(2, { message: "Jabatan wajib diisi." }),
-  department: z.string().nullable().optional(),
-  role: z.nativeEnum(EmployeeRole, {
-    errorMap: () => ({ message: "Peran karyawan wajib dipilih." }),
-  }),
-  status: z.nativeEnum(EmployeeStatus, {
-    errorMap: () => ({ message: "Status karyawan wajib dipilih." }),
-  }),
-  tanggalLahir: z
-    .date({
-      required_error: "Tanggal lahir wajib diisi.",
-    })
-    .optional()
-    .nullable(),
-  tanggalBergabung: z.date().nullable().optional(),
-  companyId: z.string().nullable().optional(),
-});
-
-export type EmployeeFormValues = z.infer<typeof employeeFormSchema>;
-
-// Interface untuk data Karyawan lengkap (termasuk ID dan timestamp)
+// Interface untuk data Karyawan yang akan disimpan di Redux state (tanggal sebagai string)
 export interface Employee {
-  id: string; // UUID
-  userId?: string | null;
+  id: string;
+  userId: string | null;
   name: string;
-  email?: string | null;
-  password?: string | null;
-  photo?: string | null;
-  phone?: string | null;
-  address?: string | null;
-  position?: string | null;
+  email: string | null;
+  photo: string | null;
+  phone: string | null;
+  address: string | null;
+  position: string | null;
   role: EmployeeRole;
-  department?: string | null;
+  department: string | null;
   status: EmployeeStatus;
-  tanggalLahir?: Date | null;
-  tanggalBergabung?: Date | null;
-  companyId?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  tanggalLahir: string | null; // Tanggal sebagai string ISO atau null
+  tanggalBergabung: string | null; // Tanggal sebagai string ISO atau null
+  companyId: string | null; // <-- HARUS ADA DAN string | null
+  createdAt: string;
+  updatedAt: string;
 
   // Relasi (jika ingin disertakan di type ini untuk frontend)
-  company?: Company[];
+  company?: Company | null; // <-- Menggunakan Company yang sudah terformat string
   mechanicWorkOrders?: WorkOrder[];
   driverWorkOrders?: WorkOrder[];
   approvedWorkOrders?: WorkOrder[];
@@ -118,3 +67,78 @@ export interface Employee {
   requestedPurchaseOrders?: PurchaseOrder[];
   approvedPurchaseOrders?: PurchaseOrder[];
 }
+
+// Interface untuk data mentah Karyawan yang diterima dari API (tanggal sebagai Date objek)
+// Ini akan sesuai dengan output default Prisma
+export interface RawEmployeeApiResponse {
+  id: string;
+  userId: string | null;
+  name: string;
+  email: string | null;
+  photo: string | null;
+  phone: string | null;
+  address: string | null;
+  position: string | null;
+  role: EmployeeRole;
+  department: string | null;
+  status: EmployeeStatus;
+  tanggalLahir: Date | null; // <-- Ini Date objek atau null dari API
+  tanggalBergabung: Date | null; // <-- Ini Date objek atau null dari API
+  createdAt: Date; // <-- Ini Date objek dari API
+  updatedAt: Date; // <-- Ini Date objek dari API
+  companyId: string | null; // <-- HARUS ADA DAN string | null
+
+  // Relasi (jika ingin disertakan dan juga perlu diformat)
+  company?: RawCompanyApiResponse | null; // <-- Ini RawCompanyApiResponse
+  mechanicWorkOrders?: WorkOrder[]; // Asumsi ini sudah string atau akan difix
+  driverWorkOrders?: WorkOrder[];
+  approvedWorkOrders?: WorkOrder[];
+  requestedWorkOrders?: WorkOrder[];
+  accountingInvoices?: Invoice[];
+  approvedInvoices?: Invoice[];
+  mechanicEstimations?: Estimation[];
+  approvedEstimations?: Estimation[];
+  estimationAccountants?: Estimation[];
+  requestedPurchaseOrders?: PurchaseOrder[];
+  approvedPurchaseOrders?: PurchaseOrder[];
+}
+
+// Skema Zod untuk form Karyawan
+export const employeeFormSchema = z.object({
+  id: z.string().uuid().optional(),
+  userId: z.string().nullable().optional(),
+  name: z.string().min(2, { message: "Nama lengkap wajib diisi." }),
+  email: z
+    .string()
+    .email({ message: "Email tidak valid." })
+    .nullable()
+    .optional(),
+  password: z
+    .string()
+    .min(6, { message: "Password harus minimal 6 karakter." })
+    .optional(),
+  photo: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  address: z.string().optional().nullable(),
+  position: z.string().nullable().optional(),
+  department: z.string().nullable().optional(),
+  role: z.nativeEnum(EmployeeRole, {
+    required_error: "Role Wajib dipilih",
+  }),
+  status: z.nativeEnum(EmployeeStatus, {
+    required_error: "Status Wajib dipilih",
+  }),
+  tanggalLahir: z
+    .string()
+    .datetime("Tanggal lahir tidak valid")
+    .optional()
+    .nullable(),
+  tanggalBergabung: z
+    .string()
+    .datetime("Tanggal bergabung tidak valid")
+    .nullable()
+    .optional(),
+  companyId: z.string().uuid("ID Perusahaan tidak valid").nullable().optional(),
+});
+
+export type EmployeeFormValues = z.infer<typeof employeeFormSchema>;

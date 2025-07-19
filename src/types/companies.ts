@@ -1,89 +1,123 @@
 import * as z from "zod";
-import { Vehicle } from "./vehicle";
-import { Employee } from "./employee";
-import { WorkOrder } from "./workOrder";
-import { PurchaseOrder } from "./purchaseOrder";
 
-// Enum sesuai Prisma
 export enum CompanyType {
-  CUSTOMER = "CUSTOMER", // Pelanggan Umum
-  VENDOR = "VENDOR", // Pemasok/Vendor (misal: suku cadang, servis)
-  INTERNAL = "INTERNAL", // Perusahaan internal (jika ada struktur multi-entitas)
-  FLEET_COMPANY = "FLEET_COMPANY", // Perusahaan dengan armada sendiri (selain rental)
-  SERVICE_MAINTENANCE = "SERVICE_MAINTENANCE", // Perusahaan penyedia jasa servis/perawatan
-  RENTAL_COMPANY = "RENTAL_COMPANY", // Perusahaan Rental Kendaraan
-  CAR_USER = "CAR_USER", // Pengguna kendaraan (customer penyewa)
-  CHILD_COMPANY = "CHILD_COMPANY", // anak perusahaan
-  SUPPLIER = "SUPPLIER", // Pemasok atau vendor yang menyediakan barang/jasa
+  CUSTOMER = "CUSTOMER",
+  VENDOR = "VENDOR",
+  RENTAL_COMPANY = "RENTAL_COMPANY",
+  SERVICE_MAINTENANCE = "SERVICE_MAINTENANCE",
+  FLEET_COMPANY = "FLEET_COMPANY",
+  INTERNAL = "INTERNAL",
+  CAR_USER = "CAR_USER",
+  CHILD_COMPANY = "CHILD_COMPANY",
+  SUPPLIER = "SUPPLIER",
 }
 
-// Enum tambahan untuk UI (tidak ada di Prisma)
 export enum CompanyStatus {
   ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
   PROSPECT = "PROSPECT",
-  SUSPENDED = "SUSPENDED", // atau status BLACKLISTED
+  SUSPENDED = "SUSPENDED",
   ON_HOLD = "ON_HOLD",
 }
 
-// Skema Zod untuk validasi form Company
-export const companyFormSchema = z.object({
-  id: z.string().optional(),
-  companyId: z.string().min(1, { message: "ID Perusahaan wajib diisi." }),
-  companyName: z.string().min(1, { message: "Nama perusahaan wajib diisi." }),
-  companyEmail: z
-    .string()
-    .email({ message: "Format email tidak valid." })
-    .optional()
-    .nullable()
-    .or(z.literal("")),
-  logo: z
-    .string()
-    .url({ message: "Format URL logo tidak valid." })
-    .optional()
-    .nullable()
-    .or(z.literal("")),
-  contact: z.string().nullable().optional(),
-  address: z.string().nullable().optional(),
-  city: z.string().nullable().optional(),
-  taxRegistered: z.boolean(),
-  companyType: z.nativeEnum(CompanyType, {
-    required_error: "Tipe perusahaan wajib dipilih.",
-  }),
-  status: z.nativeEnum(CompanyStatus, {
-    required_error: "Status perusahaan wajib dipilih.",
-  }),
-  parentCompanyId: z.string().uuid().optional().nullable(),
-});
+export enum CompanyRole {
+  MAIN_COMPANY = "MAIN_COMPANY",
+  CHILD_COMPANY = "CHILD_COMPANY",
+}
 
-export type CompanyFormValues = z.infer<typeof companyFormSchema>;
-
-// Interface Company lengkap (mencerminkan model Prisma)
+// Interface untuk data Company yang akan disimpan di Redux state (tanggal sebagai string)
 export interface Company {
-  id: string; // UUID
+  id: string;
   companyId: string;
   companyName: string;
-  companyEmail?: string | null;
-  logo?: string | null;
-  contact?: string | null;
-  address?: string | null;
-  city?: string | null;
-  phone?: string | null;
+  companyEmail: string | null;
+  logo: string | null;
+  contact: string | null;
+  address: string | null;
+  city: string | null;
   taxRegistered: boolean;
   companyType: CompanyType;
   status: CompanyStatus;
-  createdAt: Date;
-  updatedAt: Date;
-
-  // Relasi
-  parentCompanyId?: string | null;
+  parentCompanyId: string | null;
+  createdAt: string;
+  updatedAt: string;
   parentCompany?: Company | null;
-  childCompanies?: Company[] | null; // Relasi satu ke banyak
-  vehiclesOwnned?: Vehicle[];
-  vehiclesUsed?: Vehicle[];
-  employees?: Employee[];
-  customerWorkOrders?: WorkOrder[];
-  carUserWorkOrders?: WorkOrder[];
-  vendorWorkOrders?: WorkOrder[];
-  suppliedPurchaseOrders?: PurchaseOrder[];
+  childCompanies?: Company[];
 }
+
+// Interface untuk data mentah Company yang diterima dari API (tanggal sebagai STRING)
+export interface RawCompanyApiResponse {
+  id: string;
+  companyId: string;
+  companyName: string;
+  companyEmail: string | null;
+  logo: string | null;
+  contact: string | null;
+  address: string | null;
+  city: string | null;
+  taxRegistered: boolean;
+  companyType: CompanyType;
+  status: CompanyStatus;
+  parentCompanyId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  parentCompany?: RawCompanyApiResponse | null;
+  childCompanies?: RawCompanyApiResponse[];
+}
+
+export interface CompanyNameAndId {
+  id: string;
+  companyName: string;
+}
+
+export const companyFormSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    companyId: z.string().min(1, "ID Perusahaan wajib diisi."),
+    companyName: z.string().min(1, "Nama Perusahaan wajib diisi."),
+    companyEmail: z.string().email("Email tidak valid.").nullable().optional(),
+    logo: z.string().nullable().optional(),
+    contact: z.string().nullable().optional(),
+    address: z.string().nullable().optional(),
+    city: z.string().nullable().optional(),
+    // PENTING: Gunakan z.preprocess untuk memastikan taxRegistered selalu boolean
+    taxRegistered: z.preprocess(
+      (val) => (val === undefined || val === null ? false : val), // Ubah undefined/null menjadi false
+      z.boolean() // Kemudian validasi sebagai boolean
+    ),
+    companyType: z.nativeEnum(CompanyType, {
+      required_error: "Tipe Perusahaan wajib dipilih.",
+    }),
+    status: z.nativeEnum(CompanyStatus, {
+      required_error: "Status wajib dipilih.",
+    }),
+    companyRole: z.nativeEnum(CompanyRole, {
+      required_error: "Role Perusahaan wajib dipilih.",
+    }),
+    parentCompanyId: z
+      .string()
+      .uuid("ID Perusahaan Induk tidak valid.")
+      .nullable()
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.companyRole === CompanyRole.CHILD_COMPANY) {
+      if (!data.parentCompanyId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "ID Perusahaan wajib di isi",
+          path: ["parentCompanyId"],
+        });
+      }
+    } else if (data.companyRole === CompanyRole.MAIN_COMPANY) {
+      if (data.parentCompanyId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Perusahaan utama tidak boleh memiliki ID Perusahaan Induk",
+          path: ["parentCompanyId"],
+        });
+      }
+    }
+  });
+
+export type CompanyFormValues = z.infer<typeof companyFormSchema>;

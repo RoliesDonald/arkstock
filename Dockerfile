@@ -1,50 +1,32 @@
-# FROM node:20-alpine AS BASE
+# Dockerfile
 
-# FROM base AS deps
-# WORKDIR /app
-# COPY package.json yarn.lock* package-lock.json* ./
-
-# RUN npm install --frozen-lockfile
-
-# FROM base AS builder
-# WORKDIR /app
-# COPY --from=deps /app/node_modules ./node_modules
-# COPY . .
-
-# ENV DATABASE_URL="postgresql://arkstokuser:arkstokpassword@localhost:5432/arkstokdb?schema=public"
-# RUN npx prisma generate
-# RUN npm run build
-
-# FROM base AS runner
-# WORKDIR /app
-
-# ENV NODE_ENV production
-# ENV PORT 3000
-
-# COPY --from=builder /app/public ./public
-# COPY --from=builder /app/.next ./.next
-# COPY --from=builder /app/node_modules ./node_modules
-# COPY --from=builder /app/package.json ./package.json
-
-# COPY --from=builder /app/src/generated/prisma ./src/generated/prisma
-
-# EXPOSE 3000
-
-# CMD ["npm","run" , "dev"]
-
-
-FROM node:20-alpine
+# --- Stage 1: Builder (Hanya untuk menyalin file yang sudah dibangun) ---
+FROM node:20 AS builder 
 
 WORKDIR /app
 
-COPY package.json yarn.lock* package-lock.json* ./
+# Salin semua file dari host (termasuk node_modules, .next, prisma/, dll.)
+# Ini mengasumsikan Anda sudah menjalankan npm install dan npm run build di host (WSL2)
+COPY . . 
 
-COPY . .
+# --- Stage 2: Runner ---
+FROM node:20-slim AS runner 
 
-RUN npx prisma generate
+WORKDIR /app
 
-RUN npm install --frozen-lockfile
+# Salin semua yang sudah ada dari builder stage
+COPY --from=builder /app ./
+
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+
+ARG JWT_SECRET
+ENV JWT_SECRET=$JWT_SECRET
+
+# Ini mungkin masih diperlukan untuk runtime Prisma Client
+ENV PRISMA_FORCE_NAPI="true" 
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+# Mengubah CMD menjadi npm run start untuk menjalankan aplikasi Next.js yang sudah dibangun
+CMD ["npm", "run", "start"]

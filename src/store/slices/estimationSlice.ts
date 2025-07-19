@@ -1,3 +1,4 @@
+// src/store/slices/estimationSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import {
   Estimation,
@@ -5,9 +6,21 @@ import {
   EstimationStatus,
   EstimationItem,
   EstimationService,
+  RawEstimationApiResponse, // Import Raw API interfaces
+  RawEstimationItemApiResponse,
+  RawEstimationServiceApiResponse,
 } from "@/types/estimation";
-import { PartVariant, SparePart } from "@/types/sparepart"; // Untuk data spare part dummy
-import { Service } from "@/types/services"; // Untuk data service dummy
+import {
+  PartVariant,
+  SparePart,
+  RawSparePartApiResponse,
+} from "@/types/sparepart"; // Import RawSparePartApiResponse
+import {
+  Service,
+  RawServiceApiResponse,
+  RequiredSparePart,
+  RawRequiredSparePartApiResponse,
+} from "@/types/services"; // Import RawServiceApiResponse and RequiredSparePart types
 import {
   Vehicle,
   VehicleCategory,
@@ -15,406 +28,282 @@ import {
   VehicleStatus,
   VehicleTransmissionType,
   VehicleType,
-} from "@/types/vehicle"; // Untuk data vehicle dummy
-import { Company, CompanyType } from "@/types/companies"; // Untuk data company dummy
-import { Employee, EmployeeRole, EmployeeStatus } from "@/types/employee"; // Untuk data employee dummy
-import { v4 as uuidv4 } from "uuid";
+  RawVehicleApiResponse, // Import RawVehicleApiResponse
+} from "@/types/vehicle";
+import {
+  Company,
+  CompanyType,
+  CompanyStatus,
+  RawCompanyApiResponse,
+} from "@/types/companies"; // Import RawCompanyApiResponse
+import {
+  Employee,
+  EmployeeRole,
+  EmployeeStatus,
+  RawEmployeeApiResponse,
+} from "@/types/employee"; // Import RawEmployeeApiResponse
+import { WorkOrder, RawWorkOrderApiResponse } from "@/types/workOrder"; // Import RawWorkOrderApiResponse
+import {
+  Invoice,
+  InvoiceItem,
+  InvoiceService,
+  RawInvoiceApiResponse,
+  RawInvoiceItemApiResponse,
+  RawInvoiceServiceApiResponse,
+} from "@/types/invoice"; // Import RawInvoiceApiResponse and its nested raw types
+import { api } from "@/lib/utils/api"; // Menggunakan API yang sudah ada
 
-// --- Data Dummy yang Lebih Lengkap (Sesuaikan dengan data master Anda) ---
-// Asumsi data master ini sudah ada atau akan diambil dari slice masing-masing
-const dummyVehicles: Vehicle[] = [
-  {
-    id: "veh-1",
-    licensePlate: "B 1234 ABC",
-    vehicleMake: "TOYOTA",
-    model: "AVANZA",
-    color: "Hitam",
-    yearMade: 2020,
-    chassisNum: "MHK123XYZ4567890",
-    engineNum: "1NRVE123456",
-    ownerId: "comp-1",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    trimLevel: null,
-    vinNum: null,
-    vehicleType: VehicleType.PASSENGER,
-    vehicleCategory: VehicleCategory.MPV,
-    fuelType: VehicleFuelType.GASOLINE,
-    transmissionType: VehicleTransmissionType.AUTOMATIC,
-    lastOdometer: 50000,
-    lastServiceDate: new Date(),
-    status: VehicleStatus.ACTIVE,
-    notes: null,
-    carUserId: null,
-  },
-  {
-    id: "veh-2",
-    licensePlate: "D 5678 EFG",
-    vehicleMake: "HONDA",
-    model: "JAZZ",
-    color: "Merah",
-    yearMade: 2018,
-    chassisNum: "MHF987XYZ6543210",
-    engineNum: "L15A789012",
-    ownerId: "comp-2",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    trimLevel: null,
-    vinNum: null,
-    vehicleType: VehicleType.PASSENGER,
-    vehicleCategory: VehicleCategory.HATCHBACK,
-    fuelType: VehicleFuelType.GASOLINE,
-    transmissionType: VehicleTransmissionType.AUTOMATIC,
-    lastOdometer: 60000,
-    lastServiceDate: new Date(),
-    status: VehicleStatus.ACTIVE,
-    notes: null,
-    carUserId: null,
-  },
-];
+// --- Helper Functions untuk Konversi Tanggal (Date -> String ISO) ---
+// Fungsi-fungsi ini akan mengonversi Date objek dari API menjadi string ISO untuk Redux state.
 
-const dummyCompanies: Company[] = [
-  {
-    id: "comp-1",
-    companyName: "Pelanggan A",
-    companyId: "CUST-001",
-    address: "Jl. Contoh No. 1, Jakarta",
-    phone: "08111222333",
-    companyEmail: "a@example.com",
-    contact: "Bapak Joni",
-    taxRegistered: false,
-    companyType: CompanyType.CUSTOMER,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: "comp-2",
-    companyName: "Pelanggan B",
-    companyId: "CUST-002",
-    address: "Jl. Raya No. 5, Bandung",
-    phone: "08123456789",
-    companyEmail: "b@example.com",
-    contact: "Ibu Ani",
-    taxRegistered: false,
-    companyType: CompanyType.CUSTOMER,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+// Fungsi helper untuk memformat tanggal di objek Company
+const formatCompanyDates = (rawCompany: RawCompanyApiResponse): Company => {
+  return {
+    ...rawCompany,
+    createdAt: rawCompany.createdAt.toISOString(),
+    updatedAt: rawCompany.updatedAt.toISOString(),
+  };
+};
 
-const dummyEmployees: Employee[] = [
-  {
-    id: "emp-1",
-    name: "Budi Setiawan",
-    position: "Service Advisor",
-    email: "budi@example.com",
-    phoneNumber: "08111111111",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    address: "",
-    role: EmployeeRole.SUPER_ADMIN,
-    status: EmployeeStatus.ACTIVE,
-    tanggalLahir: new Date(),
-    tanggalBergabung: null,
-    currentCompanyId: null,
-  },
-  {
-    id: "emp-2",
-    name: "Dian Permata",
-    position: "Service Advisor",
-    email: "dian@example.com",
-    phoneNumber: "08222222222",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    address: "",
-    role: EmployeeRole.SUPER_ADMIN,
-    status: EmployeeStatus.ACTIVE,
-    tanggalLahir: new Date(),
-    tanggalBergabung: null,
-    currentCompanyId: null,
-  },
-  {
-    id: "emp-3",
-    name: "Joko Mulyante",
-    position: "Mechanic",
-    email: "joko@example.com",
-    phoneNumber: "08333333333",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    address: "",
-    role: EmployeeRole.SUPER_ADMIN,
-    status: EmployeeStatus.ACTIVE,
-    tanggalLahir: new Date(),
-    tanggalBergabung: null,
-    currentCompanyId: null,
-  },
-];
+// Fungsi helper untuk memformat tanggal di objek Employee
+const formatEmployeeDates = (rawEmployee: RawEmployeeApiResponse): Employee => {
+  return {
+    ...rawEmployee,
+    createdAt: rawEmployee.createdAt.toISOString(),
+    updatedAt: rawEmployee.updatedAt.toISOString(),
+    tanggalLahir: rawEmployee.tanggalLahir
+      ? rawEmployee.tanggalLahir.toISOString()
+      : null,
+    tanggalBergabung: rawEmployee.tanggalBergabung
+      ? rawEmployee.tanggalBergabung.toISOString()
+      : null,
+    company: rawEmployee.company
+      ? formatCompanyDates(rawEmployee.company)
+      : null, // Rekursif
+  };
+};
 
-const dummySpareParts: SparePart[] = [
-  {
-    id: "sp-1",
-    sku: "OL-001",
-    itemName: "Oli Mesin 4L",
-    partNumber: "OL-001",
-    unit: "Liter",
-    stock: 100,
-    initialStock: 100,
-    minStock: 10,
-    price: 300000,
-    variant: PartVariant.OEM,
-    brand: "Castrol",
-    manufacturer: "Castrol",
-    compatibility: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "sp-2",
-    sku: "FU-001",
-    itemName: "Filter Udara",
-    partNumber: "FU-001",
-    unit: "Pcs",
-    stock: 50,
-    initialStock: 50,
-    minStock: 5,
-    price: 80000,
-    variant: PartVariant.AFTERMARKET,
-    brand: "Sakura",
-    manufacturer: "Sakura",
-    compatibility: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "sp-3",
-    sku: "KRD-001",
-    itemName: "Kampas Rem Depan",
-    partNumber: "KRD-001",
-    unit: "Set",
-    stock: 40,
-    initialStock: 40,
-    minStock: 5,
-    price: 250000,
-    variant: PartVariant.OEM,
-    brand: "Aisin",
-    manufacturer: "Aisin",
-    compatibility: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "sp-4",
-    sku: "FREON-AC",
-    itemName: "Freon AC",
-    partNumber: "FREON-AC",
-    unit: "Kg",
-    stock: 30,
-    initialStock: 30,
-    minStock: 3,
-    price: 120000,
-    variant: PartVariant.AFTERMARKET,
-    brand: "DuPont",
-    manufacturer: "DuPont",
-    compatibility: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+// Fungsi helper untuk memformat tanggal di objek SparePart
+const formatSparePartDates = (
+  rawSparePart: RawSparePartApiResponse
+): SparePart => {
+  return {
+    ...rawSparePart,
+    createdAt: rawSparePart.createdAt.toISOString(),
+    updatedAt: rawSparePart.updatedAt.toISOString(),
+  };
+};
 
-const dummyServices: Service[] = [
-  {
-    id: "svc-1",
-    serviceName: "Service Berkala 50.000 KM",
-    category: "Perawatan Rutin",
-    subCategory: "Service Besar",
-    description: "Service besar termasuk penggantian oli, filter, busi, dll.",
-    unitPrice: 400000,
-    tasks: [],
-    requiredSpareParts: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "svc-2",
-    serviceName: "Pengecekan Kaki-kaki",
-    category: "Perbaikan",
-    subCategory: "Sistem Suspensi",
-    description: "Pengecekan komponen kaki-kaki mobil.",
-    unitPrice: 150000,
-    tasks: [],
-    requiredSpareParts: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "svc-3",
-    serviceName: "Penggantian Kampas Rem Depan",
-    category: "Perbaikan",
-    subCategory: "Sistem Rem",
-    description: "Penggantian kampas rem depan.",
-    unitPrice: 150000,
-    tasks: [],
-    requiredSpareParts: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "svc-4",
-    serviceName: "Pengecekan Sistem AC",
-    category: "Perbaikan",
-    subCategory: "Sistem Pendingin",
-    description: "Pengecekan dan diagnosis sistem AC.",
-    unitPrice: 100000,
-    tasks: [],
-    requiredSpareParts: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+// Fungsi helper untuk memformat tanggal di objek WorkOrder
+const formatWorkOrderDates = (
+  rawWorkOrder: RawWorkOrderApiResponse
+): WorkOrder => {
+  return {
+    ...rawWorkOrder,
+    createdAt: rawWorkOrder.createdAt.toISOString(),
+    updatedAt: rawWorkOrder.updatedAt.toISOString(),
+    date: rawWorkOrder.date.toISOString(),
+    schedule: rawWorkOrder.schedule
+      ? rawWorkOrder.schedule.toISOString()
+      : null,
+    vehicle: rawWorkOrder.vehicle
+      ? formatVehicleDates(rawWorkOrder.vehicle)
+      : undefined, // Rekursif
+    customer: rawWorkOrder.customer
+      ? formatCompanyDates(rawWorkOrder.customer)
+      : undefined, // Rekursif
+    carUser: rawWorkOrder.carUser
+      ? formatCompanyDates(rawWorkOrder.carUser)
+      : undefined, // Rekursif
+    vendor: rawWorkOrder.vendor
+      ? formatCompanyDates(rawWorkOrder.vendor)
+      : undefined, // Rekursif
+    mechanic: rawWorkOrder.mechanic
+      ? formatEmployeeDates(rawWorkOrder.mechanic)
+      : undefined, // Rekursif
+    driver: rawWorkOrder.driver
+      ? formatEmployeeDates(rawWorkOrder.driver)
+      : undefined, // Rekursif
+    approvedBy: rawWorkOrder.approvedBy
+      ? formatEmployeeDates(rawWorkOrder.approvedBy)
+      : undefined, // Rekursif
+    requestedBy: rawWorkOrder.requestedBy
+      ? formatEmployeeDates(rawWorkOrder.requestedBy)
+      : undefined, // Rekursif
+    // location: rawWorkOrder.location ? formatLocationDates(rawWorkOrder.location) : undefined, // Jika ada Location
+  };
+};
 
-const initialEstimates: Estimation[] = [
-  {
-    id: "est-123",
-    estNum: "EST/2025/07/001",
-    estimationDate: "2025-07-01T00:00:00Z", // Gunakan string ISO 8601 untuk konsistensi
-    requestOdo: 54900,
-    actualOdo: 55000,
-    remark: "Keluhan suara aneh dari mesin dan AC kurang dingin.",
-    notes: "Estimasi ini berlaku selama 7 hari kerja.",
-    totalEstimatedAmount: 930000, // Total = 400k + 150k + 300k + 80k = 930k
-    woId: "wo-dummy-1",
-    vehicleId: "veh-1",
-    mechanicId: "emp-3",
-    approvedById: "emp-1",
-    issuedById: "emp-1", // Asumsi issuedBy
-    createdAt: new Date("2025-07-01T09:00:00Z"),
-    updatedAt: new Date("2025-07-01T09:00:00Z"),
-    estStatus: EstimationStatus.PENDING,
-    estimationServices: [
-      {
-        id: uuidv4(),
-        estimationId: "est-123",
-        serviceId: "svc-1",
-        quantity: 1,
-        unitPrice: 400000,
-        totalPrice: 400000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        service: dummyServices.find((s) => s.id === "svc-1"),
-      },
-      {
-        id: uuidv4(),
-        estimationId: "est-123",
-        serviceId: "svc-2",
-        quantity: 1,
-        unitPrice: 150000,
-        totalPrice: 150000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        service: dummyServices.find((s) => s.id === "svc-2"),
-      },
-    ],
-    estimationItems: [
-      {
-        id: uuidv4(),
-        estimationId: "est-123",
-        sparePartId: "sp-1",
-        quantity: 1,
-        unitPrice: 300000,
-        totalPrice: 300000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        sparePart: dummySpareParts.find((sp) => sp.id === "sp-1"),
-      },
-      {
-        id: uuidv4(),
-        estimationId: "est-123",
-        sparePartId: "sp-2",
-        quantity: 1,
-        unitPrice: 80000,
-        totalPrice: 80000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        sparePart: dummySpareParts.find((sp) => sp.id === "sp-2"),
-      },
-    ],
-    vehicle: dummyVehicles.find((v) => v.id === "veh-1"),
-    customer: dummyCompanies.find((c) => c.id === "comp-1"),
-    mechanic: dummyEmployees.find((e) => e.id === "emp-3"),
-    approvedBy: dummyEmployees.find((e) => e.id === "emp-1"),
-  },
-  {
-    id: "est-124",
-    estNum: "EST/2025/07/002",
-    estimationDate: "2025-07-02T00:00:00Z", // Gunakan string ISO 8601 untuk konsistensi
-    requestOdo: 69900,
-    actualOdo: 70000,
-    remark: "Keluhan rem berbunyi dan AC tidak dingin sama sekali.",
-    notes: "Harga dapat berubah tergantung ketersediaan suku cadang.",
-    totalEstimatedAmount: 620000, // Total = 150k + 100k + 250k + 120k = 620k
-    woId: "wo-dummy-2",
-    vehicleId: "veh-2",
-    mechanicId: "emp-3",
-    approvedById: "emp-2",
-    issuedById: "emp-2", // Asumsi issuedBy
-    createdAt: new Date("2025-07-02T10:30:00Z"),
-    updatedAt: new Date("2025-07-02T10:30:00Z"),
-    estStatus: EstimationStatus.APPROVED,
-    estimationServices: [
-      {
-        id: uuidv4(),
-        estimationId: "est-124",
-        serviceId: "svc-3",
-        quantity: 1,
-        unitPrice: 150000,
-        totalPrice: 150000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        service: dummyServices.find((s) => s.id === "svc-3"),
-      },
-      {
-        id: uuidv4(),
-        estimationId: "est-124",
-        serviceId: "svc-4",
-        quantity: 1,
-        unitPrice: 100000,
-        totalPrice: 100000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        service: dummyServices.find((s) => s.id === "svc-4"),
-      },
-    ],
-    estimationItems: [
-      {
-        id: uuidv4(),
-        estimationId: "est-124",
-        sparePartId: "sp-3",
-        quantity: 1,
-        unitPrice: 250000,
-        totalPrice: 250000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        sparePart: dummySpareParts.find((sp) => sp.id === "sp-3"),
-      },
-      {
-        id: uuidv4(),
-        estimationId: "est-124",
-        sparePartId: "sp-4",
-        quantity: 1,
-        unitPrice: 120000,
-        totalPrice: 120000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        sparePart: dummySpareParts.find((sp) => sp.id === "sp-4"),
-      },
-    ],
-    vehicle: dummyVehicles.find((v) => v.id === "veh-2"),
-    customer: dummyCompanies.find((c) => c.id === "comp-2"),
-    mechanic: dummyEmployees.find((e) => e.id === "emp-3"),
-    approvedBy: dummyEmployees.find((e) => e.id === "emp-2"),
-  },
-];
+// Fungsi helper untuk memformat tanggal di objek InvoiceItem
+const formatInvoiceItemDates = (
+  rawItem: RawInvoiceItemApiResponse
+): InvoiceItem => {
+  return {
+    ...rawItem,
+    createdAt: rawItem.createdAt.toISOString(),
+    updatedAt: rawItem.updatedAt.toISOString(),
+    sparePart: rawItem.sparePart
+      ? formatSparePartDates(rawItem.sparePart)
+      : undefined,
+  };
+};
 
+// Fungsi helper untuk memformat tanggal di objek InvoiceService
+const formatInvoiceServiceDates = (
+  rawService: RawInvoiceServiceApiResponse
+): InvoiceService => {
+  return {
+    ...rawService,
+    createdAt: rawService.createdAt.toISOString(),
+    updatedAt: rawService.updatedAt.toISOString(),
+    service: rawService.service
+      ? formatServiceDates(rawService.service)
+      : undefined,
+  };
+};
+
+// Fungsi helper untuk memformat tanggal di objek Invoice
+const formatInvoiceDates = (rawInvoice: RawInvoiceApiResponse): Invoice => {
+  return {
+    ...rawInvoice,
+    createdAt: rawInvoice.createdAt.toISOString(),
+    updatedAt: rawInvoice.updatedAt.toISOString(),
+    invoiceDate: rawInvoice.invoiceDate.toISOString(),
+    finishedDate: rawInvoice.finishedDate.toISOString(),
+    // Format nested items and services
+    invoiceItems: rawInvoice.invoiceItems?.map(formatInvoiceItemDates) || [],
+    invoiceServices:
+      rawInvoice.invoiceServices?.map(formatInvoiceServiceDates) || [],
+    workOrder: rawInvoice.workOrder
+      ? formatWorkOrderDates(rawInvoice.workOrder)
+      : undefined,
+    vehicle: rawInvoice.vehicle
+      ? formatVehicleDates(rawInvoice.vehicle)
+      : undefined,
+    accountant: rawInvoice.accountant
+      ? formatEmployeeDates(rawInvoice.accountant)
+      : undefined,
+    approvedBy: rawInvoice.approvedBy
+      ? formatEmployeeDates(rawInvoice.approvedBy)
+      : undefined,
+  };
+};
+
+// Fungsi helper untuk memformat tanggal di objek Vehicle
+const formatVehicleDates = (rawVehicle: RawVehicleApiResponse): Vehicle => {
+  return {
+    ...rawVehicle,
+    createdAt: rawVehicle.createdAt.toISOString(),
+    updatedAt: rawVehicle.updatedAt.toISOString(),
+    lastServiceDate: rawVehicle.lastServiceDate.toISOString(),
+    owner: rawVehicle.owner ? formatCompanyDates(rawVehicle.owner) : undefined, // Rekursif
+    carUser: rawVehicle.carUser
+      ? formatCompanyDates(rawVehicle.carUser)
+      : undefined, // Rekursif
+    // Recursively format nested arrays
+    workOrders: rawVehicle.workOrders?.map(formatWorkOrderDates) || [], // <-- REKURSIF
+    invoices: rawVehicle.invoices?.map(formatInvoiceDates) || [], // <-- REKURSIF
+    estimation: rawVehicle.estimation?.map(formatEstimationDates) || [], // <-- REKURSIF
+  };
+};
+
+// Fungsi helper untuk memformat tanggal di objek EstimationItem
+const formatEstimationItemDates = (
+  rawItem: RawEstimationItemApiResponse
+): EstimationItem => {
+  return {
+    ...rawItem,
+    createdAt: rawItem.createdAt.toISOString(),
+    updatedAt: rawItem.updatedAt.toISOString(),
+    sparePart: rawItem.sparePart
+      ? formatSparePartDates(rawItem.sparePart)
+      : undefined, // Rekursif
+  };
+};
+
+// Fungsi helper untuk memformat tanggal di objek EstimationService
+const formatEstimationServiceDates = (
+  rawService: RawEstimationServiceApiResponse
+): EstimationService => {
+  return {
+    ...rawService,
+    createdAt: rawService.createdAt.toISOString(),
+    updatedAt: rawService.updatedAt.toISOString(),
+    // Pastikan objek service yang dikembalikan sesuai dengan tipe Service
+    service: rawService.service
+      ? formatServiceDates(rawService.service) // <-- Panggil formatServiceDates
+      : undefined, // Rekursif
+  };
+};
+
+// Fungsi helper utama untuk memformat tanggal di objek Estimation
+const formatEstimationDates = (
+  rawEstimation: RawEstimationApiResponse
+): Estimation => {
+  return {
+    ...rawEstimation,
+    createdAt: rawEstimation.createdAt.toISOString(),
+    updatedAt: rawEstimation.updatedAt.toISOString(),
+    estimationDate: rawEstimation.estimationDate.toISOString(),
+    finishedDate: rawEstimation.finishedDate
+      ? rawEstimation.finishedDate.toISOString()
+      : null,
+
+    // Format relasi bersarang
+    estimationItems:
+      rawEstimation.estimationItems?.map(formatEstimationItemDates) || [],
+    estimationServices:
+      rawEstimation.estimationServices?.map(formatEstimationServiceDates) || [],
+
+    vehicle: rawEstimation.vehicle
+      ? formatVehicleDates(rawEstimation.vehicle)
+      : undefined,
+    customer: rawEstimation.customer
+      ? formatCompanyDates(rawEstimation.customer)
+      : undefined,
+    mechanic: rawEstimation.mechanic
+      ? formatEmployeeDates(rawEstimation.mechanic)
+      : undefined,
+    approvedBy: rawEstimation.approvedBy
+      ? formatEmployeeDates(rawEstimation.approvedBy)
+      : undefined,
+    accountant: rawEstimation.accountant
+      ? formatEmployeeDates(rawEstimation.accountant)
+      : undefined,
+    workOrder: rawEstimation.workOrder
+      ? formatWorkOrderDates(rawEstimation.workOrder)
+      : undefined,
+  };
+};
+
+// Fungsi helper untuk memformat tanggal di objek Service
+// Fungsi ini harus didefinisikan setelah semua helper yang mungkin dipanggilnya (seperti formatSparePartDates)
+// atau dideklarasikan sebagai 'function' agar hoisting bekerja.
+// Saya akan memindahkannya di sini untuk memastikan semua dependensi ada.
+// Ini adalah fungsi yang menyebabkan error karena invoiceServices dan estimationServices tidak diformat.
+const formatServiceDates = (rawService: RawServiceApiResponse): Service => {
+  return {
+    ...rawService,
+    createdAt: rawService.createdAt.toISOString(),
+    updatedAt: rawService.updatedAt.toISOString(),
+    requiredSpareParts:
+      rawService.requiredSpareParts?.map(
+        (rsp: RawRequiredSparePartApiResponse) => ({
+          ...rsp,
+          sparePart: rsp.sparePart
+            ? formatSparePartDates(rsp.sparePart)
+            : undefined,
+        })
+      ) || [],
+    // PERBAIKAN: Format invoiceServices dan estimationServices
+    invoiceServices:
+      rawService.invoiceServices?.map(formatInvoiceServiceDates) || [],
+    estimationServices:
+      rawService.estimationServices?.map(formatEstimationServiceDates) || [],
+  };
+};
+
+// --- Initial State ---
 interface EstimateState {
   estimates: Estimation[];
   status: "idle" | "loading" | "succeeded" | "failed";
@@ -422,161 +311,98 @@ interface EstimateState {
 }
 
 const initialState: EstimateState = {
-  estimates: initialEstimates,
+  estimates: [], // Dimulai dengan array kosong, tidak ada data dummy
   status: "idle",
   error: null,
 };
 
-// Async Thunks
+// --- Async Thunks (Menggunakan API Anda) ---
 export const fetchEstimates = createAsyncThunk(
   "estimates/fetchEstimates",
-  async () => {
-    return new Promise<Estimation[]>((resolve) => {
-      setTimeout(() => {
-        resolve(initialEstimates);
-      }, 500);
-    });
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get<RawEstimationApiResponse[]>(
+        "http://localhost:3000/api/estimations"
+      ); // Ganti dengan endpoint API Anda
+      const formattedData = response.map(formatEstimationDates);
+      return formattedData;
+    } catch (error: any) {
+      console.error("Error fetching estimations:", error);
+      return rejectWithValue(error.message || "Gagal memuat estimasi.");
+    }
   }
 );
 
 export const addEstimate = createAsyncThunk(
   "estimates/addEstimate",
-  async (newEstimateData: EstimationFormValues) => {
-    // Hitung totalEstimatedAmount berdasarkan item dan service
-    const calculatedTotalAmount =
-      (newEstimateData.partItems?.reduce(
-        (sum, item) => sum + item.quantity * item.unitPrice,
-        0
-      ) || 0) +
-      (newEstimateData.serviceItems?.reduce(
-        (sum, service) => sum + service.quantity * service.price,
-        0
-      ) || 0);
+  async (newEstimateData: EstimationFormValues, { rejectWithValue }) => {
+    try {
+      // API Anda mungkin mengharapkan tanggal sebagai string ISO, atau objek Date.
+      // Jika formSchema menggunakan z.date(), newEstimateData.estimationDate adalah Date objek.
+      // Sesuaikan payload jika API Anda membutuhkan format string ISO:
+      const payload = {
+        ...newEstimateData,
+        estimationDate: newEstimateData.estimationDate.toISOString(),
+        // Jika ada finishedDate dari form:
+        finishedDate: newEstimateData.finishedDate
+          ? newEstimateData.finishedDate.toISOString()
+          : null,
+      };
 
-    // Buat objek EstimationItem dan EstimationService dari data form
-    const estimationItems: EstimationItem[] =
-      newEstimateData.partItems?.map((item) => ({
-        id: uuidv4(),
-        estimationId: "", // Akan diisi setelah estimasi dibuat
-        sparePartId: item.sparePartId || "", // Pastikan ada sparePartId
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.quantity * item.unitPrice,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        sparePart: dummySpareParts.find((sp) => sp.id === item.sparePartId), // Tambahkan detail sparePart untuk simulasi
-      })) || [];
-
-    const estimationServices: EstimationService[] =
-      newEstimateData.serviceItems?.map((service) => ({
-        id: uuidv4(),
-        estimationId: "", // Akan diisi setelah estimasi dibuat
-        serviceId: service.serviceId || "", // Pastikan ada serviceId
-        quantity: service.quantity,
-        unitPrice: service.price, // Pastikan unitPrice ada di TransactionServiceDetails
-        totalPrice: service.quantity * service.price,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        service: dummyServices.find((svc) => svc.id === service.serviceId), // Tambahkan detail service untuk simulasi
-      })) || [];
-
-    const newEstimate: Estimation = {
-      id: uuidv4(),
-      ...newEstimateData,
-      totalEstimatedAmount: calculatedTotalAmount, // Gunakan yang dihitung
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      estStatus: EstimationStatus.DRAFT, // Status awal
-      estimationItems: estimationItems,
-      estimationServices: estimationServices,
-      // Tambahkan relasi dummy untuk display
-      vehicle: dummyVehicles.find((v) => v.id === newEstimateData.vehicleId),
-      customer: dummyCompanies.find(
-        (c) =>
-          c.id ===
-          dummyVehicles.find((v) => v.id === newEstimateData.vehicleId)?.ownerId
-      ),
-      mechanic: dummyEmployees.find((e) => e.id === newEstimateData.mechanicId),
-      approvedBy: dummyEmployees.find(
-        (e) => e.id === newEstimateData.approvedById
-      ),
-      // workOrder: dummyWorkOrders.find(wo => wo.id === newEstimateData.woId), // Jika ada dummy work order
-      // issuedById dan issuedBy tidak ada di EstimationFormValues,
-      // jadi tidak perlu ditambahkan di sini.
-    };
-
-    // Set estimationId untuk item dan service
-    newEstimate.estimationItems?.forEach(
-      (item) => (item.estimationId = newEstimate.id)
-    );
-    newEstimate.estimationServices?.forEach(
-      (service) => (service.estimationId = newEstimate.id)
-    );
-
-    return new Promise<Estimation>((resolve) => {
-      setTimeout(() => {
-        initialEstimates.push(newEstimate); // <-- KOREKSI: Pastikan ini hanya dipanggil sekali
-        resolve(newEstimate);
-      }, 500);
-    });
+      const response = await api.post<RawEstimationApiResponse>(
+        "http://localhost:3000/api/estimations", // Ganti dengan endpoint API Anda
+        payload
+      );
+      return formatEstimationDates(response);
+    } catch (error: any) {
+      console.error("Error adding estimation:", error);
+      return rejectWithValue(error.message || "Gagal membuat estimasi baru.");
+    }
   }
 );
 
 export const updateEstimate = createAsyncThunk(
   "estimates/updateEstimate",
-  async (updatedEstimateData: Estimation) => {
-    // Hitung ulang totalEstimatedAmount saat update
-    const calculatedTotalAmount =
-      (updatedEstimateData.estimationItems?.reduce(
-        (sum, item) => sum + item.quantity * item.unitPrice,
-        0
-      ) || 0) +
-      (updatedEstimateData.estimationServices?.reduce(
-        (sum, service) => sum + service.quantity * service.unitPrice,
-        0
-      ) || 0);
+  async (
+    updatedEstimateData: EstimationFormValues, // Menggunakan EstimationFormValues untuk konsistensi input
+    { rejectWithValue }
+  ) => {
+    try {
+      if (!updatedEstimateData.id) {
+        throw new Error("ID estimasi tidak ditemukan untuk pembaruan.");
+      }
 
-    return new Promise<Estimation>((resolve, reject) => {
-      setTimeout(() => {
-        const index = initialEstimates.findIndex(
-          (e) => e.id === updatedEstimateData.id
-        );
-        if (index !== -1) {
-          initialEstimates[index] = {
-            ...updatedEstimateData,
-            totalEstimatedAmount: calculatedTotalAmount, // Perbarui total
-            updatedAt: new Date(),
-          };
-          resolve(initialEstimates[index]);
-        } else {
-          reject(new Error("Estimasi tidak ditemukan"));
-        }
-      }, 500);
-    });
+      // Sesuaikan payload jika API Anda membutuhkan format string ISO:
+      const payload = {
+        ...updatedEstimateData,
+        estimationDate: updatedEstimateData.estimationDate.toISOString(),
+        finishedDate: updatedEstimateData.finishedDate
+          ? updatedEstimateData.finishedDate.toISOString()
+          : null,
+      };
+
+      const response = await api.put<RawEstimationApiResponse>(
+        `http://localhost:3000/api/estimations/${updatedEstimateData.id}`, // Ganti dengan endpoint API Anda
+        payload
+      );
+      return formatEstimationDates(response);
+    } catch (error: any) {
+      console.error("Error updating estimation:", error);
+      return rejectWithValue(error.message || "Gagal memperbarui estimasi.");
+    }
   }
 );
 
 export const deleteEstimate = createAsyncThunk(
   "estimates/deleteEstimate",
-  async (estimateId: string) => {
-    return new Promise<string>((resolve, reject) => {
-      setTimeout(() => {
-        const initialLength = initialEstimates.length;
-        const filteredEstimates = initialEstimates.filter(
-          (e) => e.id !== estimateId
-        );
-        if (filteredEstimates.length < initialLength) {
-          initialEstimates.splice(
-            0,
-            initialEstimates.length,
-            ...filteredEstimates
-          );
-          resolve(estimateId);
-        } else {
-          reject(new Error("Estimasi tidak ditemukan"));
-        }
-      }, 500);
-    });
+  async (estimateId: string, { rejectWithValue }) => {
+    try {
+      await api.delete(`http://localhost:3000/api/estimations/${estimateId}`); // Ganti dengan endpoint API Anda
+      return estimateId;
+    } catch (error: any) {
+      console.error("Error deleting estimation:", error);
+      return rejectWithValue(error.message || "Gagal menghapus estimasi.");
+    }
   }
 );
 
@@ -598,7 +424,7 @@ const estimateSlice = createSlice({
       )
       .addCase(fetchEstimates.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.error.message || "Gagal memuat estimasi";
+        state.error = (action.payload as string) || "Gagal memuat estimasi";
       })
       .addCase(
         addEstimate.fulfilled,

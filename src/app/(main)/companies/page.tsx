@@ -1,4 +1,3 @@
-// src/app/(admin)/(auth)/(main)/companies/page.tsx
 "use client";
 import TableMain from "@/components/common/table/TableMain";
 import CompanyDialog from "@/components/dialog/companyDialog/_component/CompanyDialog";

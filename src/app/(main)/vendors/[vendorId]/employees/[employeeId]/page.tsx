@@ -2,7 +2,7 @@
 import TableMain from "@/components/common/table/TableMain";
 import { userData } from "@/lib/sampleTableDataa";
 import { useAppSelector } from "@/store/hooks";
-import { User, UserStatus } from "@/types/user";
+// import { User, UserStatus } from "@/types/user";
 import { useMemo, useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,15 +15,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
-import WoDialog from "@/components/woDialog/_components/WoDialog";
+import WoDialog from "@/components/dialog/woDialog/_components/WoDialog";
+import { Employee } from "@/types/employee";
+import { EmployeeStatus } from "@prisma/client";
 
 export default function EmployeePage() {
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
-  const [allUsers] = useState<User[]>(userData);
+  // const [allUsers] = useState<Employee[]>(emplyeeDa);
   const [activeTab, setActiveTab] = useState<string>("all`");
   const [isNewWoDialogOpen, setIsNewWoDialogOpen] = useState(false);
 
-  const userColumns: ColumnDef<User>[] = useMemo(
+  const userColumns: ColumnDef<Employee>[] = useMemo(
     () => [
       {
         id: "select",
@@ -57,18 +59,18 @@ export default function EmployeePage() {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => {
-          const status = row.original.status as UserStatus;
+          const status = row.original.status as EmployeeStatus;
           let statusColor = "";
           switch (status) {
-            case UserStatus.ON_DUTY:
+            case EmployeeStatus.ACTIVE:
               statusColor = "bg-arkBlue-500 text-arkBlue-50";
               break;
-            case UserStatus.ON_LEAVE:
+            case EmployeeStatus.ON_LEAVE:
               statusColor = "bg-arkBg-500 text-arkBg-50";
               break;
-            case UserStatus.OFF_DUTY:
+            case EmployeeStatus.ACTIVE:
               statusColor = "bg-arkRed-500 text-arkRed-50";
-            case UserStatus.SUSPENDED:
+            case EmployeeStatus.ACTIVE:
               statusColor = "bg-arkYellow-500 text-arkYellow-50";
               break;
             default:

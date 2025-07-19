@@ -1,10 +1,8 @@
-import { PrismaClient } from "@/generated/prisma";
 import bcrypt from "bcryptjs";
+import prisma from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
-
-const prisma = new PrismaClient();
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Email tidak valid." }),

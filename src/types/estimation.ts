@@ -1,5 +1,11 @@
+// src/types/estimation.ts
 import * as z from "zod";
-import { SparePart } from "./sparepart";
+import { SparePart, RawSparePartApiResponse } from "./sparepart";
+import { Service, RawServiceApiResponse } from "./services"; // Import Service dan RawServiceApiResponse
+import { Vehicle, RawVehicleApiResponse } from "./vehicle";
+import { Company, RawCompanyApiResponse } from "./companies";
+import { Employee, RawEmployeeApiResponse } from "./employee";
+import { WorkOrder, RawWorkOrderApiResponse } from "./workOrder";
 
 export const transactionPartDetailsSchema = z.object({
   sparePartId: z.string().min(1, { message: "ID Spare Part wajib diisi." }),
@@ -29,7 +35,6 @@ export enum EstimationStatus {
   CANCELLED = "CANCELLED",
 }
 
-// Skema Zod untuk form Estimation
 export const estimationFormSchema = z.object({
   id: z.string().optional(),
   estNum: z.string().min(1, { message: "Nomor Estimasi wajib diisi." }),
@@ -59,8 +64,9 @@ export const estimationFormSchema = z.object({
 
 export type EstimationFormValues = z.infer<typeof estimationFormSchema>;
 
-// Interface untuk EstimationItem (join table) - mencerminkan Prisma
-// Ini adalah item spare part yang terkait dengan estimasi
+// --- INTERFACES UNTUK REDUX STATE (TANGGAL SEBAGAI STRING) ---
+
+// Interface untuk EstimationItem (join table) - mencerminkan Prisma, untuk Redux State
 export interface EstimationItem {
   id: string; // UUID
   estimationId: string; // FK ke Estimation
@@ -68,63 +74,44 @@ export interface EstimationItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // <-- STRING
+  updatedAt: string; // <-- STRING
   // Relasi (untuk digunakan di frontend jika di-include)
-  sparePart?: {
-    // Tambahkan detail spare part untuk display
-    id: string;
-    partName: string;
-    partNumber: string;
-    unit: string;
-    sku?: string | null;
-    variant?: SparePart["variant"] | null;
-    make?: string | null;
-    price?: number;
-    description?: string | null;
-    stock?: number;
-  };
+  sparePart?: SparePart; // <-- Menggunakan SparePart yang sudah terdefinisi
 }
 
-// Interface untuk EstimationService (join table) - mencerminkan Prisma
-// Ini adalah jasa yang terkait dengan estimasi
+// Interface untuk EstimationService (join table) - mencerminkan Prisma, untuk Redux State
 export interface EstimationService {
   id: string; // UUID
   estimationId: string; // FK ke Estimation
   serviceId: string; // FK ke Service
   quantity: number;
-  unitPrice: number; // Tambahkan unitPrice di sini agar konsisten dengan PricedItem
+  unitPrice: number;
   totalPrice: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // <-- STRING
+  updatedAt: string; // <-- STRING
   // Relasi (untuk digunakan di frontend jika di-include)
-  service?: {
-    // Tambahkan detail service untuk display
-    id: string;
-    serviceName: string;
-    description?: string | null;
-    price: number;
-  };
+  service?: Service; // <-- Menggunakan interface Service yang sudah terdefinisi
 }
 
-// Interface Estimation lengkap (mencerminkan model Prisma)
+// Interface Estimation lengkap (mencerminkan model Prisma, untuk Redux State)
 export interface Estimation {
   id: string; // UUID
   estimationNumber: string;
-  estimationDate: Date;
+  estimationDate: string; // <-- STRING
   requestOdo: number;
   actualOdo: number;
   remark: string;
   notes?: string | null;
-  finishedDate?: Date | null; // Bisa null
+  finishedDate?: string | null; // <-- STRING atau null
   totalEstimatedAmount: number;
   workOrderId: string; // FK
   vehicleId: string; // FK
   mechanicId?: string | null; // FK
   accountantId?: string | null; // FK
   approvedById?: string | null; // FK
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // <-- STRING
+  updatedAt: string; // <-- STRING
 
   // Relasi: array dari join tables, bisa di-include saat fetch
   estimationItems?: EstimationItem[];
@@ -133,52 +120,70 @@ export interface Estimation {
   estStatus: EstimationStatus; // Status estimasi
 
   // Relasi (untuk display di frontend, jika di-include dari Prisma)
-  vehicle?: {
-    // Detail kendaraan terkait
-    id: string;
-    licensePlate: string;
-    vehicleMake: string;
-    model: string;
-    color: string;
-    yearMade: number;
-    chassisNum?: string | null;
-    engineNum?: string | null;
-  };
-  customer?: {
-    // Detail customer terkait (asumsi vehicle punya customerId, atau ambil dari WO)
-    id: string;
-    companyName: string;
-    contact?: string | null;
-    address?: string | null;
-  };
-  mechanic?: {
-    // Detail mekanik terkait
-    id: string;
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-    position?: string | null;
-  };
-  approvedBy?: {
-    // Detail yang menyetujui
-    id: string;
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-    position?: string | null;
-  };
-  accountant?: {
-    id: string;
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-    position?: string | null;
-  };
-  workOrder?: {
-    // Detail work order terkait
-    id: string;
-    workOrderNumber: string;
-    workOrderMaster: string;
-    date: Date;
-  };
+  vehicle?: Vehicle; // <-- Menggunakan Vehicle (yang sudah string)
+  customer?: Company; // <-- Menggunakan Company (yang sudah string)
+  mechanic?: Employee; // <-- Menggunakan Employee (yang sudah string)
+  approvedBy?: Employee; // <-- Menggunakan Employee (yang sudah string)
+  accountant?: Employee; // <-- Menggunakan Employee (yang sudah string)
+  workOrder?: WorkOrder; // <-- Menggunakan WorkOrder (yang sudah string)
+}
+
+// --- INTERFACES UNTUK DATA MENTAH DARI API (TANGGAL SEBAGAI DATE OBJEK) ---
+
+// Interface untuk Raw EstimationItem ApiResponse
+export interface RawEstimationItemApiResponse {
+  id: string;
+  estimationId: string;
+  sparePartId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  createdAt: Date; // <-- DATE
+  updatedAt: Date; // <-- DATE
+  sparePart?: RawSparePartApiResponse; // <-- RawSparePartApiResponse
+}
+
+// Interface untuk Raw EstimationService ApiResponse
+export interface RawEstimationServiceApiResponse {
+  id: string;
+  estimationId: string;
+  serviceId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  createdAt: Date; // <-- DATE
+  updatedAt: Date; // <-- DATE
+  service?: RawServiceApiResponse; // <-- RawServiceApiResponse
+}
+
+// Interface untuk Raw Estimation ApiResponse
+export interface RawEstimationApiResponse {
+  id: string;
+  estimationNumber: string;
+  estimationDate: Date; // <-- DATE
+  requestOdo: number;
+  actualOdo: number;
+  remark: string;
+  notes?: string | null;
+  finishedDate?: Date | null; // <-- DATE atau null
+  totalEstimatedAmount: number;
+  workOrderId: string;
+  vehicleId: string;
+  mechanicId?: string | null;
+  accountantId?: string | null;
+  approvedById?: string | null;
+  createdAt: Date; // <-- DATE
+  updatedAt: Date; // <-- DATE
+
+  estimationItems?: RawEstimationItemApiResponse[]; // <-- RawEstimationItemApiResponse
+  estimationServices?: RawEstimationServiceApiResponse[]; // <-- RawEstimationServiceApiResponse
+
+  estStatus: EstimationStatus;
+
+  vehicle?: RawVehicleApiResponse; // <-- RawVehicleApiResponse
+  customer?: RawCompanyApiResponse; // <-- RawCompanyApiResponse
+  mechanic?: RawEmployeeApiResponse; // <-- RawEmployeeApiResponse
+  approvedBy?: RawEmployeeApiResponse; // <-- RawEmployeeApiResponse
+  accountant?: RawEmployeeApiResponse; // <-- RawEmployeeApiResponse
+  workOrder?: RawWorkOrderApiResponse; // <-- RawWorkOrderApiResponse
 }

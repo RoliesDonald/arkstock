@@ -1,6 +1,27 @@
-import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
-import { Company, CompanyFormValues, CompanyStatus } from "@/types/companies";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import {
+  Company,
+  CompanyFormValues,
+  RawCompanyApiResponse,
+  CompanyNameAndId,
+  CompanyRole,
+} from "@/types/companies";
 import { api } from "@/lib/utils/api";
+
+// Fungsi helper utama untuk memformat tanggal di objek Company
+export const formatCompanyDates = (
+  rawCompany: RawCompanyApiResponse
+): Company => {
+  return {
+    ...rawCompany,
+    createdAt: new Date(rawCompany.createdAt).toISOString(),
+    updatedAt: new Date(rawCompany.updatedAt).toISOString(),
+    parentCompany: rawCompany.parentCompany
+      ? formatCompanyDates(rawCompany.parentCompany)
+      : null, // Corrected typo from childComapnies to childCompanies
+    childCompanies: rawCompany.childCompanies?.map(formatCompanyDates) || [],
+  };
+};
 
 interface CompanyState {
   companies: Company[];
@@ -18,16 +39,13 @@ export const fetchCompanies = createAsyncThunk(
   "companies/fetchCompanies",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get<Company[]>(
+      const response = await api.get<RawCompanyApiResponse[]>(
         "http://localhost:3000/api/companies"
       );
-      const formattedData = response.map((company) => ({
-        ...company,
-        createdAt: new Date(company.createdAt),
-        updatedAt: new Date(company.updatedAt),
-      }));
+      const formattedData = response.map(formatCompanyDates);
       return formattedData;
     } catch (error: any) {
+      console.error("Error fetching companies:", error);
       return rejectWithValue(
         error.message || "Gagal memuat daftar perusahaan."
       );
@@ -35,21 +53,16 @@ export const fetchCompanies = createAsyncThunk(
   }
 );
 
-// NEW: Async Thunk untuk mengambil satu perusahaan berdasarkan ID
 export const fetchCompanyById = createAsyncThunk(
   "companies/fetchCompanyById",
   async (companyId: string, { rejectWithValue }) => {
     try {
-      const response = await api.get<Company>(
+      const response = await api.get<RawCompanyApiResponse>(
         `http://localhost:3000/api/companies/${companyId}`
       );
-      // Konversi string tanggal ke objek Date
-      return {
-        ...response,
-        createdAt: new Date(response.createdAt),
-        updatedAt: new Date(response.updatedAt),
-      } as Company;
+      return formatCompanyDates(response);
     } catch (error: any) {
+      console.error("Error fetching company by ID:", error);
       return rejectWithValue(
         error.message ||
           `Gagal memuat detail perusahaan dengan ID ${companyId}.`
@@ -62,16 +75,22 @@ export const createCompany = createAsyncThunk(
   "companies/createCompany",
   async (newCompanyData: CompanyFormValues, { rejectWithValue }) => {
     try {
-      const response = await api.post<Company>(
+      const payload = {
+        ...newCompanyData,
+        parentCompanyId:
+          newCompanyData.companyRole === CompanyRole.MAIN_COMPANY
+            ? null
+            : newCompanyData.parentCompanyId || null, // Pastikan string kosong jadi null
+      };
+      delete (payload as any).companyRole; // Hati-hati dengan type assertion 'any'
+
+      const response = await api.post<RawCompanyApiResponse>(
         "http://localhost:3000/api/companies",
-        newCompanyData
+        payload
       );
-      return {
-        ...response,
-        createdAt: new Date(response.createdAt),
-        updatedAt: new Date(response.updatedAt),
-      } as Company;
+      return formatCompanyDates(response);
     } catch (error: any) {
+      console.error("Error creating company:", error);
       return rejectWithValue(error.message || "Gagal membuat perusahaan baru.");
     }
   }
@@ -84,17 +103,25 @@ export const updateCompany = createAsyncThunk(
       if (!updatedCompanyData.id) {
         throw new Error("ID perusahaan tidak ditemukan untuk pembaruan.");
       }
-      const response = await api.put<Company>(
+      const payload = {
+        ...updatedCompanyData,
+        // Pastikan parentCompanyId adalah null jika companyRole adalah MAIN_COMPANY
+        parentCompanyId:
+          updatedCompanyData.companyRole === CompanyRole.MAIN_COMPANY
+            ? null
+            : updatedCompanyData.parentCompanyId || null, // Pastikan string kosong jadi null
+      };
+      // Hapus companyRole dari payload sebelum dikirim ke API jika API tidak mengharapkannya
+      delete (payload as any).companyRole; // Hati-hati dengan type assertion 'any'
+
+      const response = await api.put<RawCompanyApiResponse>(
         `http://localhost:3000/api/companies/${updatedCompanyData.id}`,
-        updatedCompanyData
+        payload
       );
-      return {
-        ...response,
-        createdAt: new Date(response.createdAt),
-        updatedAt: new Date(response.updatedAt),
-      } as Company;
+      return formatCompanyDates(response);
     } catch (error: any) {
-      return rejectWithValue(error.message || "Gagal mengupdate perusahaan.");
+      console.error("Error updating company:", error);
+      return rejectWithValue(error.message || "Gagal memperbarui perusahaan.");
     }
   }
 );
@@ -115,7 +142,7 @@ const companySlice = createSlice({
   name: "companies",
   initialState,
   reducers: {
-    resetCompanyStatus: (state) => {
+    resetCompaniesStatus: (state) => {
       state.status = "idle";
       state.error = null;
     },
@@ -137,7 +164,6 @@ const companySlice = createSlice({
         state.error =
           (action.payload as string) || "Gagal memuat daftar perusahaan.";
       })
-      // NEW: Handle fetchCompanyById
       .addCase(fetchCompanyById.pending, (state) => {
         state.status = "loading";
       })
@@ -145,7 +171,6 @@ const companySlice = createSlice({
         fetchCompanyById.fulfilled,
         (state, action: PayloadAction<Company>) => {
           state.status = "succeeded";
-          // Jika perusahaan sudah ada di state, perbarui. Jika tidak, tambahkan.
           const index = state.companies.findIndex(
             (c) => c.id === action.payload.id
           );
@@ -214,7 +239,6 @@ const companySlice = createSlice({
       });
   },
 });
-
-export const { resetCompanyStatus } = companySlice.actions;
+export const { resetCompaniesStatus } = companySlice.actions;
 
 export default companySlice.reducer;

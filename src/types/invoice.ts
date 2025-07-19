@@ -1,9 +1,10 @@
+// src/types/invoice.ts
 import * as z from "zod";
-import { Employee } from "./employee";
-import { SparePart } from "./sparepart";
-import { Service } from "./services";
-import { WorkOrder } from "./workOrder";
-import { Vehicle } from "./vehicle";
+import { Employee, RawEmployeeApiResponse } from "./employee"; // Import RawEmployeeApiResponse
+import { SparePart, RawSparePartApiResponse } from "./sparepart"; // Import RawSparePartApiResponse
+import { Service, RawServiceApiResponse } from "./services"; // Import RawServiceApiResponse
+import { WorkOrder, RawWorkOrderApiResponse } from "./workOrder"; // Import RawWorkOrderApiResponse
+import { Vehicle, RawVehicleApiResponse } from "./vehicle"; // Import RawVehicleApiResponse
 
 // SEMENTARA buat tester
 export const transactionPartDetailsSchema = z.object({
@@ -86,6 +87,8 @@ export const invoiceFormSchema = z.object({
 
 export type InvoiceFormValues = z.infer<typeof invoiceFormSchema>;
 
+// --- INTERFACES UNTUK REDUX STATE (TANGGAL SEBAGAI STRING) ---
+
 // Interface for InvoiceItem (join table in database)
 export interface InvoiceItem {
   id: string;
@@ -94,8 +97,8 @@ export interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // <-- STRING
+  updatedAt: string; // <-- STRING
   sparePart?: SparePart; // Detail SparePart master (jika di-populate)
 }
 
@@ -107,24 +110,24 @@ export interface InvoiceService {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // <-- STRING
+  updatedAt: string; // <-- STRING
   service?: Service; // Detail Service master (jika di-populate)
 }
 
 // Interface untuk Invoice yang disimpan di database (meliputi relasi jika di-populate)
 export interface Invoice {
   id: string; // UUID Invoice
-  nvoiceNumber: string;
-  invoiceDate: Date;
+  invoiceNumber: string; // <-- Perbaiki typo nvoiceNumber menjadi invoiceNumber
+  invoiceDate: string; // <-- STRING
   requestOdo: number;
   actualOdo: number;
   remark?: string | null;
-  finishedDate: Date;
+  finishedDate: string; // <-- STRING
   totalAmount: number;
   status: InvoiceStatus;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // <-- STRING
+  updatedAt: string; // <-- STRING
 
   // Foreign Keys (sudah ada di model utama)
   workOrderId: string;
@@ -141,4 +144,63 @@ export interface Invoice {
   // Relasi ke item-item transaksi
   invoiceItems: InvoiceItem[];
   invoiceServices: InvoiceService[];
+}
+
+// --- INTERFACES UNTUK DATA MENTAH DARI API (TANGGAL SEBAGAI DATE OBJEK) ---
+
+// Interface for Raw InvoiceItem ApiResponse
+export interface RawInvoiceItemApiResponse {
+  id: string;
+  invoiceId: string;
+  sparePartId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  createdAt: Date; // <-- DATE
+  updatedAt: Date; // <-- DATE
+  sparePart?: RawSparePartApiResponse; // Detail SparePart master (jika di-populate)
+}
+
+// Interface for Raw InvoiceService ApiResponse
+export interface RawInvoiceServiceApiResponse {
+  id: string;
+  invoiceId: string;
+  serviceId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  createdAt: Date; // <-- DATE
+  updatedAt: Date; // <-- DATE
+  service?: RawServiceApiResponse; // Detail Service master (jika di-populate)
+}
+
+// Interface untuk Raw Invoice ApiResponse
+export interface RawInvoiceApiResponse {
+  id: string; // UUID Invoice
+  invoiceNumber: string; // <-- Perbaiki typo nvoiceNumber menjadi invoiceNumber
+  invoiceDate: Date; // <-- DATE
+  requestOdo: number;
+  actualOdo: number;
+  remark?: string | null;
+  finishedDate: Date; // <-- DATE
+  totalAmount: number;
+  status: InvoiceStatus;
+  createdAt: Date; // <-- DATE
+  updatedAt: Date; // <-- DATE
+
+  // Foreign Keys (sudah ada di model utama)
+  workOrderId: string;
+  vehicleId: string;
+  accountantId?: string | null;
+  approvedById?: string | null;
+
+  // Relasi objects
+  workOrder?: RawWorkOrderApiResponse;
+  vehicle?: RawVehicleApiResponse;
+  accountant?: RawEmployeeApiResponse;
+  approvedBy?: RawEmployeeApiResponse;
+
+  // Relasi ke item-item transaksi
+  invoiceItems: RawInvoiceItemApiResponse[];
+  invoiceServices: RawInvoiceServiceApiResponse[];
 }
