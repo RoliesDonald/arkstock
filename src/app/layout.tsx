@@ -1,11 +1,16 @@
+// src/app/layout.tsx
+// Hapus baris "use client"; dari sini. Ini harus menjadi Server Component.
+
 import "./globals.css";
 import React from "react";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
-import { ReduxProvider } from "@/providers/ReduxProvider"; // Impor Redux Provider
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { ThemeProvider } from "@/providers/ThemeProvider";
-import { Toaster } from "@/components/ui/toaster"; // Import Toaster dari shadcn/ui
+
+// Import Providers yang akan membungkus children
+import { Toaster } from "@/components/ui/toaster";
+import { ReduxProvider } from "../providers/ReduxProvider";
+import { ThemeProvider } from "../providers/ThemeProvider";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -29,13 +34,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <link rel="icon" href="/favicon.ico" type="image/svg+xml" sizes="any" />
       </head>
       <body className={`${poppins.variable} antialiased`}>
+        {/* Providers ini adalah Client Components yang membungkus children */}
         <ReduxProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem
-            disableTransitionOnChange
-          >
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
             {children}
             <Toaster />
           </ThemeProvider>

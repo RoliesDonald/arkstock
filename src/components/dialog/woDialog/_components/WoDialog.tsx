@@ -1,15 +1,31 @@
-// src/components/woDialog/WoDialog.tsx
+// src/components/dialog/workOrderDialog/_components/WorkOrderDialog.tsx
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { id } from "date-fns/locale"; // Impor locale Indonesia
+import { useEffect } from "react";
+import { format, parseISO } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 
+import { WorkOrder } from "@/types/workOrder"; 
+import { Company } from "@/types/companies"; // Untuk customer, carUser, vendor
+import { Vehicle } from "@/types/vehicle"; // Untuk vehicle
+import { Employee } from "@/types/employee"; // Untuk mechanic, driver, approvedBy, requestedBy
+import { Location } from "@/types/location"; // Asumsi ada types/locations.ts
+import { workOrderFormSchema, WorkOrderFormValues } from "@/schemas/workOrder"; 
+import { WoProgresStatus, WoPriorityType } from "@prisma/client"; 
+
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -32,142 +48,102 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { DialogFooter } from "@/components/ui/dialog";
 
-import { formatWoNumber } from "@/lib/woFromatter";
-import { generateInitial } from "@/lib/nameFormatter";
-
-import {
-  WorkOrderFormValues,
-  workOrderFormSchema,
-  WoProgresStatus,
-  WoPriorityType,
-  WorkOrder, // Import WorkOrder interface
-} from "@/types/workOrder";
-import { CompanyType } from "@/types/companies";
-import { Company } from "@/types/companies";
-import { UserRole } from "@/types/user";
-import { Vehicle } from "@/types/vehicle";
-import { Location } from "@/types/location";
-
-import { companyData } from "@/data/sampleCompanyData";
-import { userData } from "@/data/sampleUserData";
-import { vehicleData } from "@/data/sampleVehicleData";
-import { workOrderData } from "@/data/sampleWorkOrderData"; // Digunakan untuk generate WO number
-import { locationData } from "@/data/sampleLocationData";
-
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-
-interface WoDialogProps {
-  onClose?: () => void;
-  initialData?: WorkOrder | null; // <-- Properti baru untuk mode edit
-  onSubmitWorkOrder: (values: WorkOrderFormValues) => void; // <-- Properti baru untuk submit
+interface WorkOrderDialogProps {
+  onClose: () => void;
+  onSubmit: (values: WorkOrderFormValues) => Promise<void>;
+  initialData?: WorkOrder;
+  companies: Company[];
+  vehicles: Vehicle[];
+  employees: Employee[];
+  locations: Location[]; // Asumsi Anda akan membuat file types/locations.ts dan slice/locationSlice.ts
+  companiesStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  vehiclesStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  employeesStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  locationsStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
 }
 
-const WoDialog: React.FC<WoDialogProps> = ({
+export default function WorkOrderDialog({
   onClose,
   initialData,
-  onSubmitWorkOrder,
-}) => {
-  const dispatch = useAppDispatch();
-  const status = useAppSelector((state) => state.workOrders.status);
-  const error = useAppSelector((state) => state.workOrders.error);
+  onSubmit,
+  companies,
+  vehicles,
+  employees,
+  locations,
+  companiesStatus,
+  vehiclesStatus,
+  employeesStatus,
+  locationsStatus,
+}: WorkOrderDialogProps) {
 
-  const vendors = useMemo(() => {
-    return companyData.filter(
-      (company) =>
-        company.companyType === CompanyType.VENDOR ||
-        company.companyType === CompanyType.INTERNAL
-    );
-  }, []);
-
-  const customers = useMemo(() => {
-    return companyData.filter(
-      (company) => company.companyType === CompanyType.CUSTOMER
-    );
-  }, []);
-
-  const carUsers = useMemo(() => {
-    return companyData.filter(
-      (company) =>
-        company.companyType === CompanyType.CAR_USER ||
-        company.companyType === CompanyType.CUSTOMER
-    );
-  }, []);
-
-  const mechanics = useMemo(() => {
-    return userData.filter((user) => user.role === UserRole.MECHANIC);
-  }, []);
-
-  const drivers = useMemo(() => {
-    return userData.filter((user) => user.role === UserRole.DRIVER);
-  }, []);
-
-  const approvedByUsers = useMemo(() => {
-    return userData.filter((user) =>
-      [
-        UserRole.SERVICE_ADVISOR,
-        UserRole.ADMIN,
-        UserRole.PIC,
-        UserRole.ACCOUNTING_MANAGER,
-        UserRole.WAREHOUSE_MANAGER,
-        UserRole.PURCHASING_MANAGER,
-      ].includes(user.role)
-    );
-  }, []);
-
-  const requestedByUsers = useMemo(() => {
-    return userData.filter((user) =>
-      [UserRole.PIC, UserRole.ADMIN].includes(user.role)
-    );
-  }, []);
+  const mapWorkOrderToFormValues = (workOrder: WorkOrder): WorkOrderFormValues => {
+    return {
+      id: workOrder.id,
+      workOrderNumber: workOrder.workOrderNumber,
+      workOrderMaster: workOrder.workOrderMaster,
+      date: format(workOrder.date, "yyyy-MM-dd"),
+      settledOdo: workOrder.settledOdo || null,
+      remark: workOrder.remark,
+      schedule: workOrder.schedule ? format(workOrder.schedule, "yyyy-MM-dd") : null,
+      serviceLocation: workOrder.serviceLocation,
+      notes: workOrder.notes || null,
+      vehicleMake: workOrder.vehicleMake,
+      progresStatus: workOrder.progresStatus,
+      priorityType: workOrder.priorityType,
+      vehicleId: workOrder.vehicleId,
+      customerId: workOrder.customerId,
+      carUserId: workOrder.carUserId,
+      vendorId: workOrder.vendorId,
+      mechanicId: workOrder.mechanicId || null,
+      driverId: workOrder.driverId || null,
+      driverContact: workOrder.driverContact || null,
+      approvedById: workOrder.approvedById || null,
+      requestedById: workOrder.requestedById || null,
+      locationId: workOrder.locationId || null,
+    };
+  };
 
   const form = useForm<WorkOrderFormValues>({
     resolver: zodResolver(workOrderFormSchema),
-    defaultValues: useMemo(() => {
-      // Jika ada initialData, konstruksi objek WorkOrderFormValues secara eksplisit
-      if (initialData) {
-        // PERBAIKAN: Hanya ambil properti yang ada di WorkOrderFormValues
-        const defaultFormValues: WorkOrderFormValues = {
-          woNumber: initialData.woNumber,
-          woMaster: initialData.woMaster,
-          date: initialData.date,
-          settledOdo: initialData.settledOdo ?? undefined,
-          remark: initialData.remark,
-          schedule: initialData.schedule ?? undefined, // Correctly handles null to undefined
-          serviceLocation: initialData.serviceLocation,
-          notes: initialData.notes ?? undefined,
-          vehicleMake: initialData.vehicleMake,
-          progresStatus: initialData.progresStatus,
-          priorityType: initialData.priorityType,
-          vehicleId: initialData.vehicleId,
-          customerId: initialData.customerId,
-          carUserId: initialData.carUserId,
-          vendorId: initialData.vendorId,
-          mechanicId: initialData.mechanicId ?? undefined,
-          driverId: initialData.driverId ?? undefined,
-          driverContact: initialData.driverContact ?? undefined,
-          approvedById: initialData.approvedById ?? undefined,
-          requestedById: initialData.requestedById ?? undefined,
-          locationId: initialData.locationId ?? undefined,
-        };
-        console.log(
-          "WoDialog: Setting defaultValues from initialData:",
-          defaultFormValues
-        ); // Debugging log
-        return defaultFormValues;
-      }
-      // Default untuk form baru
-      const newFormDefaults = {
-        woNumber: "",
-        woMaster: "",
-        date: new Date(),
-        settledOdo: undefined,
+    defaultValues: initialData ? mapWorkOrderToFormValues(initialData) : {
+      workOrderNumber: "",
+      workOrderMaster: "",
+      date: format(new Date(), "yyyy-MM-dd"),
+      settledOdo: null,
+      remark: "",
+      schedule: null,
+      serviceLocation: "",
+      notes: null,
+      vehicleMake: "",
+      progresStatus: WoProgresStatus.DRAFT,
+      priorityType: WoPriorityType.NORMAL,
+      vehicleId: "",
+      customerId: "",
+      carUserId: "",
+      vendorId: "",
+      mechanicId: null,
+      driverId: null,
+      driverContact: null,
+      approvedById: null,
+      requestedById: null,
+      locationId: null,
+    },
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset(mapWorkOrderToFormValues(initialData));
+    } else {
+      form.reset({
+        workOrderNumber: "",
+        workOrderMaster: "",
+        date: format(new Date(), "yyyy-MM-dd"),
+        settledOdo: null,
         remark: "",
-        schedule: undefined,
+        schedule: null,
         serviceLocation: "",
-        notes: undefined,
+        notes: null,
         vehicleMake: "",
         progresStatus: WoProgresStatus.DRAFT,
         priorityType: WoPriorityType.NORMAL,
@@ -175,682 +151,610 @@ const WoDialog: React.FC<WoDialogProps> = ({
         customerId: "",
         carUserId: "",
         vendorId: "",
-        mechanicId: undefined,
-        driverId: undefined,
-        driverContact: undefined,
-        approvedById: undefined,
-        requestedById: undefined,
-        locationId: undefined,
-      };
-      console.log(
-        "WoDialog: Setting defaultValues for new form:",
-        newFormDefaults
-      ); // Debugging log
-      return newFormDefaults;
-    }, [initialData]), // Re-compute defaultValues jika initialData berubah
-  });
-
-  const selectedVendorId = form.watch("vendorId");
-  const woDate = form.watch("date");
-  const selectedVehicleId = form.watch("vehicleId");
-  const currentWoNumber = form.watch("woNumber");
-
-  useEffect(() => {
-    // Generate WO number hanya jika ini form baru (tidak ada initialData)
-    // atau jika woNumber di initialData kosong (misal, WO lama yang belum punya nomor)
-    if (!initialData || !initialData.woNumber) {
-      const generateAndSetWoNumber = () => {
-        if (selectedVendorId && woDate) {
-          const selectedVendor = vendors.find((v) => v.id === selectedVendorId);
-          if (selectedVendor) {
-            const vendorInitial = generateInitial(selectedVendor.companyName);
-            const year = woDate.getFullYear();
-
-            const maxSequenceForVendorAndYear = workOrderData
-              .filter((wo) => {
-                const woYear = wo.date.getFullYear();
-                const woVendorCompany = companyData.find(
-                  (c) => c.id === wo.vendorId
-                );
-                return (
-                  woYear === year && woVendorCompany?.id === selectedVendor.id
-                );
-              })
-              .map((wo) => {
-                const parts = wo.woNumber.split("/");
-                return parseInt(parts[parts.length - 1], 10);
-              })
-              .reduce((max, current) => Math.max(max, current), 0);
-
-            const nextWoSequence = maxSequenceForVendorAndYear + 1;
-
-            const formattedWo = formatWoNumber(
-              nextWoSequence,
-              vendorInitial,
-              woDate
-            );
-            form.setValue("woNumber", formattedWo, { shouldValidate: true });
-          } else {
-            form.setValue("woNumber", "", { shouldValidate: true });
-          }
-        } else {
-          form.setValue("woNumber", "", { shouldValidate: true });
-        }
-      };
-      generateAndSetWoNumber();
-    }
-  }, [selectedVendorId, woDate, vendors, form, initialData]);
-
-  useEffect(() => {
-    if (selectedVehicleId) {
-      const vehicle = vehicleData.find((v) => v.id === selectedVehicleId);
-      if (vehicle) {
-        form.setValue("vehicleMake", vehicle.vehicleMake);
-      } else {
-        form.setValue("vehicleMake", "");
-      }
-    } else {
-      form.setValue("vehicleMake", "");
-    }
-  }, [selectedVehicleId, form]);
-
-  const onSubmit = async (values: WorkOrderFormValues) => {
-    if (!values.woNumber) {
-      form.setError("woNumber", {
-        type: "manual",
-        message:
-          "Nomor WO wajib diisi. Pastikan Anda memilih Vendor dan Tanggal terlebih dahulu.",
+        mechanicId: null,
+        driverId: null,
+        driverContact: null,
+        approvedById: null,
+        requestedById: null,
+        locationId: null,
       });
-      return;
     }
+  }, [initialData, form]);
 
-    console.log("Mengirim Work Order:", values);
-    onSubmitWorkOrder(values); // Panggil callback yang diterima dari parent
-    onClose?.();
-    form.reset();
+  const handleSubmit = async (values: WorkOrderFormValues) => {
+    await onSubmit(values);
   };
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4"
-      >
-        <FormField
-          control={form.control}
-          name="woNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nomor Work Order</FormLabel>
-              <FormControl>
-                <Input placeholder="WO/BP/VII/2024/005" {...field} disabled />
-              </FormControl>
-              {form.formState.errors.woNumber && currentWoNumber === "" ? (
-                <FormMessage>
-                  {form.formState.errors.woNumber.message}
-                </FormMessage>
-              ) : (
-                currentWoNumber === "" &&
-                (!selectedVendorId || !woDate) && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Pilih Vendor dan Tanggal untuk otomatis mengisi nomor WO.
-                  </p>
-                )
+    <DialogContent className="sm:max-w-[425px] md:max-w-[700px] lg:max-w-[900px]">
+      <DialogHeader>
+        <DialogTitle>{initialData ? "Edit Work Order" : "Tambahkan Work Order Baru"}</DialogTitle>
+        <DialogDescription>
+          {initialData ? "Edit detail Work Order yang sudah ada." : "Isi detail Work Order untuk menambah data Work Order baru ke sistem."}
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Field Work Order Number */}
+            <FormField
+              control={form.control}
+              name="workOrderNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nomor Work Order</FormLabel>
+                  <FormControl>
+                    <Input placeholder="WO-202407001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="woMaster"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nomor WO Master (dari Customer)</FormLabel>
-              <FormControl>
-                <Input placeholder="WO Master dari Customer" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Tanggal WO */}
-        <FormField
-          control={form.control}
-          name="date"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Tanggal Work Order</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
+            />
+            {/* Field Work Order Master */}
+            <FormField
+              control={form.control}
+              name="workOrderMaster"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Master Work Order</FormLabel>
                   <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPPP", { locale: id })
-                      ) : (
-                        <span>Pilih tanggal</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
+                    <Input placeholder="WO Master" {...field} />
                   </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value} // <-- Ini sudah benar karena field.value bisa Date atau undefined
-                    onSelect={field.onChange}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="settledOdo"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Odometer (KM)</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  placeholder="140000"
-                  {...{ ...field, value: field.value ?? "" }}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    field.onChange(value === "" ? null : Number(value));
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="remark"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Keluhan / Remark</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Jelaskan keluhan atau masalah kendaraan"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Schedule (Opsional) */}
-        <FormField
-          control={form.control}
-          name="schedule"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel>Tanggal Jadwal (Opsional)</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Date */}
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Tanggal WO</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(parseISO(field.value), "PPP", { locale: localeId })
+                          ) : (
+                            <span>Pilih tanggal WO</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value ? parseISO(field.value) : undefined}
+                        onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date("1900-01-01")
+                        }
+                        initialFocus
+                        locale={localeId}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Schedule */}
+            <FormField
+              control={form.control}
+              name="schedule"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Tanggal Jadwal (Opsional)</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(parseISO(field.value), "PPP", { locale: localeId })
+                          ) : (
+                            <span>Pilih tanggal jadwal</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value ? parseISO(field.value) : undefined}
+                        onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
+                        disabled={(date) =>
+                          date < new Date("1900-01-01")
+                        }
+                        initialFocus
+                        locale={localeId}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Settled Odo */}
+            <FormField
+              control={form.control}
+              name="settledOdo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Odometer Terselesaikan (Opsional)</FormLabel>
                   <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPPP", { locale: id })
-                      ) : (
-                        <span>Pilih tanggal</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
+                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(Number(e.target.value))} value={field.value || ""} />
                   </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value ?? undefined} // <-- PERBAIKAN UTAMA: Pastikan null menjadi undefined
-                    onSelect={(date) => field.onChange(date || null)} // <-- Pastikan undefined dari Calendar menjadi null
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="serviceLocation"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Lokasi Servis</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Misal: Bengkel Utama, Mobile Service"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Catatan (Opsional)</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Tambahkan catatan tambahan"
-                  {...field}
-                  value={field.value || ""}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value === "" ? null : e.target.value
-                    )
-                  }
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Vehicle ID (Dropdown) */}
-        <FormField
-          control={form.control}
-          name="vehicleId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Pilih Kendaraan</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kendaraan..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {vehicleData.map((vehicle: Vehicle) => (
-                    <SelectItem key={vehicle.id} value={vehicle.id}>
-                      {vehicle.licensePlate} ({vehicle.vehicleMake}{" "}
-                      {vehicle.model})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="vehicleMake"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Merk Kendaraan (Otomatis)</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Merk akan terisi otomatis"
-                  {...field}
-                  disabled
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Customer ID (Dropdown) */}
-        <FormField
-          control={form.control}
-          name="customerId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Customer (Pemilik Kendaraan)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih customer..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {customers.map((company: Company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.companyName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Car User ID (Dropdown) */}
-        <FormField
-          control={form.control}
-          name="carUserId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Pengguna Kendaraan</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih pengguna kendaraan..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {carUsers.map((company: Company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.companyName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Vendor ID (Dropdown - PENTING untuk format WO) */}
-        <FormField
-          control={form.control}
-          name="vendorId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Vendor (Bengkel)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih vendor bengkel..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {vendors.map((company: Company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.companyName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Mechanic ID (Dropdown - Opsional) */}
-        <FormField
-          control={form.control}
-          name="mechanicId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Mekanik (Opsional)</FormLabel>
-              <Select
-                onValueChange={(value) =>
-                  field.onChange(value === "__null__" ? null : value)
-                }
-                value={field.value || "__null__"}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih mekanik..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="__null__">Tidak Ada</SelectItem>
-                  {mechanics.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Driver ID (Dropdown - Opsional) */}
-        <FormField
-          control={form.control}
-          name="driverId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Driver (Opsional)</FormLabel>
-              <Select
-                onValueChange={(value) =>
-                  field.onChange(value === "__null__" ? null : value)
-                }
-                value={field.value || "__null__"}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih driver..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="__null__">Tidak Ada</SelectItem>
-                  {drivers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Driver Contact (Opsional) */}
-        <FormField
-          control={form.control}
-          name="driverContact"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Kontak Driver (Opsional)</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="0812xxxx"
-                  {...field}
-                  value={field.value || ""}
-                  onChange={(e) =>
-                    field.onChange(
-                      e.target.value === "" ? null : e.target.value
-                    )
-                  }
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Approved By ID (Dropdown - Opsional) */}
-        <FormField
-          control={form.control}
-          name="approvedById"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Disetujui Oleh (Opsional)</FormLabel>
-              <Select
-                onValueChange={(value) =>
-                  field.onChange(value === "__null__" ? null : value)
-                }
-                value={field.value || "__null__"}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih penyetuju..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="__null__">Tidak Ada</SelectItem>
-                  {approvedByUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.role})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Requested By ID (Dropdown - Opsional) */}
-        <FormField
-          control={form.control}
-          name="requestedById"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Diminta Oleh (Opsional)</FormLabel>
-              <Select
-                onValueChange={(value) =>
-                  field.onChange(value === "__null__" ? null : value)
-                }
-                value={field.value || "__null__"}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih peminta..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="__null__">Tidak Ada</SelectItem>
-                  {requestedByUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.role})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Location ID (Dropdown - Opsional) */}
-        <FormField
-          control={form.control}
-          name="locationId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Lokasi Kendaraan (Opsional)</FormLabel>
-              <Select
-                onValueChange={(value) =>
-                  field.onChange(value === "__null__" ? null : value)
-                }
-                value={field.value || "__null__"}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih lokasi..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="__null__">Tidak Ada</SelectItem>
-                  {locationData.map((loc: Location) => (
-                    <SelectItem key={loc.id} value={loc.id}>
-                      {loc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Progress Status */}
-        <FormField
-          control={form.control}
-          name="progresStatus"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Status Progres</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih status progres" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {Object.values(WoProgresStatus).map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status.replace(/_/g, " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Priority Type */}
-        <FormField
-          control={form.control}
-          name="priorityType"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tipe Prioritas</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih tipe prioritas" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {Object.values(WoPriorityType).map((priority) => (
-                    <SelectItem key={priority} value={priority}>
-                      {priority.replace(/_/g, " ")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <DialogFooter className="pt-6">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={status === "loading"}
-          >
-            Batal
-          </Button>
-          <Button type="submit" disabled={status === "loading"}>
-            {initialData ? "Simpan Perubahan" : "Buat Work Order"}
-            {/* Teks tombol dinamis */}
-          </Button>
-        </DialogFooter>
-        {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-      </form>
-    </Form>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Remark */}
+            <FormField
+              control={form.control}
+              name="remark"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Remark</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Perbaikan umum" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Service Location */}
+            <FormField
+              control={form.control}
+              name="serviceLocation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Lokasi Servis</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Bengkel Pusat" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Notes */}
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Catatan (Opsional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Catatan tambahan untuk WO..." {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Vehicle Make (redundant but in schema) */}
+            <FormField
+              control={form.control}
+              name="vehicleMake"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Merk Kendaraan (Manual)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Toyota" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Progress Status */}
+            <FormField
+              control={form.control}
+              name="progresStatus"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status Progres</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Status Progres" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(WoProgresStatus).map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Priority Type */}
+            <FormField
+              control={form.control}
+              name="priorityType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipe Prioritas</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Tipe Prioritas" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(WoPriorityType).map((priority) => (
+                        <SelectItem key={priority} value={priority}>
+                          {priority.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Vehicle ID */}
+            <FormField
+              control={form.control}
+              name="vehicleId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Kendaraan</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Kendaraan" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {vehiclesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat kendaraan...
+                        </SelectItem>
+                      )}
+                      {vehiclesStatus === "succeeded" && vehicles.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada kendaraan
+                        </SelectItem>
+                      )}
+                      {vehicles.map((v: Vehicle) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.licensePlate} ({v.vehicleMake} {v.model})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Customer ID */}
+            <FormField
+              control={form.control}
+              name="customerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Customer</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Customer" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {companiesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat perusahaan...
+                        </SelectItem>
+                      )}
+                      {companiesStatus === "succeeded" && companies.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada perusahaan
+                        </SelectItem>
+                      )}
+                      {companies.filter(c => c.companyType === 'CUSTOMER').map((c: Company) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Car User ID */}
+            <FormField
+              control={form.control}
+              name="carUserId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pengguna Kendaraan</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Pengguna Kendaraan" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {companiesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat perusahaan...
+                        </SelectItem>
+                      )}
+                      {companiesStatus === "succeeded" && companies.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada perusahaan
+                        </SelectItem>
+                      )}
+                      {companies.filter(c => c.companyType === 'CAR_USER').map((c: Company) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Vendor ID */}
+            <FormField
+              control={form.control}
+              name="vendorId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Vendor</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Vendor" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {companiesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat perusahaan...
+                        </SelectItem>
+                      )}
+                      {companiesStatus === "succeeded" && companies.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada perusahaan
+                        </SelectItem>
+                      )}
+                      {companies.filter(c => c.companyType === 'VENDOR').map((c: Company) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Mechanic ID */}
+            <FormField
+              control={form.control}
+              name="mechanicId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mekanik (Opsional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Mekanik" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Tidak Ada</SelectItem>
+                      {employeesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat karyawan...
+                        </SelectItem>
+                      )}
+                      {employeesStatus === "succeeded" && employees.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada karyawan
+                        </SelectItem>
+                      )}
+                      {employees.filter(e => e.role === 'MECHANIC').map((e: Employee) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Driver ID */}
+            <FormField
+              control={form.control}
+              name="driverId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Driver (Opsional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Driver" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Tidak Ada</SelectItem>
+                      {employeesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat karyawan...
+                        </SelectItem>
+                      )}
+                      {employeesStatus === "succeeded" && employees.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada karyawan
+                        </SelectItem>
+                      )}
+                      {employees.filter(e => e.role === 'DRIVER').map((e: Employee) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Driver Contact */}
+            <FormField
+              control={form.control}
+              name="driverContact"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Kontak Driver (Opsional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="081234567890" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Approved By ID */}
+            <FormField
+              control={form.control}
+              name="approvedById"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Disetujui Oleh (Opsional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Karyawan" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Tidak Ada</SelectItem>
+                      {employeesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat karyawan...
+                        </SelectItem>
+                      )}
+                      {employeesStatus === "succeeded" && employees.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada karyawan
+                        </SelectItem>
+                      )}
+                      {employees.map((e: Employee) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name} ({e.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Requested By ID */}
+            <FormField
+              control={form.control}
+              name="requestedById"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Diminta Oleh (Opsional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Karyawan" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Tidak Ada</SelectItem>
+                      {employeesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat karyawan...
+                        </SelectItem>
+                      )}
+                      {employeesStatus === "succeeded" && employees.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada karyawan
+                        </SelectItem>
+                      )}
+                      {employees.map((e: Employee) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name} ({e.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Location ID */}
+            <FormField
+              control={form.control}
+              name="locationId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Lokasi (Opsional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Lokasi" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Tidak Ada</SelectItem>
+                      {locationsStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat lokasi...
+                        </SelectItem>
+                      )}
+                      {locationsStatus === "succeeded" && locations.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada lokasi
+                        </SelectItem>
+                      )}
+                      {locations.map((loc: Location) => (
+                        <SelectItem key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Batal
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
   );
-};
-
-export default WoDialog;
+}

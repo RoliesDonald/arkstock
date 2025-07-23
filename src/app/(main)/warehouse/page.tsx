@@ -1,5 +1,6 @@
 "use client";
 
+import TableMain from "@/components/common/table/TableMain";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -9,115 +10,177 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  createWarehouse,
-  deleteWarehouse,
-  fetchWarehouses,
-  updateWarehouse,
-} from "@/store/slices/warehouseSlice";
-import { Warehouse, WarehouseFormValues } from "@/types/warehouse";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { Warehouse, RawWarehouseApiResponse } from "@/types/warehouse"; 
+import { WarehouseFormValues } from "@/schemas/warehouse"; 
 import { ColumnDef } from "@tanstack/react-table";
-import { set } from "lodash";
 import { MoreVertical } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-
-import { format } from "date-fns";
-import { id } from "date-fns/locale";
-import { count } from "console";
-import TableMain from "@/components/common/table/TableMain";
-import WarehouseDialog from "@/components/dialog/warehouseDialog/WarehouseDialog";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Dialog } from "@/components/ui/dialog"; 
+import { useToast } from "@/hooks/use-toast";
+import { fetchWarehouses, formatWarehouseDates } from "@/store/slices/warehouseSlice"; 
+import { WarehouseType } from "@prisma/client"; 
+import { api } from "@/lib/utils/api"; 
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import WarehouseDialogWrapper from "@/components/dialog/warehouseDialog/WarehouseDialogWrapper";
 
 export default function WarehouseListPage() {
-  const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
+  const router = useRouter();
+  const { toast } = useToast();
   const dispatch = useAppDispatch();
 
-  // data gudang dan status dari redux
+  const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
   const allWarehouses = useAppSelector((state) => state.warehouses.warehouses);
-  const warehouseStatus = useAppSelector((state) => state.warehouses.status);
-  const warehouseError = useAppSelector((state) => state.warehouses.error);
+  const loading = useAppSelector((state) => state.warehouses.status === 'loading');
+  const error = useAppSelector((state) => state.warehouses.error);
 
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [isWarehouseDialogOpen, setIsWarehouseDialogOpen] = useState(false);
-  const [editWarehouseData, setEditWarehouseData] = useState<
-    Warehouse | undefined
-  >(undefined);
-  const router = useRouter();
+  const [isWarehouseDialogOpen, setIsWarehouseDialogOpen] = useState<boolean>(false);
+  const [editWarehouseData, setEditWarehouseData] = useState<Warehouse | undefined>(undefined);
+  const [warehouseToDelete, setWarehouseToDelete] = useState<Warehouse | undefined>(undefined);
 
-  // ambil data saat komponen warehouse pertama loading
-  useEffect(() => {
-    if (warehouseStatus === "idle") {
-      dispatch(fetchWarehouses());
+  const getAuthToken = useCallback(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("jwt_token");
     }
-  }, [dispatch, warehouseStatus]);
+    return null;
+  }, []);
+
+  useEffect(() => {
+    dispatch(fetchWarehouses());
+  }, [dispatch]);
+
+  const handleDetailWarehouse = useCallback(
+    (warehouse: Warehouse) => {
+      router.push(`/warehouses/${warehouse.id}`);
+    },
+    [router]
+  );
 
   const handleEditWarehouse = useCallback((warehouse: Warehouse) => {
     setEditWarehouseData(warehouse);
     setIsWarehouseDialogOpen(true);
   }, []);
 
-  const handleSaveWarehouse = useCallback(
+  const handleSubmitWarehouse = useCallback(
     async (values: WarehouseFormValues) => {
-      if (values.id) {
-        const existingWarehouse = allWarehouses.find(
-          (wh) => wh.id === values.id
-        );
-        if (existingWarehouse) {
-          const fullUpdatedWarehouse: Warehouse = {
-            ...existingWarehouse,
-            ...values,
-            updatedAt: new Date(), // Perbarui timestamp
-          };
-          await dispatch(updateWarehouse(fullUpdatedWarehouse));
-        }
-      } else {
-        // Mode tambah baru, id, createdAt, updatedAt akan di-generate di slice
-        await dispatch(createWarehouse(values));
+      console.log("Submit Warehouse:", values);
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Tidak ada token otentikasi. Silakan login kembali.",
+          variant: "destructive",
+        });
+        router.push("/login");
+        return;
       }
-      setIsWarehouseDialogOpen(false);
-      setEditWarehouseData(undefined);
+
+      try {
+        const url = `http://localhost:3000/api/warehouses${values.id ? `/${values.id}` : ''}`;
+        
+        let response;
+        if (values.id) {
+          response = await api.put<Warehouse | RawWarehouseApiResponse>(url, values, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+        } else {
+          response = await api.post<Warehouse | RawWarehouseApiResponse>(url, values, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+        }
+
+        toast({
+          title: "Sukses",
+          description: `Gudang berhasil di${values.id ? "perbarui" : "tambahkan"}.`,
+        });
+        setIsWarehouseDialogOpen(false);
+        setEditWarehouseData(undefined);
+        dispatch(fetchWarehouses()); 
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err.message || "Terjadi kesalahan saat menyimpan gudang.",
+          variant: "destructive",
+        });
+      }
     },
-    [dispatch, allWarehouses]
+    [dispatch, toast, getAuthToken, router]
   );
 
   const handleDeleteWarehouse = useCallback(
     async (warehouseId: string) => {
-      if (window.confirm("Apakah Anda yakin ingin menghapus gudang ini?")) {
-        await dispatch(deleteWarehouse(warehouseId));
+      console.log("Delete Warehouse ID:", warehouseId);
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Tidak ada token otentikasi. Silakan login kembali.",
+          variant: "destructive",
+        });
+        router.push("/login");
+        return;
+      }
+
+      try {
+        await api.delete(`http://localhost:3000/api/warehouses/${warehouseId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        toast({
+          title: "Sukses",
+          description: "Gudang berhasil dihapus.",
+        });
+        setWarehouseToDelete(undefined);
+        dispatch(fetchWarehouses()); 
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err.message || "Terjadi kesalahan saat menghapus gudang.",
+          variant: "destructive",
+        });
       }
     },
-    [dispatch]
+    [dispatch, toast, getAuthToken, router]
   );
 
-  const handleDetailWarehouse = useCallback(
-    (warehouse: Warehouse) => {
-      router.push(`/warehouse/${warehouse.id}`);
-    },
-    [router]
-  );
-
-  const warehouseColums: ColumnDef<Warehouse>[] = useMemo(
+  const warehouseColumns: ColumnDef<Warehouse>[] = useMemo(
     () => [
       {
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
+            checked={table.getIsAllPageRowsSelected() ? true : (table.getIsSomePageRowsSelected() ? 'indeterminate' : false)}
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all rows"
           />
         ),
         cell: ({ row }) => (
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select Row"
+            aria-label="Select row"
           />
         ),
         enableSorting: false,
@@ -126,30 +189,27 @@ export default function WarehouseListPage() {
       { accessorKey: "name", header: "Nama Gudang" },
       { accessorKey: "location", header: "Lokasi" },
       {
-        accessorKey: "isMainWarehouse",
-        header: "Gudang Utama",
-        cell: ({ row }) => (row.original.isMainWarehouse ? "Ya" : "Tidak"),
-      },
-      {
-        accessorKey: "createdAt",
-        header: "Dibuat Pada",
+        accessorKey: "warehouseType",
+        header: "Tipe Gudang",
         cell: ({ row }) => {
-          const date = row.original.createdAt;
-          if (date instanceof Date) {
-            return format(date, "dd-MM-yyyy HH:mm", { locale: id });
+          const type = row.original.warehouseType;
+          let typeColor: string;
+          switch (type) {
+            case WarehouseType.CENTRAL_WAREHOUSE:
+              typeColor = "bg-blue-200 text-blue-800";
+              break;
+            case WarehouseType.BRANCH_WAREHOUSE:
+              typeColor = "bg-green-200 text-green-800";
+              break;
+            case WarehouseType.SERVICE_CAR_WAREHOUSE:
+              typeColor = "bg-purple-200 text-purple-800";
+              break;
+            default:
+              typeColor = "bg-gray-400 text-gray-800";
           }
-          return "N/A";
-        },
-      },
-      {
-        accessorKey: "updatedAt",
-        header: "Diperbarui Pada",
-        cell: ({ row }) => {
-          const date = row.original.updatedAt;
-          if (date instanceof Date) {
-            return format(date, "dd-MM-yyyy HH:mm", { locale: id });
-          }
-          return "N/A";
+          return (
+            <span className={`${typeColor} px-2 py-1 rounded-full text-xs font-semibold`}>{type.replace(/_/g, " ")}</span>
+          );
         },
       },
       {
@@ -166,21 +226,14 @@ export default function WarehouseListPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Action</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => handleDetailWarehouse(warehouse)}
-                >
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleDetailWarehouse(warehouse)}>
                   Lihat Detail
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleEditWarehouse(warehouse)}
-                >
+                <DropdownMenuItem onClick={() => handleEditWarehouse(warehouse)}>
                   Edit Gudang
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleDeleteWarehouse(warehouse.id)}
-                  className="text-red-600"
-                >
+                <DropdownMenuItem onClick={() => setWarehouseToDelete(warehouse)} className="text-red-600">
                   Hapus Gudang
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -189,95 +242,103 @@ export default function WarehouseListPage() {
         },
       },
     ],
-    [handleDeleteWarehouse, handleEditWarehouse, handleDetailWarehouse]
+    [handleDetailWarehouse, handleEditWarehouse]
   );
 
-  const filteredWarehouses = useMemo(() => {
-    let currentWarehouses = allWarehouses;
-    if (activeTab !== "all") {
-      if (activeTab === "main_warehouse") {
-        currentWarehouses = currentWarehouses.filter(
-          (wh) => wh.isMainWarehouse
-        );
-      } else if (activeTab === "sub_warehouse") {
-        currentWarehouses = currentWarehouses.filter(
-          (wh) => !wh.isMainWarehouse
-        );
-      }
-    }
-
-    if (searchQuery) {
-      const lowerCaseQuery = searchQuery.toLowerCase();
-      currentWarehouses = currentWarehouses.filter((warehouse) =>
-        Object.values(warehouse).some(
-          (value) =>
-            (typeof value === "string" &&
-              value.toLowerCase().includes(lowerCaseQuery)) ||
-            (value instanceof Date &&
-              format(value, "dd-MM-yyyy").includes(lowerCaseQuery)) ||
-            (typeof value === "number" &&
-              value.toString().includes(lowerCaseQuery))
-        )
-      );
-    }
-    return currentWarehouses;
-  }, [activeTab, searchQuery, allWarehouses]);
-
   const warehouseTabItems = useMemo(() => {
-    const allCount = allWarehouses.length;
-    const mainCount = allWarehouses.filter((wh) => wh.isMainWarehouse).length;
-    const subCount = allWarehouses.filter((wh) => !wh.isMainWarehouse).length;
-
     return [
-      { value: "all", label: "Semua", count: allCount },
-      { value: "main_warehouse", label: "Gudang Utama", count: mainCount },
-      { value: "sub_warehouse", label: "Gudang Sub", count: subCount },
+      { value: "all", label: "All", count: allWarehouses.length },
+      // Tabs for WarehouseType
+      {
+        value: WarehouseType.CENTRAL_WAREHOUSE.toLowerCase(),
+        label: "Gudang Pusat",
+        count: allWarehouses.filter((wh) => wh.warehouseType === WarehouseType.CENTRAL_WAREHOUSE).length,
+      },
+      {
+        value: WarehouseType.BRANCH_WAREHOUSE.toLowerCase(),
+        label: "Gudang Cabang",
+        count: allWarehouses.filter((wh) => wh.warehouseType === WarehouseType.BRANCH_WAREHOUSE).length,
+      },
+      {
+        value: WarehouseType.SERVICE_CAR_WAREHOUSE.toLowerCase(),
+        label: "Gudang Mobil Servis",
+        count: allWarehouses.filter((wh) => wh.warehouseType === WarehouseType.SERVICE_CAR_WAREHOUSE).length,
+      },
     ];
   }, [allWarehouses]);
 
-  // status loading atau error
+  const filteredWarehouses = useMemo(() => {
+    let data = allWarehouses;
 
-  if (warehouseStatus === "loading") {
-    return <div className="text-center py-8">Memuat data gudang...</div>;
-  }
+    if (activeTab !== "all") {
+      data = data.filter((warehouse) => {
+        const lowerCaseActiveTab = activeTab.toLowerCase();
+        // Cek berdasarkan WarehouseType
+        if (Object.values(WarehouseType).some(t => t.toLowerCase() === lowerCaseActiveTab)) {
+          return warehouse.warehouseType.toLowerCase() === lowerCaseActiveTab;
+        }
+        return false;
+      });
+    }
 
-  if (warehouseStatus === "failed") {
-    return (
-      <div className="text-center py-8 text-red-500">
-        Error: {warehouseError}
-      </div>
+    return data.filter((warehouse) =>
+      warehouse.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      warehouse.location.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }
+  }, [allWarehouses, activeTab, searchQuery]);
+
+  const handleAddNewWarehouseClick = useCallback(() => {
+    setEditWarehouseData(undefined);
+    setIsWarehouseDialogOpen(true);
+  }, []);
+
+  const handleWarehouseDialogClose = useCallback(() => {
+    setIsWarehouseDialogOpen(false);
+    setEditWarehouseData(undefined);
+  }, []);
 
   return (
-    <TableMain<Warehouse>
-      searchQuery={searchQuery}
-      data={filteredWarehouses}
-      columns={warehouseColums}
-      tabItems={warehouseTabItems}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      showAddButton={true}
-      showDownloadPrintButtons={true}
-      emptyMessage="Tidak ada gudang ditemukan."
-      isDialogOpen={isWarehouseDialogOpen}
-      onOpenChange={setIsWarehouseDialogOpen}
-      dialogContent={
-        <WarehouseDialog
-          onClose={() => {
-            setIsWarehouseDialogOpen(false);
-            setEditWarehouseData(undefined); // Clear edit data when closing
-          }}
-          onSubmitWarehouse={handleSaveWarehouse}
-          initialData={editWarehouseData} // Pass initialData for editing
+    <>
+      <TableMain<Warehouse>
+        searchQuery={searchQuery}
+        data={filteredWarehouses}
+        columns={warehouseColumns}
+        tabItems={warehouseTabItems} 
+        activeTab={activeTab}       
+        onTabChange={setActiveTab}   
+        showAddButton={true}
+        onAddClick={handleAddNewWarehouseClick}
+        showDownloadPrintButtons={true}
+        emptyMessage={
+          loading ? "Memuat data..." : error ? `Error: ${error}` : "Tidak ada Gudang ditemukan."
+        }
+      />
+
+      <Dialog open={isWarehouseDialogOpen} onOpenChange={setIsWarehouseDialogOpen}>
+        <WarehouseDialogWrapper 
+          onClose={handleWarehouseDialogClose}
+          initialData={editWarehouseData}
+          onSubmit={handleSubmitWarehouse}
         />
-      }
-      dialogTitle={editWarehouseData ? "Edit Gudang" : "Tambahkan Gudang Baru"}
-      dialogDescription={
-        editWarehouseData
-          ? "Ubah detail gudang ini."
-          : "Isi detail gudang untuk menambah data gudang baru ke sistem."
-      }
-    />
+      </Dialog>
+
+      <AlertDialog open={!!warehouseToDelete} onOpenChange={(open) => !open && setWarehouseToDelete(undefined)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus gudang &quot;
+              {warehouseToDelete?.name}&quot;? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setWarehouseToDelete(undefined)}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => warehouseToDelete && handleDeleteWarehouse(warehouseToDelete.id)}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

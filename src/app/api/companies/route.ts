@@ -1,37 +1,40 @@
-import { authenticateToken, authorizeRoles } from "@/lib/auth";
-import { companyFormSchema } from "@/types/companies";
-import { EmployeeRole } from "@/types/employee";
+// src/app/api/companies/route.ts
+import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { NextRequest, NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
-export async function POST(req: NextRequest) {
-  // otensikasi token
-  const authResult = await authenticateToken(req);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  const authzResult = await authorizeRoles([
-    EmployeeRole.SUPER_ADMIN,
-    EmployeeRole.ADMIN,
-  ])(req);
-  if (authzResult instanceof NextResponse) {
-    return authzResult;
-  }
+// Mengambil semua perusahaan
+export async function GET() {
   try {
-    const body = await req.json();
-    // validasi input
-    const validation = companyFormSchema.safeParse(body);
-    if (!validation.success) {
-      return NextResponse.json(
-        { errors: validation.error.flatten().fieldErrors },
-        { status: 400 }
-      );
-    }
+    const companies = await prisma.company.findMany({
+      include: {
+        parentCompany: {
+          select: {
+            id: true,
+            companyName: true,
+          },
+        },
+        // Anda bisa menyertakan relasi lain jika dibutuhkan di daftar,
+        // seperti vehiclesOwned, vehiclesUsed, employees, dll.,
+        // namun untuk daftar, seringkali hanya data dasar yang dibutuhkan
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    return NextResponse.json(companies, { status: 200 });
+  } catch (error: any) {
+    console.error("Error fetching companies:", error);
+    return NextResponse.json({ message: "Failed to fetch companies", error: error.message }, { status: 500 });
+  }
+}
+
+// Membuat perusahaan baru
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
     const {
-      // id, // 'id' tidak diperlukan saat membuat, karena Prisma akan auto-generate UUID
       companyId,
       companyName,
       companyEmail,
@@ -42,18 +45,10 @@ export async function POST(req: NextRequest) {
       taxRegistered,
       companyType,
       status,
+      companyRole,
       parentCompanyId,
-    } = validation.data;
+    } = body;
 
-    const existingCompany = await prisma.company.findUnique({
-      where: { companyId: companyId },
-    });
-    if (existingCompany) {
-      return NextResponse.json(
-        { message: "ID Perusahaan sudah terdaftar" },
-        { status: 409 }
-      );
-    }
     const newCompany = await prisma.company.create({
       data: {
         companyId,
@@ -66,102 +61,22 @@ export async function POST(req: NextRequest) {
         taxRegistered,
         companyType,
         status,
-        parentCompanyId,
+        companyRole,
+        ...(parentCompanyId && { parentCompany: { connect: { id: parentCompanyId } } }),
       },
-      select: {
-        id: true,
-        companyId: true,
-        companyName: true,
-        companyEmail: true,
-        logo: true,
-        contact: true,
-        address: true,
-        city: true,
-        taxRegistered: true,
-        companyType: true,
-        status: true,
-        parentCompanyId: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        // Sertakan relasi yang sama seperti GET untuk konsistensi respons
+        parentCompany: {
+          select: {
+            id: true,
+            companyName: true,
+          },
+        },
       },
     });
     return NextResponse.json(newCompany, { status: 201 });
-  } catch (error) {
-    console.error("Gagal membuat perusahaan baru:", error);
-    return NextResponse.json(
-      {
-        message: "Terjadi kesalahan saat membuat perusahaan baru",
-        error: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
-  } finally {
-    // await prisma.$disconnect();
-  }
-}
-
-export async function GET(req: NextRequest) {
-  const authResult = await authenticateToken(req);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  const authzResult = await authorizeRoles([
-    EmployeeRole.SUPER_ADMIN,
-    EmployeeRole.ADMIN,
-    EmployeeRole.USER,
-  ])(req);
-  if (authzResult instanceof NextResponse) {
-    return authzResult;
-  }
-
-  try {
-    const companies = await prisma.company.findMany({
-      select: {
-        id: true, // Pastikan id tetap dipilih
-        companyId: true,
-        companyName: true,
-        companyEmail: true,
-        logo: true,
-        contact: true,
-        address: true,
-        city: true,
-        taxRegistered: true,
-        companyType: true,
-        status: true,
-        parentCompanyId: true,
-        createdAt: true,
-        updatedAt: true,
-        parentCompany: {
-          select: { companyName: true },
-        },
-        childCompanies: { select: { companyName: true, id: true } },
-      },
-      orderBy: {
-        companyName: "asc",
-      },
-    });
-
-    // --- DEBUG LOG BARU DI SINI ---
-    console.log(
-      "API /api/companies: Data retrieved from Prisma before sending:"
-    );
-    companies.forEach((company, index) => {
-      console.log(`  Company ${index}:`, JSON.stringify(company, null, 2));
-    });
-    // --- AKHIR DEBUG LOG BARU ---
-
-    return NextResponse.json(companies, { status: 200 });
-  } catch (error) {
-    console.error("Terjadi kesalahan saat mengambil data perusahaan:", error);
-    return NextResponse.json(
-      {
-        message: "Terjadi kesalahan saat mengambil data perusahaan",
-        error: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
-  } finally {
-    // await prisma.$disconnect();
+  } catch (error: any) {
+    console.error("Error creating company:", error);
+    return NextResponse.json({ message: "Failed to create company", error: error.message }, { status: 500 });
   }
 }

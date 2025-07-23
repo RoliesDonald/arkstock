@@ -1,15 +1,33 @@
-// src/components/vehicleDialog/VehicleDialog.tsx
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { id } from "date-fns/locale";
+import { useEffect } from "react";
+import { format, parseISO } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 
+import { Vehicle } from "@/types/vehicle"; // Import Vehicle type
+import { Company } from "@/types/companies"; // Import Company type for dropdowns
+import { vehicleFormSchema, VehicleFormValues } from "@/schemas/vehicle"; // Import VehicleFormValues from schemas
+import {
+  VehicleType,
+  VehicleCategory,
+  VehicleFuelType,
+  VehicleTransmissionType,
+  VehicleStatus,
+} from "@prisma/client"; // Import Enums dari Prisma
+
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -19,7 +37,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -32,129 +49,123 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { DialogFooter } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-import {
-  VehicleFormValues,
-  vehicleFormSchema,
-  VehicleType,
-  VehicleCategory,
-  VehicleFuelType,
-  VehicleTransmissionType,
-  VehicleStatus,
-} from "@/types/vehicle";
-
-import { companyData, getCompaniesByType } from "@/data/sampleCompanyData";
-import { CompanyType } from "@/types/companies";
 interface VehicleDialogProps {
   onClose: () => void;
-  onSubmitVehicle: (values: VehicleFormValues) => void;
-  initialData?: VehicleFormValues;
+  onSubmit: (values: VehicleFormValues) => Promise<void>;
+  initialData?: Vehicle;
+  allCompanies: Company[]; // Prop untuk daftar perusahaan (pemilik/pengguna)
+  companiesStatus: 'idle' | 'loading' | 'succeeded' | 'failed'; // Status loading perusahaan
 }
 
-const VehicleDialog: React.FC<VehicleDialogProps> = ({
+export default function VehicleDialog({
   onClose,
-  onSubmitVehicle,
   initialData,
-}) => {
-  const form = useForm<VehicleFormValues>({
-    resolver: zodResolver(vehicleFormSchema),
-    defaultValues: useMemo(() => {
-      const defaults = initialData
-        ? {
-            ...initialData,
-            trimLevel: initialData.trimLevel ?? null,
-            vinNum: initialData.vinNum ?? null,
-            engineNum: initialData.engineNum ?? null,
-            chassisNum: initialData.chassisNum ?? null,
-            notes: initialData.notes ?? null,
-            carUserId: initialData.carUserId ?? null,
-            ownerId: initialData.ownerId,
-            status: initialData.status,
-          }
-        : {
-            licensePlate: "",
-            vehicleMake: "",
-            model: "",
-            trimLevel: null,
-            vinNum: null,
-            engineNum: null,
-            chassisNum: null,
-            yearMade: new Date().getFullYear(),
-            color: "",
-            vehicleType: VehicleType.PASSENGER,
-            vehicleCategory: VehicleCategory.BOX_TRUCK,
-            fuelType: VehicleFuelType.GASOLINE,
-            transmissionType: VehicleTransmissionType.AUTOMATIC,
-            lastOdometer: 0,
-            lastServiceDate: new Date(),
-            ownerId: "",
-            carUserId: null,
-            status: VehicleStatus.ACTIVE,
-            notes: null,
-          };
-      console.log("Default Form Values (VehicleDialog):", defaults);
-      return defaults;
-    }, [initialData]),
-  });
+  onSubmit,
+  allCompanies,
+  companiesStatus,
+}: VehicleDialogProps) {
 
-  const onSubmit = async (values: VehicleFormValues) => {
-    if (values.ownerId === "") {
-      form.setError("ownerId", {
-        type: "manual",
-        message: "Pemilik (Perusahaan Rental) wajib diisi.",
-      });
-      return;
-    }
-
-    console.log("Mengirim Data Kendaraan:", values);
-    onSubmitVehicle(values);
-    onClose();
-    form.reset();
+  const mapVehicleToFormValues = (vehicle: Vehicle): VehicleFormValues => {
+    return {
+      id: vehicle.id,
+      licensePlate: vehicle.licensePlate,
+      vehicleMake: vehicle.vehicleMake,
+      model: vehicle.model,
+      trimLevel: vehicle.trimLevel || null,
+      vinNum: vehicle.vinNum || null,
+      engineNum: vehicle.engineNum || null,
+      chassisNum: vehicle.chassisNum || null,
+      yearMade: vehicle.yearMade,
+      color: vehicle.color,
+      vehicleType: vehicle.vehicleType,
+      vehicleCategory: vehicle.vehicleCategory,
+      fuelType: vehicle.fuelType,
+      transmissionType: vehicle.transmissionType,
+      lastOdometer: vehicle.lastOdometer,
+      lastServiceDate: format(vehicle.lastServiceDate, "yyyy-MM-dd"), // Format Date ke string
+      status: vehicle.status,
+      notes: vehicle.notes || null,
+      ownerId: vehicle.ownerId,
+      carUserId: vehicle.carUserId || null,
+    };
   };
 
-  const rentalCompanies = useMemo(
-    () => getCompaniesByType(CompanyType.RENTAL_COMPANY),
-    []
-  );
-  const customers = useMemo(() => getCompaniesByType(CompanyType.CAR_USER), []);
+  const form = useForm<VehicleFormValues>({
+    resolver: zodResolver(vehicleFormSchema),
+    defaultValues: initialData ? mapVehicleToFormValues(initialData) : {
+      licensePlate: "",
+      vehicleMake: "",
+      model: "",
+      trimLevel: null,
+      vinNum: null,
+      engineNum: null,
+      chassisNum: null,
+      yearMade: new Date().getFullYear(), // Default ke tahun sekarang
+      color: "",
+      vehicleType: VehicleType.PASSENGER,
+      vehicleCategory: VehicleCategory.SEDAN,
+      fuelType: VehicleFuelType.GASOLINE,
+      transmissionType: VehicleTransmissionType.MANUAL,
+      lastOdometer: 0,
+      lastServiceDate: format(new Date(), "yyyy-MM-dd"), // Default ke tanggal sekarang
+      status: VehicleStatus.ACTIVE,
+      notes: null,
+      ownerId: "", // Harus diisi
+      carUserId: null,
+    },
+  });
 
   useEffect(() => {
-    console.log(
-      "Rental Companies (Memoized):",
-      JSON.stringify(rentalCompanies, null, 2)
-    );
-    console.log("Customers (Memoized):", JSON.stringify(customers, null, 2));
-  }, [rentalCompanies, customers]);
+    if (initialData) {
+      form.reset(mapVehicleToFormValues(initialData));
+    } else {
+      form.reset({
+        licensePlate: "",
+        vehicleMake: "",
+        model: "",
+        trimLevel: null,
+        vinNum: null,
+        engineNum: null,
+        chassisNum: null,
+        yearMade: new Date().getFullYear(),
+        color: "",
+        vehicleType: VehicleType.PASSENGER,
+        vehicleCategory: VehicleCategory.SEDAN,
+        fuelType: VehicleFuelType.GASOLINE,
+        transmissionType: VehicleTransmissionType.MANUAL,
+        lastOdometer: 0,
+        lastServiceDate: format(new Date(), "yyyy-MM-dd"),
+        status: VehicleStatus.ACTIVE,
+        notes: null,
+        ownerId: "",
+        carUserId: null,
+      });
+    }
+  }, [initialData, form]);
 
-  const watchedOwnerId = form.watch("ownerId");
-
-  useEffect(() => {
-    console.log(
-      `Aggressive Debugging: ownerId from form watch is "${watchedOwnerId}" (type: ${typeof watchedOwnerId})`
-    );
-  }, [watchedOwnerId]);
+  const handleSubmit = async (values: VehicleFormValues) => {
+    await onSubmit(values);
+  };
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4"
-      >
-        {/* Informasi Dasar Kendaraan */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Informasi Dasar Kendaraan</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <DialogContent className="sm:max-w-[425px] md:max-w-[700px] lg:max-w-[900px]">
+      <DialogHeader>
+        <DialogTitle>{initialData ? "Edit Kendaraan" : "Tambahkan Kendaraan Baru"}</DialogTitle>
+        <DialogDescription>
+          {initialData ? "Edit detail kendaraan yang sudah ada." : "Isi detail kendaraan untuk menambah data kendaraan baru ke sistem."}
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Field License Plate */}
             <FormField
               control={form.control}
               name="licensePlate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Plat Nomor</FormLabel>
+                  <FormLabel>Nomor Plat</FormLabel>
                   <FormControl>
                     <Input placeholder="B 1234 ABC" {...field} />
                   </FormControl>
@@ -162,54 +173,91 @@ const VehicleDialog: React.FC<VehicleDialogProps> = ({
                 </FormItem>
               )}
             />
+            {/* Field Vehicle Make */}
             <FormField
               control={form.control}
               name="vehicleMake"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Merek Kendaraan</FormLabel>
+                  <FormLabel>Merk Kendaraan</FormLabel>
                   <FormControl>
-                    <Input placeholder="Toyota, Honda, dll." {...field} />
+                    <Input placeholder="Toyota" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Model */}
             <FormField
               control={form.control}
               name="model"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Model Kendaraan</FormLabel>
+                  <FormLabel>Model</FormLabel>
                   <FormControl>
-                    <Input placeholder="Avanza, Civic, dll." {...field} />
+                    <Input placeholder="Avanza" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Trim Level */}
             <FormField
               control={form.control}
               name="trimLevel"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Varian (Opsional)</FormLabel>
+                  <FormLabel>Level Trim (Opsional)</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="G, E, RS, dll."
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : e.target.value
-                        )
-                      }
-                    />
+                    <Input placeholder="G" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field VIN Num */}
+            <FormField
+              control={form.control}
+              name="vinNum"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nomor VIN (Opsional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="VIN1234567890" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Engine Num */}
+            <FormField
+              control={form.control}
+              name="engineNum"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nomor Mesin (Opsional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="ENG1234567890" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Chassis Num */}
+            <FormField
+              control={form.control}
+              name="chassisNum"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nomor Rangka (Opsional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="CHS1234567890" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Year Made */}
             <FormField
               control={form.control}
               name="yearMade"
@@ -217,22 +265,13 @@ const VehicleDialog: React.FC<VehicleDialogProps> = ({
                 <FormItem>
                   <FormLabel>Tahun Pembuatan</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="2020"
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : Number(e.target.value)
-                        )
-                      }
-                    />
+                    <Input type="number" placeholder="2020" {...field} onChange={e => field.onChange(Number(e.target.value))} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Color */}
             <FormField
               control={form.control}
               name="color"
@@ -240,35 +279,127 @@ const VehicleDialog: React.FC<VehicleDialogProps> = ({
                 <FormItem>
                   <FormLabel>Warna</FormLabel>
                   <FormControl>
-                    <Input placeholder="Hitam, Putih, Silver" {...field} />
+                    <Input placeholder="Hitam" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Vehicle Type */}
+            <FormField
+              control={form.control}
+              name="vehicleType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipe Kendaraan</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Tipe Kendaraan" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(VehicleType).map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Vehicle Category */}
+            <FormField
+              control={form.control}
+              name="vehicleCategory"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Kategori Kendaraan</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Kategori Kendaraan" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(VehicleCategory).map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Fuel Type */}
+            <FormField
+              control={form.control}
+              name="fuelType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipe Bahan Bakar</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Tipe Bahan Bakar" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(VehicleFuelType).map((fuel) => (
+                        <SelectItem key={fuel} value={fuel}>
+                          {fuel.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Transmission Type */}
+            <FormField
+              control={form.control}
+              name="transmissionType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipe Transmisi</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Tipe Transmisi" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(VehicleTransmissionType).map((trans) => (
+                        <SelectItem key={trans} value={trans}>
+                          {trans.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Last Odometer */}
             <FormField
               control={form.control}
               name="lastOdometer"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Odometer Terakhir (KM)</FormLabel>
+                  <FormLabel>Odometer Terakhir</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="50000"
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : Number(e.target.value)
-                        )
-                      }
-                    />
+                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(Number(e.target.value))} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Last Service Date */}
             <FormField
               control={form.control}
               name="lastServiceDate"
@@ -286,9 +417,9 @@ const VehicleDialog: React.FC<VehicleDialogProps> = ({
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "PPPP", { locale: id })
+                            format(parseISO(field.value), "PPP", { locale: localeId })
                           ) : (
-                            <span>Pilih tanggal</span>
+                            <span>Pilih tanggal servis</span>
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -297,9 +428,13 @@ const VehicleDialog: React.FC<VehicleDialogProps> = ({
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
+                        selected={field.value ? parseISO(field.value) : undefined}
+                        onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date("1900-01-01")
+                        }
                         initialFocus
+                        locale={localeId}
                       />
                     </PopoverContent>
                   </Popover>
@@ -307,222 +442,17 @@ const VehicleDialog: React.FC<VehicleDialogProps> = ({
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="vinNum"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nomor Rangka (VIN) (Opsional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="ABCDEFG1234567890"
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : e.target.value
-                        )
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="engineNum"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nomor Mesin (Opsional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="XYZ123456789"
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : e.target.value
-                        )
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="chassisNum"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nomor Sasis (Opsional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="CHASSIS123456789"
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : e.target.value
-                        )
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Catatan (Opsional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Informasi tambahan..."
-                      {...field}
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === "" ? null : e.target.value
-                        )
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Tipe Kendaraan */}
-            <FormField
-              control={form.control}
-              name="vehicleType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipe Kendaraan</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih tipe kendaraan..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.values(VehicleType).map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type.replace(/_/g, " ")}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* Kategori Kendaraan */}
-            <FormField
-              control={form.control}
-              name="vehicleCategory"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Kategori Kendaraan</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih kategori kendaraan..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.values(VehicleCategory).map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category.replace(/_/g, " ")}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* Tipe Bahan Bakar */}
-            <FormField
-              control={form.control}
-              name="fuelType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipe Bahan Bakar</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih tipe bahan bakar..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.values(VehicleFuelType).map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type.replace(/_/g, " ")}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* Tipe Transmisi */}
-            <FormField
-              control={form.control}
-              name="transmissionType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipe Transmisi</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih tipe transmisi..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.values(VehicleTransmissionType).map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type.replace(/_/g, " ")}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {/* Status Kendaraan */}
+            {/* Field Status */}
             <FormField
               control={form.control}
               name="status"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status Kendaraan</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih status kendaraan..." />
+                        <SelectValue placeholder="Pilih Status Kendaraan" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -537,87 +467,47 @@ const VehicleDialog: React.FC<VehicleDialogProps> = ({
                 </FormItem>
               )}
             />
-
-            {/* Pemilik (Owner) - Perusahaan Rental,
-             saat unit di input oleh user dari perusahaan rental 
-             nama perusahaan ini harus default ikut nama dari perusahaan user tersebut
-             dan secara UI tampilannya jadi disable atau tidak bisa di dropdown */}
+            {/* Field Notes */}
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Catatan (Opsional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Catatan tambahan..." {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Owner ID (Company) */}
             <FormField
               control={form.control}
               name="ownerId"
-              render={({ field }) => {
-                console.log(
-                  "OwnerId Field Value (inside render):",
-                  field.value
-                );
-                console.log(
-                  "Rental Companies Array (inside render):",
-                  JSON.stringify(rentalCompanies, null, 2)
-                );
-
-                return (
-                  <FormItem>
-                    <FormLabel>Pemilik (Perusahaan Rental)</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(
-                          value === "empty-owner-option" ? "" : value
-                        );
-                      }}
-                      value={
-                        field.value === "" ? "empty-owner-option" : field.value
-                      }
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih perusahaan pemilik..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="empty-owner-option">
-                          Pilih perusahaan pemilik...
-                        </SelectItem>
-                        {rentalCompanies.map((company) => (
-                          <SelectItem key={company.id} value={company.id}>
-                            {company.companyName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                );
-              }}
-            />
-            {/* Pengguna Kendaraan (Car User) - Pelanggan/Penyewa (Opsional) */}
-            <FormField
-              control={form.control}
-              name="carUserId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Pengguna Kendaraan (Penyewa/Opsional)</FormLabel>
-                  <Select
-                    onValueChange={(value) =>
-                      field.onChange(
-                        value === "null-caruser-option" ? null : value
-                      )
-                    }
-                    value={
-                      field.value === null ? "null-caruser-option" : field.value
-                    }
-                  >
+                  <FormLabel>Pemilik (Perusahaan)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih pengguna kendaraan..." />
+                        <SelectValue placeholder="Pilih Pemilik Perusahaan" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="null-caruser-option">
-                        Tidak Ada / Kosongkan
-                      </SelectItem>
-                      {customers.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id}>
-                          {customer.companyName}
+                      {companiesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat perusahaan...
+                        </SelectItem>
+                      )}
+                      {companiesStatus === "succeeded" && allCompanies.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada perusahaan
+                        </SelectItem>
+                      )}
+                      {allCompanies.map((company: Company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.companyName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -626,20 +516,53 @@ const VehicleDialog: React.FC<VehicleDialogProps> = ({
                 </FormItem>
               )}
             />
-          </CardContent>
-        </Card>
-
-        <DialogFooter className="pt-6">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Batal
-          </Button>
-          <Button type="submit">
-            {initialData ? "Simpan Perubahan" : "Tambah Kendaraan"}
-          </Button>
-        </DialogFooter>
-      </form>
-    </Form>
+            {/* Field Car User ID (Company) */}
+            <FormField
+              control={form.control}
+              name="carUserId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pengguna (Perusahaan - Opsional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Pengguna Perusahaan" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Tidak Ada</SelectItem> {/* Opsi untuk tidak memilih pengguna */}
+                      {companiesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat perusahaan...
+                        </SelectItem>
+                      )}
+                      {companiesStatus === "succeeded" && allCompanies.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada perusahaan
+                        </SelectItem>
+                      )}
+                      {allCompanies.map((company: Company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Batal
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
   );
-};
-
-export default VehicleDialog;
+}

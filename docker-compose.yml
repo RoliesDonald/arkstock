@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data # Ini merujuk ke volume bernama 'db_data'
 
   app:
     build:
@@ -27,10 +27,11 @@ services:
     depends_on:
       - db 
     volumes:
-      - .:/app
+      # Volume anonim untuk node_modules dan .next untuk kinerja build yang lebih baik
+      # dan untuk mencegah polusi direktori host
       - /app/node_modules 
       - /app/.next 
 
-volumes:
-  db_data:
-    driver: local
+volumes: 
+  db_data: 
+    driver: local 

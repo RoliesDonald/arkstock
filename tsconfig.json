@@ -17,17 +17,18 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".", // PASTIKAN ADA INI! Ini adalah root untuk path alias
+    "baseUrl": ".", // PASTIKAN INI ADA DAN DISETEL KE "."
     "paths": {
-      // Alias untuk src/components, src/lib, src/utils, src/app
-      "@/*": ["./src/*"], // Ini adalah alias utama untuk src
+      // Alias untuk src/
+      "@/*": ["./src/*"],
+
+      // Alias spesifik (jika Anda menggunakannya)
       "@/components/*": ["./src/components/*"],
       "@/lib/*": ["./src/lib/*"],
       "@/utils/*": ["./src/utils/*"],
       "@/app/*": ["./src/app/*"],
-
-      // Alias untuk Prisma Client
-      // Ini sangat penting agar Webpack menemukan Prisma Client yang digenerate
+      "@/types/*": ["./src/types/*"],
+      // Alias untuk Prisma Client (penting untuk IntelliSense Prisma)
       "@/generated/prisma": ["./node_modules/.prisma/client"]
     }
   },

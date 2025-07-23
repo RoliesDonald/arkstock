@@ -1,15 +1,29 @@
-// src/components/stockTransactionDialog/StockTransactionDialog.tsx
 "use client";
 
-import React, { useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { id as localeId } from "date-fns/locale"; // Rename id to localeId to avoid conflict
+import { useEffect } from "react";
+import { format, parseISO } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 
+import { StockTransaction } from "@/types/stockTransaction"; 
+import { SparePart } from "@/types/sparepart"; 
+import { Warehouse } from "@/types/warehouse"; 
+import { Employee } from "@/types/employee"; 
+import { stockTransactionFormSchema, StockTransactionFormValues } from "@/schemas/stockTransaction"; 
+import { StockTransactionType, EmployeeRole } from "@prisma/client"; 
+
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -17,7 +31,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,118 +46,117 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { DialogFooter } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-import {
-  StockTransactionFormValues,
-  stockTransactionFormSchema,
-  TransactionType,
-} from "@/types/stockTransaction";
-
-// Data dummy (akan diganti dengan Redux store di masa depan)
-import { sparePartData } from "@/data/sampleSparePartData";
-import { warehouseData } from "@/data/sampleWarehouseData";
 
 interface StockTransactionDialogProps {
   onClose: () => void;
-  onSubmitTransaction: (values: StockTransactionFormValues) => void;
-  initialData?: StockTransactionFormValues; // Data awal untuk mode edit
-  // Prop tambahan untuk memfilter gudang asal/tujuan jika dialog dibuka dari halaman detail gudang tertentu
-  currentWarehouseId?: string;
+  onSubmit: (values: StockTransactionFormValues) => Promise<void>;
+  initialData?: StockTransaction;
+  spareParts: SparePart[];
+  warehouses: Warehouse[];
+  employees: Employee[];
+  sparePartsStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  warehousesStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  employeesStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
 }
 
-const StockTransactionDialog: React.FC<StockTransactionDialogProps> = ({
+export default function StockTransactionDialog({
   onClose,
-  onSubmitTransaction,
   initialData,
-  currentWarehouseId,
-}) => {
-  const form = useForm<StockTransactionFormValues>({
-    resolver: zodResolver(stockTransactionFormSchema),
-    defaultValues: useMemo(() => {
-      // Filter gudang utama (Mess) sebagai default sourceWarehouseId jika ada
-      const defaultSourceWarehouse =
-        warehouseData.find((wh) => wh.isMainWarehouse) || warehouseData[0];
+  onSubmit,
+  spareParts,
+  warehouses,
+  employees,
+  sparePartsStatus,
+  warehousesStatus,
+  employeesStatus,
+}: StockTransactionDialogProps) {
 
-      return initialData
-        ? {
-            ...initialData,
-            date: new Date(initialData.date), // Pastikan tanggal adalah objek Date
-            quantity: initialData.quantity,
-            // Pastikan targetWarehouseId adalah null jika tidak ada
-            targetWarehouseId: initialData.targetWarehouseId ?? null,
-            remark: initialData.remark ?? null,
-          }
-        : {
-            date: new Date(),
-            sparePartId: "",
-            quantity: 1,
-            transactionType: TransactionType.IN, // Default IN
-            sourceWarehouseId:
-              currentWarehouseId || defaultSourceWarehouse?.id || "", // Default ke currentWarehouseId atau Gudang Mess
-            targetWarehouseId: null,
-            remark: null,
-          };
-    }, [initialData, currentWarehouseId]),
-  });
-
-  // Watch transactionType untuk menampilkan/menyembunyikan targetWarehouseId
-  const watchTransactionType = form.watch("transactionType");
-  const watchSourceWarehouseId = form.watch("sourceWarehouseId");
-
-  // Filter spare parts yang tersedia
-  const availableSpareParts = useMemo(() => sparePartData, []);
-  // Filter gudang yang tersedia
-  const availableWarehouses = useMemo(() => warehouseData, []);
-
-  // Filter gudang tujuan: tidak boleh sama dengan gudang asal
-  const filteredTargetWarehouses = useMemo(() => {
-    return availableWarehouses.filter((wh) => wh.id !== watchSourceWarehouseId);
-  }, [availableWarehouses, watchSourceWarehouseId]);
-
-  // Reset targetWarehouseId jika transactionType bukan TRANSFER_OUT
-  useEffect(() => {
-    if (watchTransactionType !== TransactionType.TRANSFER_OUT) {
-      form.setValue("targetWarehouseId", null);
-    }
-  }, [watchTransactionType, form]);
-
-  const onSubmit = async (values: StockTransactionFormValues) => {
-    console.log("Mengirim transaksi stok:", values);
-    onSubmitTransaction(values);
-    onClose();
-    form.reset();
+  const mapStockTransactionToFormValues = (st: StockTransaction): StockTransactionFormValues => {
+    return {
+      id: st.id,
+      transactionNumber: st.transactionNumber,
+      transactionDate: format(st.transactionDate, "yyyy-MM-dd"),
+      type: st.type,
+      sparePartId: st.sparePartId,
+      sourceWarehouseId: st.sourceWarehouseId, // Perubahan
+      targetWarehouseId: st.targetWarehouseId || null, // Perubahan
+      quantity: st.quantity,
+      notes: st.notes || null,
+      processedById: st.processedById || null,
+    };
   };
 
-  // Tentukan label untuk Gudang Asal/Penerima
-  const sourceWarehouseLabel = useMemo(() => {
-    if (
-      watchTransactionType === TransactionType.IN ||
-      watchTransactionType === TransactionType.TRANSFER_IN
-    ) {
-      return "Gudang Penerima";
+  const form = useForm<StockTransactionFormValues>({
+    resolver: zodResolver(stockTransactionFormSchema),
+    defaultValues: initialData ? mapStockTransactionToFormValues(initialData) : {
+      transactionNumber: "",
+      transactionDate: format(new Date(), "yyyy-MM-dd"),
+      type: StockTransactionType.IN, 
+      sparePartId: "",
+      sourceWarehouseId: "", // Default
+      targetWarehouseId: null, // Default
+      quantity: 1,
+      notes: null,
+      processedById: null,
+    },
+  });
+
+  // Watch for changes in the 'type' field to conditionally render targetWarehouseId
+  const transactionType = form.watch("type");
+
+  useEffect(() => {
+    if (initialData) {
+      form.reset(mapStockTransactionToFormValues(initialData));
+    } else {
+      form.reset({
+        transactionNumber: "",
+        transactionDate: format(new Date(), "yyyy-MM-dd"),
+        type: StockTransactionType.IN,
+        sparePartId: "",
+        sourceWarehouseId: "",
+        targetWarehouseId: null,
+        quantity: 1,
+        notes: null,
+        processedById: null,
+      });
     }
-    return "Gudang Asal";
-  }, [watchTransactionType]);
+  }, [initialData, form]);
+
+  const handleSubmit = async (values: StockTransactionFormValues) => {
+    await onSubmit(values);
+  };
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4"
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>Detail Transaksi Stok</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <DialogContent className="sm:max-w-[425px] md:max-w-[700px] lg:max-w-[900px]">
+      <DialogHeader>
+        <DialogTitle>{initialData ? "Edit Transaksi Stok" : "Tambahkan Transaksi Stok Baru"}</DialogTitle>
+        <DialogDescription>
+          {initialData ? "Edit detail transaksi stok yang sudah ada." : "Isi detail transaksi stok untuk menambah data transaksi stok baru ke sistem."}
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Field Transaction Number */}
             <FormField
               control={form.control}
-              name="date"
+              name="transactionNumber"
               render={({ field }) => (
-                <FormItem className="">
+                <FormItem>
+                  <FormLabel>Nomor Transaksi</FormLabel>
+                  <FormControl>
+                    <Input placeholder="TRX-202407001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Transaction Date */}
+            <FormField
+              control={form.control}
+              name="transactionDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
                   <FormLabel>Tanggal Transaksi</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
@@ -157,9 +169,9 @@ const StockTransactionDialog: React.FC<StockTransactionDialogProps> = ({
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "PPPP", { locale: localeId })
+                            format(parseISO(field.value), "PPP", { locale: localeId })
                           ) : (
-                            <span>Pilih tanggal</span>
+                            <span>Pilih tanggal transaksi</span>
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -168,9 +180,13 @@ const StockTransactionDialog: React.FC<StockTransactionDialogProps> = ({
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
+                        selected={field.value ? parseISO(field.value) : undefined}
+                        onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : null)}
+                        disabled={(date) =>
+                          date > new Date() || date < new Date("1900-01-01")
+                        }
                         initialFocus
+                        locale={localeId}
                       />
                     </PopoverContent>
                   </Popover>
@@ -178,65 +194,21 @@ const StockTransactionDialog: React.FC<StockTransactionDialogProps> = ({
                 </FormItem>
               )}
             />
-
+            {/* Field Type */}
             <FormField
               control={form.control}
-              name="sparePartId"
+              name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Suku Cadang</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <FormLabel>Tipe Transaksi</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih suku cadang..." />
+                        <SelectValue placeholder="Pilih Tipe Transaksi" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {availableSpareParts.map((sp) => (
-                        <SelectItem key={sp.id} value={sp.id}>
-                          {sp.name} ({sp.partNumber})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Kuantitas</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Jumlah"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="transactionType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Jenis Transaksi</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih jenis transaksi..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.values(TransactionType).map((type) => (
+                      {Object.values(StockTransactionType).map((type) => (
                         <SelectItem key={type} value={type}>
                           {type.replace(/_/g, " ")}
                         </SelectItem>
@@ -247,24 +219,33 @@ const StockTransactionDialog: React.FC<StockTransactionDialogProps> = ({
                 </FormItem>
               )}
             />
-
+            {/* Field Spare Part ID */}
             <FormField
               control={form.control}
-              name="sourceWarehouseId"
+              name="sparePartId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{sourceWarehouseLabel}</FormLabel>{" "}
-                  {/* <-- PERUBAHAN LABEL DI SINI */}
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <FormLabel>Spare Part</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih gudang..." />
+                        <SelectValue placeholder="Pilih Spare Part" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {availableWarehouses.map((wh) => (
-                        <SelectItem key={wh.id} value={wh.id}>
-                          {wh.name}
+                      {sparePartsStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat spare part...
+                        </SelectItem>
+                      )}
+                      {sparePartsStatus === "succeeded" && spareParts.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada spare part
+                        </SelectItem>
+                      )}
+                      {spareParts.map((part: SparePart) => (
+                        <SelectItem key={part.id} value={part.id}>
+                          {part.partName} ({part.partNumber})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -273,71 +254,154 @@ const StockTransactionDialog: React.FC<StockTransactionDialogProps> = ({
                 </FormItem>
               )}
             />
-
-            {watchTransactionType === TransactionType.TRANSFER_OUT && (
+            {/* Field Source Warehouse ID */}
+            <FormField
+              control={form.control}
+              name="sourceWarehouseId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gudang Sumber</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Gudang Sumber" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {warehousesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat gudang...
+                        </SelectItem>
+                      )}
+                      {warehousesStatus === "succeeded" && warehouses.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada gudang
+                        </SelectItem>
+                      )}
+                      {warehouses.map((wh: Warehouse) => (
+                        <SelectItem key={wh.id} value={wh.id}>
+                          {wh.name} ({wh.location})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Target Warehouse ID (Conditional) */}
+            {transactionType === StockTransactionType.TRANSFER && (
               <FormField
                 control={form.control}
                 name="targetWarehouseId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Gudang Tujuan</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ""}
-                    >
+                    <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Pilih gudang tujuan..." />
+                          <SelectValue placeholder="Pilih Gudang Tujuan" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {filteredTargetWarehouses.map((wh) => (
+                        <SelectItem value="">Tidak Ada</SelectItem> {/* Allow null/empty for optional */}
+                        {warehousesStatus === "loading" && (
+                          <SelectItem value="" disabled>
+                            Memuat gudang...
+                          </SelectItem>
+                        )}
+                        {warehousesStatus === "succeeded" && warehouses.length === 0 && (
+                          <SelectItem value="" disabled>
+                            Tidak ada gudang
+                          </SelectItem>
+                        )}
+                        {warehouses.map((wh: Warehouse) => (
                           <SelectItem key={wh.id} value={wh.id}>
-                            {wh.name}
+                            {wh.name} ({wh.location})
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
-                    <FormDescription>
-                      Pilih gudang tujuan untuk transaksi transfer.
-                    </FormDescription>
                   </FormItem>
                 )}
               />
             )}
-
+            {/* Field Quantity */}
             <FormField
               control={form.control}
-              name="remark"
+              name="quantity"
               render={({ field }) => (
-                <FormItem className="col-span-1 md:col-span-2">
-                  <FormLabel>Catatan / Remark</FormLabel>
+                <FormItem>
+                  <FormLabel>Kuantitas</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Contoh: Pembelian dari Toko ABC, Digunakan untuk WO-XYZ"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
+                    <Input type="number" placeholder="1" {...field} onChange={e => field.onChange(Number(e.target.value))} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </CardContent>
-        </Card>
-
-        <DialogFooter className="pt-6">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Batal
-          </Button>
-          <Button type="submit">
-            {initialData ? "Simpan Perubahan" : "Tambah Transaksi"}
-          </Button>
-        </DialogFooter>
-      </form>
-    </Form>
+            {/* Field Notes */}
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Catatan (Opsional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Catatan transaksi..." {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Processed By ID */}
+            <FormField
+              control={form.control}
+              name="processedById"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Diproses Oleh (Opsional)</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Karyawan" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Tidak Ada</SelectItem>
+                      {employeesStatus === "loading" && (
+                        <SelectItem value="" disabled>
+                          Memuat karyawan...
+                        </SelectItem>
+                      )}
+                      {employeesStatus === "succeeded" && employees.length === 0 && (
+                        <SelectItem value="" disabled>
+                          Tidak ada karyawan
+                        </SelectItem>
+                      )}
+                      {employees.filter(e => e.role === EmployeeRole.WAREHOUSE_STAFF || e.role === EmployeeRole.WAREHOUSE_MANAGER).map((e: Employee) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.name} ({e.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Batal
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
   );
-};
-
-export default StockTransactionDialog;
+}

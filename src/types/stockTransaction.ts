@@ -1,45 +1,81 @@
-import * as z from "zod";
+// Import Enums dari Prisma Client
+import { StockTransactionType } from "@prisma/client";
 
-export enum TransactionType {
-  IN = "IN",
-  OUT = "OUT",
-  TRANSFER_OUT = "TRANSFER_OUT",
-  TRANSFER_IN = "TRANSFER_IN",
+// Interface untuk data mentah yang diterima langsung dari API
+export interface RawStockTransactionApiResponse {
+  id: string;
+  transactionNumber: string;
+  transactionDate: string; // Dari API, akan berupa string ISO
+  type: string; // Dari API, akan berupa string
+  sparePartId: string;
+  sourceWarehouseId: string; // Perubahan
+  targetWarehouseId: string | null; // Perubahan
+  quantity: number;
+  notes: string | null;
+  processedById: string | null;
+  createdAt: string; // Dari API, akan berupa string ISO
+  updatedAt: string; // Dari API, akan berupa string ISO
+
+  // Relasi opsional jika disertakan dalam respons API
+  sparePart?: {
+    id: string;
+    partNumber: string;
+    partName: string;
+    unit: string;
+  };
+  sourceWarehouse?: {
+    // Perubahan
+    id: string;
+    name: string;
+  };
+  targetWarehouse?: {
+    // Perubahan
+    id: string;
+    name: string;
+  };
+  processedBy?: {
+    id: string;
+    name: string;
+  };
 }
 
+// Interface untuk data StockTransaction yang sudah diformat di frontend (dengan Date objects dan Enums)
 export interface StockTransaction {
   id: string;
-  date: Date;
+  transactionNumber: string;
+  transactionDate: Date; // Date object
+  type: StockTransactionType; // Tipe Enum Prisma
   sparePartId: string;
+  sourceWarehouseId: string; // Perubahan
+  targetWarehouseId: string | null; // Perubahan
   quantity: number;
-  transactionType: TransactionType;
-  originWarehouseId: string;
-  targetWarehouseId?: string | null;
-  remark?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  notes: string | null;
+  processedById: string | null;
+  createdAt: Date; // Date object
+  updatedAt: Date; // Date object
+
+  // Relasi opsional
+  sparePart?: {
+    id: string;
+    partNumber: string;
+    partName: string;
+    unit: string;
+  };
+  sourceWarehouse?: {
+    // Perubahan
+    id: string;
+    name: string;
+  };
+  targetWarehouse?: {
+    // Perubahan
+    id: string;
+    name: string;
+  };
+  processedBy?: {
+    id: string;
+    name: string;
+  };
 }
 
-export const stockTransactionFormSchema = z.object({
-  id: z.string().optional(),
-  date: z.date({ required_error: "Tanggal wajib diisi" }),
-  sparePartId: z.string().uuid({ message: "Spare part wajib dipilih" }),
-  quantity: z.coerce
-    .number()
-    .int()
-    .min(1, { message: "Jumlah harus lebih dari 0" }),
-  transactionType: z.nativeEnum(TransactionType, {
-    errorMap: () => ({ message: "Tipe transaksi wajib dipilih" }),
-  }),
-  originWarehouseId: z.string().uuid({ message: "Gudang asal wajib dipilih" }),
-  targetWarehouseId: z
-    .string()
-    .uuid({ message: "Gudang tujuan wajib dipilih" })
-    .nullable()
-    .optional(),
-  remark: z.string().optional().nullable(),
-});
-
-export type StockTransactionFormValues = z.infer<
-  typeof stockTransactionFormSchema
->;
+// CATATAN: StockTransactionFormValues TIDAK didefinisikan di sini.
+// Ia akan didefinisikan di src/schemas/stockTransaction.ts menggunakan z.infer.

@@ -1,14 +1,7 @@
-// src/app/(main)/employees/page.tsx
 "use client";
 
 import TableMain from "@/components/common/table/TableMain";
-// Hapus import userData dari "@/lib/sampleTableData"
-// Gunakan data karyawan dari "@/data/sampleEmployeeData"
-import { employeeData as initialEmployeeData } from "@/data/sampleEmployeeData"; // <-- Import data karyawan dummy
-import { useAppSelector } from "@/store/hooks";
-import { User, UserStatus, UserRole } from "@/types/user"; // Mungkin perlu diperbaiki/disesuaikan dengan UserRole di types/employee
-import { useMemo, useState } from "react";
-import { ColumnDef } from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -17,48 +10,131 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { Employee, EmployeeFormValues } from "@/types/employee"; // Import RawEmployeeApiResponse
+import { ColumnDef } from "@tanstack/react-table";
 import { MoreVertical } from "lucide-react";
-import { format } from "date-fns"; // Untuk format tanggal di kolom
-import { id } from "date-fns/locale"; // Untuk locale Indonesia
-
-// IMPOR KOMPONEN DIALOG KARYAWAN DAN TIPE TERKAIT
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Employee,
-  EmployeeFormValues,
-  EmployeeStatus as EmployeeStatusEnum,
-  EmployeeRole as EmployeeRoleEnum,
-} from "@/types/employee"; // Sesuaikan jika ada konflik nama enum
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Dialog } from "@/components/ui/dialog"; // Import Dialog
+import { useToast } from "@/hooks/use-toast";
+import { fetchEmployees, } from "@/store/slices/employeeSlice"; // Import fetchEmployees dan formatEmployeeDates
+import { EmployeeStatus, EmployeeRole } from "@prisma/client"; // Import Enums dari Prisma
+import EmployeeDialog from "@/components/dialog/employeeDialog/_component/EmployeeDialog";
 
-// Untuk generate UUID baru
-import { v4 as uuidv4 } from "uuid";
-import EmployeeDialog from "@/components/dialog/employeeDialog/_component";
+export default function EmployeeListPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const dispatch = useAppDispatch();
 
-export default function EmployeePage() {
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
-  // Gunakan state allEmployees sebagai ganti allUsers
-  const [allEmployees, setAllEmployees] =
-    useState<Employee[]>(initialEmployeeData);
-  // Pastikan activeTab cocok dengan nilai tab di bawah
-  const [activeTab, setActiveTab] = useState<string>("all");
-  // Ganti isNewWoDialogOpen menjadi isEmployeeDialogOpen
-  const [isEmployeeDialogOpen, setIsEmployeeDialogOpen] = useState(false);
+  const allEmployees = useAppSelector((state) => state.employee.employees);
+  const loading = useAppSelector((state) => state.employee.status === 'loading');
+  const error = useAppSelector((state) => state.employee.error);
 
-  // Perbaiki kolom agar sesuai dengan tipe Employee
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const [isEmployeeDialogOpen, setIsEmployeeDialogOpen] = useState<boolean>(false);
+  const [editEmployeeData, setEditEmployeeData] = useState<Employee | undefined>(undefined);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | undefined>(undefined);
+
+  const getAuthToken = useCallback(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("jwt_token");
+    }
+    return null;
+  }, []);
+
+  useEffect(() => {
+    dispatch(fetchEmployees());
+  }, [dispatch]);
+
+  const handleDetailEmployee = useCallback(
+    (employee: Employee) => {
+      router.push(`/employees/${employee.id}`);
+    },
+    [router]
+  );
+
+  const handleEditEmployee = useCallback((employee: Employee) => {
+    setEditEmployeeData(employee);
+    setIsEmployeeDialogOpen(true);
+  }, []);
+
+  const handleSubmitEmployee = useCallback(
+    async (values: EmployeeFormValues) => {
+      console.log("Submit Employee:", values);
+      // Logika untuk POST/PUT ke API
+      // Contoh:
+      // const token = getAuthToken();
+      // if (!token) { /* handle error */ return; }
+      // const method = values.id ? 'PUT' : 'POST';
+      // const url = values.id ? `http://localhost:3000/api/employees/${values.id}` : 'http://localhost:3000/api/employees';
+      // const response = await fetch(url, {
+      //   method,
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${token}`,
+      //   },
+      //   body: JSON.stringify(values),
+      // });
+      // if (!response.ok) { /* handle error */ return; }
+
+      toast({
+        title: "Sukses",
+        description: `Karyawan berhasil di${values.id ? "perbarui" : "tambahkan"}.`,
+      });
+      setIsEmployeeDialogOpen(false);
+      setEditEmployeeData(undefined);
+      dispatch(fetchEmployees()); // Refresh data
+    },
+    [dispatch, toast]
+  );
+
+  const handleDeleteEmployee = useCallback(
+    async (employeeId: string) => {
+      console.log("Delete Employee ID:", employeeId);
+      // Logika untuk DELETE ke API
+      // Contoh:
+      // const token = getAuthToken();
+      // if (!token) { /* handle error */ return; }
+      // const response = await fetch(`http://localhost:3000/api/employees/${employeeId}`, {
+      //   method: 'DELETE',
+      //   headers: {
+      //     'Authorization': `Bearer ${token}`,
+      //   },
+      // });
+      // if (!response.ok) { /* handle error */ return; }
+
+      toast({
+        title: "Sukses",
+        description: "Karyawan berhasil dihapus.",
+      });
+      setEmployeeToDelete(undefined);
+      dispatch(fetchEmployees()); // Refresh data
+    },
+    [dispatch, toast]
+  );
+
   const employeeColumns: ColumnDef<Employee>[] = useMemo(
     () => [
       {
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
+            checked={table.getIsAllPageRowsSelected() ? true : (table.getIsSomePageRowsSelected() ? 'indeterminate' : false)}
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all rows"
           />
         ),
         cell: ({ row }) => (
@@ -71,60 +147,64 @@ export default function EmployeePage() {
         enableSorting: false,
         enableHiding: false,
       },
+      { accessorKey: "employeeId", header: "ID Karyawan" },
       { accessorKey: "name", header: "Nama" },
       { accessorKey: "email", header: "Email" },
-      { accessorKey: "phoneNumber", header: "Telepon" }, // Perbaiki nama kolom
-      { accessorKey: "position", header: "Jabatan" }, // Perbaiki nama kolom
+      { accessorKey: "phone", header: "Telepon" },
+      { accessorKey: "position", header: "Posisi" },
+      { accessorKey: "department", header: "Departemen" },
       {
         accessorKey: "role",
-        header: "Peran",
-        cell: ({ row }) => row.original.role.replace(/_/g, " "), // Format ROLE agar lebih mudah dibaca
+        header: "Role",
+        cell: ({ row }) => {
+          const role = row.original.role;
+          let roleColor: string;
+          switch (role) {
+            case EmployeeRole.ADMIN:
+              roleColor = "bg-red-200 text-red-800";
+              break;
+            case EmployeeRole.ACCOUNTING_MANAGER:
+              roleColor = "bg-blue-200 text-blue-800";
+              break;
+            case EmployeeRole.MECHANIC:
+              roleColor = "bg-green-200 text-green-800";
+              break;
+            case EmployeeRole.USER:
+              roleColor = "bg-gray-200 text-gray-800";
+              break;
+            default:
+              roleColor = "bg-gray-400 text-gray-800";
+          }
+          return (
+            <span className={`${roleColor} px-2 py-1 rounded-full text-xs font-semibold`}>{role}</span>
+          );
+        },
       },
       {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => {
           const status = row.original.status;
-          let statusColor = "";
+          let statusColor: string;
           switch (status) {
-            case EmployeeStatusEnum.ACTIVE: // Gunakan enum dari types/employee
-              statusColor = "bg-green-100 text-green-800";
+            case EmployeeStatus.ACTIVE:
+              statusColor = "bg-green-500 text-white";
               break;
-            case EmployeeStatusEnum.ON_LEAVE:
-              statusColor = "bg-yellow-100 text-yellow-800";
+            case EmployeeStatus.INACTIVE:
+              statusColor = "bg-red-500 text-white";
               break;
-            case EmployeeStatusEnum.INACTIVE:
-              statusColor = "bg-red-100 text-red-800";
+            case EmployeeStatus.ON_LEAVE:
+              statusColor = "bg-yellow-500 text-black";
               break;
-            case EmployeeStatusEnum.TERMINATED:
-              statusColor = "bg-gray-100 text-gray-800";
+            case EmployeeStatus.TERMINATED:
+              statusColor = "bg-gray-700 text-white";
               break;
             default:
-              statusColor = "bg-gray-100 text-gray-700";
+              statusColor = "bg-gray-400 text-gray-800";
           }
           return (
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor}`}
-            >
-              {status.replace(/_/g, " ")}
-            </span>
+            <span className={`${statusColor} px-2 py-1 rounded-full text-xs font-semibold`}>{status}</span>
           );
-        },
-      },
-      // {
-      //   accessorKey: "tanggalLahir",
-      //   header: "Tgl. Lahir",
-      //   cell: ({ row }) => {
-      //     const date = row.original.tanggalLahir;
-      //     return format(date, "dd MMM yyyy", { locale: id });
-      //   },
-      // },
-      {
-        accessorKey: "tanggalBergabung",
-        header: "Tgl. Bergabung",
-        cell: ({ row }) => {
-          const date = row.original.tanggalBergabung;
-          return date ? format(date, "dd MMM yyyy", { locale: id }) : "-";
         },
       },
       {
@@ -140,22 +220,15 @@ export default function EmployeePage() {
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent>
+              <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => alert(`Lihat Karyawan ${employee.name}`)}
-                >
-                  Lihat Karyawan
+                <DropdownMenuItem onClick={() => handleDetailEmployee(employee)}>
+                  Lihat Detail
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => alert(`Edit Karyawan ${employee.name}`)}
-                >
+                <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
                   Edit Karyawan
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => alert(`Hapus Karyawan ${employee.name}`)}
-                  className="text-red-600"
-                >
+                <DropdownMenuItem onClick={() => setEmployeeToDelete(employee)} className="text-red-600">
                   Hapus Karyawan
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -164,118 +237,135 @@ export default function EmployeePage() {
         },
       },
     ],
-    []
+    [handleDetailEmployee, handleEditEmployee]
   );
 
-  // Data yang difilter berdasarkan tab dan search query
-  const filteredEmployees = useMemo(() => {
-    let currentEmployees = allEmployees;
-
-    if (activeTab !== "all") {
-      currentEmployees = currentEmployees.filter((emp) => {
-        // Filter berdasarkan EmployeeStatusEnum
-        if (
-          Object.values(EmployeeStatusEnum).some(
-            (s) => s.toLowerCase() === activeTab
-          )
-        ) {
-          return emp.status.toLowerCase() === activeTab;
-        }
-        // Filter berdasarkan EmployeeRoleEnum (jika Anda ingin tab berdasarkan role juga)
-        if (
-          Object.values(EmployeeRoleEnum).some(
-            (r) => r.toLowerCase() === activeTab
-          )
-        ) {
-          return emp.role.toLowerCase() === activeTab;
-        }
-        return true;
-      });
-    }
-
-    if (searchQuery) {
-      const lowerCaseQuery = searchQuery.toLowerCase();
-      currentEmployees = currentEmployees.filter((emp) =>
-        Object.values(emp).some(
-          (value) =>
-            (typeof value === "string" &&
-              value.toLowerCase().includes(lowerCaseQuery)) ||
-            (value instanceof Date &&
-              format(value, "dd-MM-yyyy").includes(lowerCaseQuery)) || // Pencarian tanggal
-            (typeof value === "number" &&
-              value.toString().includes(lowerCaseQuery))
-        )
-      );
-    }
-    return currentEmployees;
-  }, [allEmployees, activeTab, searchQuery]);
-
   const employeeTabItems = useMemo(() => {
-    const allCount = allEmployees.length;
-    const tabItems = [{ value: "all", label: "All", count: allCount }];
-
-    // Tambahkan tab untuk setiap EmployeeStatus
-    Object.values(EmployeeStatusEnum).forEach((status) => {
-      tabItems.push({
-        value: status.toLowerCase(),
-        label: status.replace(/_/g, " "),
-        count: allEmployees.filter((emp) => emp.status === status).length,
-      });
-    });
-
-    // Tambahkan tab untuk setiap EmployeeRole (opsional, jika Anda ingin)
-    Object.values(EmployeeRoleEnum).forEach((role) => {
-      tabItems.push({
-        value: role.toLowerCase(),
-        label: role.replace(/_/g, " "),
-        count: allEmployees.filter((emp) => emp.role === role).length,
-      });
-    });
-
-    return tabItems;
+    return [
+      { value: "all", label: "All", count: allEmployees.length },
+      {
+        value: EmployeeStatus.ACTIVE.toLowerCase(),
+        label: "Aktif",
+        count: allEmployees.filter((emp) => emp.status === EmployeeStatus.ACTIVE).length,
+      },
+      {
+        value: EmployeeStatus.INACTIVE.toLowerCase(),
+        label: "Tidak Aktif",
+        count: allEmployees.filter((emp) => emp.status === EmployeeStatus.INACTIVE).length,
+      },
+      {
+        value: EmployeeStatus.ON_LEAVE.toLowerCase(),
+        label: "Cuti",
+        count: allEmployees.filter((emp) => emp.status === EmployeeStatus.ON_LEAVE).length,
+      },
+      {
+        value: EmployeeStatus.TERMINATED.toLowerCase(),
+        label: "Diberhentikan",
+        count: allEmployees.filter((emp) => emp.status === EmployeeStatus.TERMINATED).length,
+      },
+      {
+        value: EmployeeRole.ADMIN.toLowerCase(),
+        label: "Admin",
+        count: allEmployees.filter((emp) => emp.role === EmployeeRole.ADMIN).length,
+      },
+      {
+        value: EmployeeRole.SERVICE_MANAGER.toLowerCase(),
+        label: "Manager",
+        count: allEmployees.filter((emp) => emp.role === EmployeeRole.SERVICE_MANAGER).length,
+      },
+      {
+        value: EmployeeRole.MECHANIC.toLowerCase(),
+        label: "Staff",
+        count: allEmployees.filter((emp) => emp.role === EmployeeRole.MECHANIC).length,
+      },
+      {
+        value: EmployeeRole.USER.toLowerCase(),
+        label: "User",
+        count: allEmployees.filter((emp) => emp.role === EmployeeRole.USER).length,
+      },
+    ];
   }, [allEmployees]);
 
-  // Fungsi untuk menangani submit dari EmployeeDialogComponent
-  const handleAddEmployeeSubmit = (values: EmployeeFormValues) => {
-    const newEmployee: Employee = {
-      ...values,
-      id: uuidv4(), // Generate UUID baru
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      // Pastikan properti opsional yang null dari form tetap null atau undefined sesuai interface Employee
-      email: values.email || null,
-      tanggalBergabung: values.tanggalBergabung || null,
-    };
-    setAllEmployees((prev) => [...prev, newEmployee]); // Tambahkan karyawan baru ke state
-    setIsEmployeeDialogOpen(false); // Tutup dialog
-    alert("Karyawan berhasil ditambahkan!");
-  };
+  const filteredEmployees = useMemo(() => {
+    let data = allEmployees;
 
-  const handleDialogClose = () => {
+    if (activeTab !== "all") {
+      data = data.filter((employee) => {
+        const lowerCaseActiveTab = activeTab.toLowerCase();
+        // Cek berdasarkan status
+        if (Object.values(EmployeeStatus).some(s => s.toLowerCase() === lowerCaseActiveTab)) {
+          return employee.status.toLowerCase() === lowerCaseActiveTab;
+        }
+        // Cek berdasarkan role
+        if (Object.values(EmployeeRole).some(r => r.toLowerCase() === lowerCaseActiveTab)) {
+          return employee.role.toLowerCase() === lowerCaseActiveTab;
+        }
+        return false;
+      });
+    }
+
+    return data.filter((employee) =>
+      employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      employee.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (employee.email && employee.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (employee.phone && employee.phone.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (employee.position && employee.position.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (employee.department && employee.department.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [allEmployees, activeTab, searchQuery]);
+
+  const handleAddNewEmployeeClick = useCallback(() => {
+    setEditEmployeeData(undefined);
+    setIsEmployeeDialogOpen(true);
+  }, []);
+
+  const handleEmployeeDialogClose = useCallback(() => {
     setIsEmployeeDialogOpen(false);
-  };
+    setEditEmployeeData(undefined);
+  }, []);
 
   return (
-    <TableMain<Employee> // Ganti User menjadi Employee
-      searchQuery={searchQuery}
-      data={filteredEmployees} // Gunakan filteredEmployees
-      columns={employeeColumns} // Gunakan employeeColumns
-      tabItems={employeeTabItems} // Gunakan employeeTabItems
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      showAddButton={true}
-      showDownloadPrintButtons={true}
-      emptyMessage="Tidak ada karyawan ditemukan." // Pesan kosong yang relevan
-      isDialogOpen={isEmployeeDialogOpen} // Gunakan state yang benar
-      onOpenChange={setIsEmployeeDialogOpen} // Gunakan state yang benar
-      dialogContent={
+    <>
+      <TableMain<Employee>
+        searchQuery={searchQuery}
+        data={filteredEmployees}
+        columns={employeeColumns}
+        tabItems={employeeTabItems} 
+        activeTab={activeTab}       
+        onTabChange={setActiveTab}   
+        showAddButton={true}
+        onAddClick={handleAddNewEmployeeClick}
+        showDownloadPrintButtons={true}
+        emptyMessage={
+          loading ? "Memuat data..." : error ? `Error: ${error}` : "Tidak ada Karyawan ditemukan."
+        }
+      />
+
+      <Dialog open={isEmployeeDialogOpen} onOpenChange={setIsEmployeeDialogOpen}>
         <EmployeeDialog
-          onSubmit={handleAddEmployeeSubmit}
-          onClose={handleDialogClose}
+          onClose={handleEmployeeDialogClose}
+          initialData={editEmployeeData}
+          onSubmit={handleSubmitEmployee}
         />
-      }
-      dialogTitle="Tambah Karyawan Baru" // Judul dialog yang relevan
-      dialogDescription="Isi detail karyawan untuk menambah data karyawan baru ke sistem." // Deskripsi dialog yang relevan
-    />
+      </Dialog>
+
+      <AlertDialog open={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(undefined)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus karyawan &quot;
+              {employeeToDelete?.name}&quot;? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setEmployeeToDelete(undefined)}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => employeeToDelete && handleDeleteEmployee(employeeToDelete.id)}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

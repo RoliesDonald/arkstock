@@ -1,51 +1,16 @@
-import { PrismaClient } from "@/generated/prisma";
-import { authenticateToken, authorizeRoles } from "@/lib/auth";
-import { employeeFormSchema, EmployeeRole } from "@/types/employee";
-import bcrypt from "bcryptjs";
-import { error } from "console";
-import { NextRequest, NextResponse } from "next/server";
-import * as z from "zod";
+import { NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const idSchema = z.object({
-  id: z.string().uuid({ message: "ID karyawan tidak valid" }),
-});
-
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const authResult = await authenticateToken(req);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  const authzResult = await authorizeRoles([
-    EmployeeRole.SUPER_ADMIN,
-    EmployeeRole.ADMIN,
-    EmployeeRole.USER,
-  ])(req);
-  if (authzResult instanceof NextResponse) {
-    return authzResult;
-  }
-
+// Fungsi untuk mengambil detail Employee berdasarkan ID
+export async function GET(request: Request, { params }: { params: { employeeId: string } }) {
+  const { employeeId } = params;
   try {
-    const validation = idSchema.safeParse(params);
-    if (!validation.success) {
-      return NextResponse.json(
-        {
-          error: validation.error.flatten().fieldErrors,
-          message: "ID karyawan tidak valid",
-        },
-        { status: 400 }
-      );
-    }
-    const { id } = validation.data;
-
     const employee = await prisma.employee.findUnique({
-      where: { id: id },
+      where: { id: employeeId },
       select: {
+        // Menggunakan select untuk hanya mengambil properti yang dibutuhkan
         id: true,
         userId: true,
         name: true,
@@ -53,16 +18,17 @@ export async function GET(
         photo: true,
         phone: true,
         address: true,
-        position: true,
+        position: true, // Pastikan 'position' disertakan
         role: true,
         department: true,
         status: true,
         tanggalLahir: true,
         tanggalBergabung: true,
+        gender: true,
         companyId: true,
         company: {
-          // Sertakan nama perusahaan jika ada relasi
           select: {
+            id: true,
             companyName: true,
           },
         },
@@ -70,125 +36,61 @@ export async function GET(
         updatedAt: true,
       },
     });
+
     if (!employee) {
-      return NextResponse.json(
-        { message: "Karyawan tidak ditemukan" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Employee not found" }, { status: 404 });
     }
     return NextResponse.json(employee, { status: 200 });
-  } catch (error) {
-    console.log("Error saat menggambil data employee by ID: ", error);
-    if (error instanceof Error && (error as any).code === "P2025") {
-      return NextResponse.json(
-        { message: "Karyawan tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-    return NextResponse.json(
-      { message: "Terjadi kesalahan server saat mengambil data karyawan" },
-      { status: 500 }
-    );
-  } finally {
-    // await prisma.$disconnect();
+  } catch (error: any) {
+    console.error("Error fetching employee:", error);
+    return NextResponse.json({ message: "Failed to fetch employee", error: error.message }, { status: 500 });
   }
 }
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const authResult = await authenticateToken(req);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  const authzResult = await authorizeRoles([
-    EmployeeRole.SUPER_ADMIN,
-    EmployeeRole.ADMIN,
-  ])(req);
-  if (authzResult instanceof NextResponse) {
-    return authzResult;
-  }
+// Fungsi untuk memperbarui Employee
+export async function PUT(request: Request, { params }: { params: { employeeId: string } }) {
+  const { employeeId } = params;
   try {
-    const idValidation = idSchema.safeParse(params);
-    if (!idValidation.success) {
-      return NextResponse.json(
-        {
-          errors: idValidation.error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
-    }
-    const { id } = idValidation.data;
-    const body = await req.json();
-
-    const validation = employeeFormSchema.partial().safeParse(body);
-    if (!validation.success) {
-      console.error(
-        "Employee validation failed:",
-        validation.error.flatten().fieldErrors
-      );
-      return NextResponse.json(
-        {
-          errors: validation.error.flatten().fieldErrors,
-          message: "Data karyawan tidak valid.",
-        },
-        { status: 400 }
-      );
-    }
-
-    const { password, ...datatoUpdate } = validation.data;
-
-    let hashedPassword = undefined;
-    if (password && password.length > 0) {
-      hashedPassword = await bcrypt.hash(password, 10);
-    }
-
-    if (datatoUpdate.email) {
-      const existingEmployeeByEmail = await prisma.employee.findFirst({
-        where: { email: datatoUpdate.email, NOT: { id: id } },
-      });
-      if (existingEmployeeByEmail) {
-        return NextResponse.json(
-          { message: "Email sudah terdaftar" },
-          { status: 409 }
-        );
-      }
-    }
-    if (datatoUpdate.userId) {
-      const existingEmployeeByUserId = await prisma.employee.findFirst({
-        where: { userId: datatoUpdate.userId, NOT: { id: id } },
-      });
-      if (existingEmployeeByUserId) {
-        return NextResponse.json(
-          {
-            message: "User ID sudah terdafrar",
-          },
-          { status: 409 }
-        );
-      }
-    }
+    const body = await request.json();
+    const {
+      userId,
+      name,
+      email,
+      password,
+      photo,
+      phone,
+      address,
+      position,
+      role,
+      department,
+      status,
+      tanggalLahir,
+      tanggalBergabung,
+      gender,
+      companyId,
+    } = body;
 
     const updatedEmployee = await prisma.employee.update({
-      where: { id: id },
+      where: { id: employeeId },
       data: {
-        ...datatoUpdate,
-        ...(hashedPassword && { password: hashedPassword }),
-        tanggalLahir:
-          datatoUpdate.tanggalLahir === null
-            ? null
-            : datatoUpdate.tanggalLahir
-            ? new Date(datatoUpdate.tanggalLahir)
-            : undefined,
-        tanggalBergabung:
-          datatoUpdate.tanggalBergabung === null
-            ? null
-            : datatoUpdate.tanggalBergabung
-            ? new Date(datatoUpdate.tanggalBergabung)
-            : undefined,
+        userId,
+        name,
+        email,
+        // password, // Hati-hati saat mengupdate password, biasanya ada endpoint terpisah
+        photo,
+        phone,
+        address,
+        position,
+        role,
+        department,
+        status,
+        tanggalLahir: tanggalLahir ? new Date(tanggalLahir) : null,
+        tanggalBergabung: tanggalBergabung ? new Date(tanggalBergabung) : null,
+        gender,
+        company: companyId ? { connect: { id: companyId } } : { disconnect: true },
       },
       select: {
+        // Sertakan properti yang sama seperti GET untuk konsistensi respons
         id: true,
         userId: true,
         name: true,
@@ -202,92 +104,35 @@ export async function PUT(
         status: true,
         tanggalLahir: true,
         tanggalBergabung: true,
+        gender: true,
         companyId: true,
+        company: {
+          select: {
+            id: true,
+            companyName: true,
+          },
+        },
         createdAt: true,
         updatedAt: true,
       },
     });
     return NextResponse.json(updatedEmployee, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating employee:", error);
-    if (error instanceof Error && (error as any).code === "P2025") {
-      return NextResponse.json(
-        { message: "Karyawan tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-    return NextResponse.json(
-      {
-        message: "Terjadi kesalahan server saat memperbarui data karyawan",
-        error: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({ message: "Failed to update employee", error: error.message }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  const authResult = await authenticateToken(req);
-  if (authResult instanceof NextResponse) {
-    return authResult;
-  }
-
-  const authzResult = await authorizeRoles([EmployeeRole.SUPER_ADMIN])(req);
-  if (authzResult instanceof NextRequest) {
-    return authzResult;
-  }
+// Fungsi untuk menghapus Employee
+export async function DELETE(request: Request, { params }: { params: { employeeId: string } }) {
+  const { employeeId } = params;
   try {
-    const validation = idSchema.safeParse(params);
-    if (!validation.success) {
-      return NextResponse.json(
-        {
-          errors: validation.error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
-    }
-    const { id } = validation.data;
-    const deleteEmployee = await prisma.employee.delete({
-      where: { id: id },
-      select: {
-        id: true,
-        name: true,
-      },
+    await prisma.employee.delete({
+      where: { id: employeeId },
     });
-    return NextResponse.json(
-      { message: "Karyawan berhasil dihapus", employee: deleteEmployee },
-      { status: 200 }
-    );
-  } catch (error) {
+    return NextResponse.json({ message: "Employee deleted successfully" }, { status: 200 });
+  } catch (error: any) {
     console.error("Error deleting employee:", error);
-    if (error instanceof Error && (error as any).code === "P2025") {
-      return NextResponse.json(
-        { message: "Karyawan tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-    if (error instanceof Error && (error as any).code === "P2003") {
-      return NextResponse.json(
-        {
-          message:
-            "Karyawan tidak dapat dihapus karena mempunyai relasi dengan data lain",
-        },
-        { status: 409 }
-      );
-    }
-    return NextResponse.json(
-      {
-        message: "Terjadi kesalahan server saat menghapus karyawan",
-        error: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
-  } finally {
-    // await prisma.$disconnect();
+    return NextResponse.json({ message: "Failed to delete employee", error: error.message }, { status: 500 });
   }
 }

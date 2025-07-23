@@ -1,8 +1,22 @@
+// src/components/dialog/warehouseDialog/_components/WarehouseDialog.tsx
 "use client";
 
-import React, { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+
+import { Warehouse } from "@/types/warehouse"; 
+import { warehouseFormSchema, WarehouseFormValues } from "@/schemas/warehouse"; 
+import { WarehouseType } from "@prisma/client"; 
+
+import { Button } from "@/components/ui/button";
+import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -12,59 +26,72 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { DialogFooter } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormDescription } from "@/components/ui/form"; // Pastikan ini diimpor
-
-import { WarehouseFormValues, warehouseFormSchema } from "@/types/warehouse";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface WarehouseDialogProps {
   onClose: () => void;
-  onSubmitWarehouse: (values: WarehouseFormValues) => void;
-  initialData?: WarehouseFormValues; // Data awal untuk mode edit
+  onSubmit: (values: WarehouseFormValues) => Promise<void>;
+  initialData?: Warehouse;
 }
 
-const WarehouseDialog: React.FC<WarehouseDialogProps> = ({
+export default function WarehouseDialog({
   onClose,
-  onSubmitWarehouse,
   initialData,
-}) => {
+  onSubmit,
+}: WarehouseDialogProps) {
+
+  const mapWarehouseToFormValues = (warehouse: Warehouse): WarehouseFormValues => {
+    return {
+      id: warehouse.id,
+      name: warehouse.name,
+      location: warehouse.location,
+      warehouseType: warehouse.warehouseType,
+    };
+  };
+
   const form = useForm<WarehouseFormValues>({
     resolver: zodResolver(warehouseFormSchema),
-    defaultValues: useMemo(() => {
-      return initialData
-        ? {
-            ...initialData,
-            isMainWarehouse: initialData.isMainWarehouse ?? false,
-          }
-        : {
-            name: "",
-            location: "",
-            isMainWarehouse: false,
-          };
-    }, [initialData]),
+    defaultValues: initialData ? mapWarehouseToFormValues(initialData) : {
+      name: "",
+      location: "",
+      warehouseType: WarehouseType.BRANCH_WAREHOUSE, // Default type
+    },
   });
 
-  const onSubmit = async (values: WarehouseFormValues) => {
-    console.log("Mengirim data gudang:", values);
-    onSubmitWarehouse(values);
-    onClose();
-    form.reset();
+  useEffect(() => {
+    if (initialData) {
+      form.reset(mapWarehouseToFormValues(initialData));
+    } else {
+      form.reset({
+        name: "",
+        location: "",
+        warehouseType: WarehouseType.BRANCH_WAREHOUSE,
+      });
+    }
+  }, [initialData, form]);
+
+  const handleSubmit = async (values: WarehouseFormValues) => {
+    await onSubmit(values);
   };
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4"
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>Informasi Gudang</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <DialogContent className="sm:max-w-[425px] md:max-w-[700px] lg:max-w-[900px]">
+      <DialogHeader>
+        <DialogTitle>{initialData ? "Edit Gudang" : "Tambahkan Gudang Baru"}</DialogTitle>
+        <DialogDescription>
+          {initialData ? "Edit detail gudang yang sudah ada." : "Isi detail gudang untuk menambah data gudang baru ke sistem."}
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Field Name */}
             <FormField
               control={form.control}
               name="name"
@@ -72,65 +99,62 @@ const WarehouseDialog: React.FC<WarehouseDialogProps> = ({
                 <FormItem>
                   <FormLabel>Nama Gudang</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Contoh: Gudang Mess, Gudang BM-14"
-                      {...field}
-                    />
+                    <Input placeholder="Gudang Utama" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Location */}
             <FormField
               control={form.control}
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Lokasi</FormLabel>
+                  <FormLabel>Lokasi Gudang</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Contoh: Kantor Pusat, Cabang Surabaya"
-                      {...field}
-                    />
+                    <Input placeholder="Jakarta" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Warehouse Type */}
             <FormField
               control={form.control}
-              name="isMainWarehouse"
+              name="warehouseType"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 col-span-1 md:col-span-2">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Gudang Utama</FormLabel>
-                    <FormDescription>
-                      Centang jika ini adalah gudang utama (misal: Gudang Mess).
-                    </FormDescription>
-                  </div>
+                <FormItem>
+                  <FormLabel>Tipe Gudang</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Tipe Gudang" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(WarehouseType).map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
                 </FormItem>
               )}
             />
-          </CardContent>
-        </Card>
-
-        <DialogFooter className="pt-6">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Batal
-          </Button>
-          <Button type="submit">
-            {initialData ? "Simpan Perubahan" : "Tambah Gudang"}
-          </Button>
-        </DialogFooter>
-      </form>
-    </Form>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Batal
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
   );
-};
-
-export default WarehouseDialog;
+}

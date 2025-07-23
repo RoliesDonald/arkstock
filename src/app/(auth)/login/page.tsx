@@ -9,8 +9,8 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useToast } from "@/hooks/use-toast"; // Pastikan useToast sudah diinstal
 import { useRouter } from "next/navigation"; // Menggunakan useRouter dari next/navigation
+import { useToast } from "@/hooks/use-toast";
 
 // Skema validasi untuk form login
 const loginFormSchema = z.object({
@@ -108,38 +108,19 @@ const LoginPage = () => {
       <div className="w-[40%] h-full bg-arkBg-50 flex flex-col items-center justify-center rounded-tr-3xl rounded-br-3xl px-5 overflow-hidden">
         <div className="w-[80%]">
           <div className="flex flex-col items-center">
-            <Image
-              src="/logo-01.png"
-              alt="logo"
-              width={60}
-              height={60}
-              className="mb-2"
-            />
-            <p className="font-bold flex items-center text-arkBlue-800 text-md">
-              Login to Your Account
-            </p>
+            <Image src="/logo-01.png" alt="logo" width={60} height={60} className="mb-2" />
+            <p className="font-bold flex items-center text-arkBlue-800 text-md">Login to Your Account</p>
           </div>
           <div className="flex mt-5 items-center justify-center w-full py-0 border-2 border-arkBg-300 bg-arkBg-100 rounded-md">
-            <Image
-              src="/google.png"
-              alt="logo"
-              width={40}
-              height={40}
-              className="p-0.5 mr-2 "
-            />
-            <p className="text-arkBlue-800 text-sm font-bold">
-              Login with Google
-            </p>
+            <Image src="/google.png" alt="logo" width={40} height={40} className="p-0.5 mr-2 " />
+            <p className="text-arkBlue-800 text-sm font-bold">Login with Google</p>
           </div>
           <p className="flex w-full justify-center item-center my-4 text-arkBlue-500 text-sm font-semibold italic ">
             or Login with email
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 w-full">
             <div className="my-2">
-              <Label
-                htmlFor="email"
-                className="text-arkBg-500 text-sm font-semibold italic mt-3 pl-2"
-              >
+              <Label htmlFor="email" className="text-arkBg-500 text-sm font-semibold italic mt-3 pl-2">
                 Email
               </Label>
               <Input
@@ -149,17 +130,10 @@ const LoginPage = () => {
                 {...register("email")}
                 className="focus:outline-none w-full placeholder:italic mt-2 text-sm rounded-lg h-[35px] border-2 p-5 bg-arkBg-100 text-arkBlue-800"
               />
-              {errors.email && (
-                <p className="text-red-500 text-xs mt-1 pl-2">
-                  {errors.email.message}
-                </p>
-              )}
+              {errors.email && <p className="text-red-500 text-xs mt-1 pl-2">{errors.email.message}</p>}
             </div>
             <div>
-              <Label
-                htmlFor="password"
-                className="text-arkBg-500 text-sm font-semibold italic mt-3 pl-2"
-              >
+              <Label htmlFor="password" className="text-arkBg-500 text-sm font-semibold italic mt-3 pl-2">
                 Password
               </Label>
               <Input
@@ -170,11 +144,7 @@ const LoginPage = () => {
                 {...register("password")}
                 className="focus:outline-none w-full placeholder:italic text-sm mt-2 rounded-lg h-[35px] border-2 p-5 bg-arkBg-100 text-arkBlue-800"
               />
-              {errors.password && (
-                <p className="text-red-500 text-xs mt-1 pl-2">
-                  {errors.password.message}
-                </p>
-              )}
+              {errors.password && <p className="text-red-500 text-xs mt-1 pl-2">{errors.password.message}</p>}
             </div>
 
             <Button

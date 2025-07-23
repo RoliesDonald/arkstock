@@ -1,8 +1,7 @@
 "use client";
+
 import TableMain from "@/components/common/table/TableMain";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ColumnDef } from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -11,65 +10,58 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { MoreVertical, ChevronDown } from "lucide-react";
-import { format } from "date-fns";
-import { id } from "date-fns/locale";
-
-import {
-  WorkOrder,
-  WoProgresStatus,
-  WorkOrderFormValues,
-} from "@/types/workOrder";
-import {
-  workOrderData as initialWorkOrderData,
-  workOrderData,
-} from "@/data/sampleWorkOrderData";
-
-// IMPOR KOMPONEN DIALOG INVOICE BARU DAN TIPE TERKAIT
-import InvoiceDialog from "@/components/dialog/invoiceDialog/InvoiceDialog"; // <-- IMPORT DIALOG INVOICE BARU
-import {
-  Invoice,
-  InvoiceFormValues,
-  InvoiceItem,
-  InvoiceService,
-  InvoiceStatus,
-} from "@/types/invoice";
-import { sparePartData } from "@/data/sampleSparePartData"; // Untuk lookup spare part
-import { serviceData } from "@/data/sampleServiceData"; // Untuk lookup service
-import { companyData } from "@/data/sampleCompanyData"; // Untuk lookup company
-import { vehicleData } from "@/data/sampleVehicleData"; // Untuk lookup vehicle
-import { userData } from "@/data/sampleUserData"; // Untuk lookup user
-
-import { v4 as uuidv4 } from "uuid";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { WorkOrder, RawWorkOrderApiResponse } from "@/types/workOrder"; 
+import { WorkOrderFormValues } from "@/schemas/workOrder"; 
+import { ColumnDef } from "@tanstack/react-table";
+import { MoreVertical } from "lucide-react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { fetchWorkOrders } from "@/store/slices/workOrderSlice";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Dialog } from "@/components/ui/dialog"; 
+import { useToast } from "@/hooks/use-toast";
+import { fetchWorkOrders, formatWorkOrderDates } from "@/store/slices/workOrderSlice"; 
+import { WoProgresStatus, WoPriorityType } from "@prisma/client"; 
+import { api } from "@/lib/utils/api"; 
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import WorkOrderDialogWrapper from "@/components/dialog/woDialog/_components/WorkOrderDialogWrapper";
 
-export default function WorkOrderPage() {
-  const dispatch = useAppDispatch();
+export default function WorkOrderListPage() {
   const router = useRouter();
-  // const allWorkOrders = useAppSelector((state) => state.workOrders.workOrders);
-  const workOrderStatus = useAppSelector((state) => state.workOrders.status);
-  const workOrderError = useAppSelector((state) => state.workOrders.error);
-  const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
-  const [activeTab, setActiveTab] = useState<string>("all");
-  const [isWoDialogOpen, setIsWoDialogOpen] = useState<boolean>(false);
-  const [editWorkOrderData, setEditWorkOrderData] = useState<
-    WorkOrder | undefined
-  >(undefined);
+  const { toast } = useToast();
+  const dispatch = useAppDispatch();
 
-  const [allWorkOrders, setAllWorkOrders] =
-    useState<WorkOrder[]>(initialWorkOrderData);
+  const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
+  const allWorkOrders = useAppSelector((state) => state.workOrders.workOrders);
+  const loading = useAppSelector((state) => state.workOrders.status === 'loading');
+  const error = useAppSelector((state) => state.workOrders.error);
+
+  const [activeTab, setActiveTab] = useState<string>("all");
+  const [isWorkOrderDialogOpen, setIsWorkOrderDialogOpen] = useState<boolean>(false);
+  const [editWorkOrderData, setEditWorkOrderData] = useState<WorkOrder | undefined>(undefined);
+  const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | undefined>(undefined);
+
+  const getAuthToken = useCallback(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("jwt_token");
+    }
+    return null;
+  }, []);
 
   useEffect(() => {
-    if (workOrderStatus === "idle") {
-      dispatch(fetchWorkOrders());
-    }
-    console.log(
-      "Sample Work Order Data Loaded",
-      JSON.stringify(workOrderData, null, 2)
-    );
-  }, [dispatch, workOrderStatus]);
+    dispatch(fetchWorkOrders());
+  }, [dispatch]);
 
   const handleDetailWorkOrder = useCallback(
     (workOrder: WorkOrder) => {
@@ -78,28 +70,110 @@ export default function WorkOrderPage() {
     [router]
   );
 
-  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
-  const [selectedWoForInvoice, setSelectedWoForInvoice] =
-    useState<WorkOrder | null>(null);
+  const handleEditWorkOrder = useCallback((workOrder: WorkOrder) => {
+    setEditWorkOrderData(workOrder);
+    setIsWorkOrderDialogOpen(true);
+  }, []);
 
-  // State untuk menyimpan daftar Invoice (opsional, tergantung di mana Anda ingin menyimpan invoice)
-  const [allInvoices, setAllInvoices] = useState<Invoice[]>([]); // Dimulai kosong, karena akan dibuat dari WO
+  const handleSubmitWorkOrder = useCallback(
+    async (values: WorkOrderFormValues) => {
+      console.log("Submit Work Order:", values);
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Tidak ada token otentikasi. Silakan login kembali.",
+          variant: "destructive",
+        });
+        router.push("/login");
+        return;
+      }
 
-  // Definisi kolom untuk Work Order
-  const woColumns: ColumnDef<WorkOrder>[] = useMemo(
+      try {
+        const url = `http://localhost:3000/api/work-orders${values.id ? `/${values.id}` : ''}`;
+        
+        let response;
+        if (values.id) {
+          response = await api.put<WorkOrder | RawWorkOrderApiResponse>(url, values, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+        } else {
+          response = await api.post<WorkOrder | RawWorkOrderApiResponse>(url, values, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+        }
+
+        toast({
+          title: "Sukses",
+          description: `Work Order berhasil di${values.id ? "perbarui" : "tambahkan"}.`,
+        });
+        setIsWorkOrderDialogOpen(false);
+        setEditWorkOrderData(undefined);
+        dispatch(fetchWorkOrders()); 
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err.message || "Terjadi kesalahan saat menyimpan Work Order.",
+          variant: "destructive",
+        });
+      }
+    },
+    [dispatch, toast, getAuthToken, router]
+  );
+
+  const handleDeleteWorkOrder = useCallback(
+    async (workOrderId: string) => {
+      console.log("Delete Work Order ID:", workOrderId);
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Tidak ada token otentikasi. Silakan login kembali.",
+          variant: "destructive",
+        });
+        router.push("/login");
+        return;
+      }
+
+      try {
+        await api.delete(`http://localhost:3000/api/work-orders/${workOrderId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        toast({
+          title: "Sukses",
+          description: "Work Order berhasil dihapus.",
+        });
+        setWorkOrderToDelete(undefined);
+        dispatch(fetchWorkOrders()); 
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err.message || "Terjadi kesalahan saat menghapus Work Order.",
+          variant: "destructive",
+        });
+      }
+    },
+    [dispatch, toast, getAuthToken, router]
+  );
+
+  const workOrderColumns: ColumnDef<WorkOrder>[] = useMemo(
     () => [
       {
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
+            checked={table.getIsAllPageRowsSelected() ? true : (table.getIsSomePageRowsSelected() ? 'indeterminate' : false)}
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all rows"
           />
         ),
         cell: ({ row }) => (
@@ -112,56 +186,75 @@ export default function WorkOrderPage() {
         enableSorting: false,
         enableHiding: false,
       },
-      { accessorKey: "woNumber", header: "Nomor WO" },
-      { accessorKey: "woMaster", header: "WO Master" },
+      { accessorKey: "workOrderNumber", header: "Nomor WO" },
+      { accessorKey: "workOrderMaster", header: "Master WO" },
       {
         accessorKey: "date",
-        header: "Tanggal WO",
-        cell: ({ row }) =>
-          format(row.original.date, "dd MMM yyyy", { locale: id }),
+        header: "Tanggal",
+        cell: ({ row }) => format(row.original.date, "PPP", { locale: localeId }),
       },
-      { accessorKey: "settledOdo", header: "Odometer (KM)" },
-      { accessorKey: "remark", header: "Keluhan" },
+      { accessorKey: "vehicle.licensePlate", header: "Plat Kendaraan" },
+      { accessorKey: "customer.companyName", header: "Customer" },
       {
         accessorKey: "progresStatus",
         header: "Status Progres",
         cell: ({ row }) => {
           const status = row.original.progresStatus;
-          let statusColor = "";
+          let statusColor: string;
           switch (status) {
             case WoProgresStatus.DRAFT:
-              statusColor = "bg-gray-100 text-gray-800";
+              statusColor = "bg-gray-200 text-gray-800";
               break;
             case WoProgresStatus.PENDING:
-              statusColor = "bg-yellow-100 text-yellow-800";
+              statusColor = "bg-yellow-200 text-yellow-800";
               break;
             case WoProgresStatus.ON_PROCESS:
-              statusColor = "bg-blue-100 text-blue-800";
+              statusColor = "bg-blue-200 text-blue-800";
               break;
             case WoProgresStatus.WAITING_APPROVAL:
-              statusColor = "bg-purple-100 text-purple-800";
+              statusColor = "bg-orange-200 text-orange-800";
               break;
             case WoProgresStatus.WAITING_PART:
-              statusColor = "bg-orange-100 text-orange-800";
+              statusColor = "bg-purple-200 text-purple-800";
               break;
             case WoProgresStatus.FINISHED:
-              statusColor = "bg-green-100 text-green-800";
+              statusColor = "bg-green-200 text-green-800";
               break;
             case WoProgresStatus.CANCELED:
-              statusColor = "bg-red-100 text-red-800";
+              statusColor = "bg-red-200 text-red-800";
               break;
-            case WoProgresStatus.INVOICE_CREATED: // <-- Status baru
-              statusColor = "bg-indigo-100 text-indigo-800";
+            case WoProgresStatus.INVOICE_CREATED:
+              statusColor = "bg-teal-200 text-teal-800";
               break;
             default:
-              statusColor = "bg-gray-100 text-gray-700";
+              statusColor = "bg-gray-400 text-gray-800";
           }
           return (
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor}`}
-            >
-              {status.replace(/_/g, " ")}
-            </span>
+            <span className={`${statusColor} px-2 py-1 rounded-full text-xs font-semibold`}>{status.replace(/_/g, " ")}</span>
+          );
+        },
+      },
+      {
+        accessorKey: "priorityType",
+        header: "Prioritas",
+        cell: ({ row }) => {
+          const priority = row.original.priorityType;
+          let priorityColor: string;
+          switch (priority) {
+            case WoPriorityType.NORMAL:
+              priorityColor = "bg-green-200 text-green-800";
+              break;
+            case WoPriorityType.URGENT:
+              priorityColor = "bg-orange-200 text-orange-800";
+              break;
+            case WoPriorityType.EMERGENCY:
+              priorityColor = "bg-red-200 text-red-800";
+              break;
+            default:
+              priorityColor = "bg-gray-400 text-gray-800";
+          }
+          return (
+            <span className={`${priorityColor} px-2 py-1 rounded-full text-xs font-semibold`}>{priority}</span>
           );
         },
       },
@@ -170,19 +263,6 @@ export default function WorkOrderPage() {
         enableHiding: false,
         cell: ({ row }) => {
           const workOrder = row.original;
-
-          const handleCreateInvoiceClick = () => {
-            // Hanya izinkan membuat invoice jika WO belum memiliki status INVOICE_CREATED
-            if (workOrder.progresStatus === WoProgresStatus.INVOICE_CREATED) {
-              alert(
-                `Invoice sudah dibuat untuk Work Order ${workOrder.woNumber}.`
-              );
-              return;
-            }
-            setSelectedWoForInvoice(workOrder); // Set Work Order yang dipilih
-            setIsInvoiceDialogOpen(true); // Buka dialog Invoice
-          };
-
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -193,30 +273,13 @@ export default function WorkOrderPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={handleCreateInvoiceClick}
-                  // disable item jika invoice sudah dibuat
-                  disabled={
-                    workOrder.progresStatus === WoProgresStatus.INVOICE_CREATED
-                  }
-                >
-                  Create new Invoice from this WO
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleDetailWorkOrder(workOrder)}
-                  // onClick={() => alert(`Lihat detail WO ${workOrder.woNumber}`)}
-                >
+                <DropdownMenuItem onClick={() => handleDetailWorkOrder(workOrder)}>
                   Lihat Detail
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleDetailWorkOrder(workOrder)}
-                >
+                <DropdownMenuItem onClick={() => handleEditWorkOrder(workOrder)}>
                   Edit Work Order
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => alert(`Hapus WO ${workOrder.woNumber}`)}
-                  className="text-red-600"
-                >
+                <DropdownMenuItem onClick={() => setWorkOrderToDelete(workOrder)} className="text-red-600">
                   Hapus Work Order
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -225,256 +288,162 @@ export default function WorkOrderPage() {
         },
       },
     ],
-    [handleDetailWorkOrder]
+    [handleDetailWorkOrder, handleEditWorkOrder]
   );
 
-  const filteredWorkOrders = useMemo(() => {
-    let currentWorkOrders = allWorkOrders;
-    if (activeTab !== "all") {
-      currentWorkOrders = currentWorkOrders.filter((wo) => {
-        const activeStatus = activeTab.toUpperCase().replace(/ /g, "_");
-        if (
-          Object.values(WoProgresStatus).includes(
-            activeStatus as WoProgresStatus
-          )
-        ) {
-          return wo.progresStatus === (activeStatus as WoProgresStatus);
-        }
-        return true;
-      });
-    }
-    if (searchQuery) {
-      const lowerCaseQuery = searchQuery.toLowerCase();
-      currentWorkOrders = currentWorkOrders.filter((wo) =>
-        Object.values(wo).some(
-          (value) =>
-            (typeof value === "string" &&
-              value.toLowerCase().includes(lowerCaseQuery)) ||
-            (value instanceof Date &&
-              format(value, "dd-MM-yyyy").includes(lowerCaseQuery)) ||
-            (typeof value === "number" &&
-              value.toString().includes(lowerCaseQuery))
-        )
-      );
-    }
-    return currentWorkOrders;
-  }, [allWorkOrders, activeTab, searchQuery]);
-
-  const woTabItems = useMemo(() => {
-    const allCount = allWorkOrders.length;
-    const tabItems = [{ value: "all", label: "All", count: allCount }];
-
-    Object.values(WoProgresStatus).forEach((status) => {
-      tabItems.push({
-        value: status.toLowerCase().replace(/_/g, " "),
-        label: status.replace(/_/g, " "),
-        count: allWorkOrders.filter((wo) => wo.progresStatus === status).length,
-      });
-    });
-
-    return tabItems;
+  const workOrderTabItems = useMemo(() => {
+    return [
+      { value: "all", label: "All", count: allWorkOrders.length },
+      // Tabs for WoProgresStatus
+      {
+        value: WoProgresStatus.DRAFT.toLowerCase(),
+        label: "Draft",
+        count: allWorkOrders.filter((wo) => wo.progresStatus === WoProgresStatus.DRAFT).length,
+      },
+      {
+        value: WoProgresStatus.PENDING.toLowerCase(),
+        label: "Pending",
+        count: allWorkOrders.filter((wo) => wo.progresStatus === WoProgresStatus.PENDING).length,
+      },
+      {
+        value: WoProgresStatus.ON_PROCESS.toLowerCase(),
+        label: "Dalam Proses",
+        count: allWorkOrders.filter((wo) => wo.progresStatus === WoProgresStatus.ON_PROCESS).length,
+      },
+      {
+        value: WoProgresStatus.WAITING_APPROVAL.toLowerCase(),
+        label: "Menunggu Persetujuan",
+        count: allWorkOrders.filter((wo) => wo.progresStatus === WoProgresStatus.WAITING_APPROVAL).length,
+      },
+      {
+        value: WoProgresStatus.WAITING_PART.toLowerCase(),
+        label: "Menunggu Part",
+        count: allWorkOrders.filter((wo) => wo.progresStatus === WoProgresStatus.WAITING_PART).length,
+      },
+      {
+        value: WoProgresStatus.FINISHED.toLowerCase(),
+        label: "Selesai",
+        count: allWorkOrders.filter((wo) => wo.progresStatus === WoProgresStatus.FINISHED).length,
+      },
+      {
+        value: WoProgresStatus.CANCELED.toLowerCase(),
+        label: "Dibatalkan",
+        count: allWorkOrders.filter((wo) => wo.progresStatus === WoProgresStatus.CANCELED).length,
+      },
+      {
+        value: WoProgresStatus.INVOICE_CREATED.toLowerCase(),
+        label: "Invoice Dibuat",
+        count: allWorkOrders.filter((wo) => wo.progresStatus === WoProgresStatus.INVOICE_CREATED).length,
+      },
+      // Tabs for WoPriorityType
+      {
+        value: WoPriorityType.NORMAL.toLowerCase(),
+        label: "Normal",
+        count: allWorkOrders.filter((wo) => wo.priorityType === WoPriorityType.NORMAL).length,
+      },
+      {
+        value: WoPriorityType.URGENT.toLowerCase(),
+        label: "Urgent",
+        count: allWorkOrders.filter((wo) => wo.priorityType === WoPriorityType.URGENT).length,
+      },
+      {
+        value: WoPriorityType.EMERGENCY.toLowerCase(),
+        label: "Emergency",
+        count: allWorkOrders.filter((wo) => wo.priorityType === WoPriorityType.EMERGENCY).length,
+      },
+    ];
   }, [allWorkOrders]);
 
-  // Fungsi untuk menangani submit Work Order baru (jika masih ada tombol "Tambah Baru" WO)
-  const handleAddWoSubmit = (values: WorkOrderFormValues) => {
-    const newWo: WorkOrder = {
-      id: uuidv4(),
-      ...values,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      woNumber: values.woNumber!,
-      schedule: values.schedule,
-      notes: values.notes || null,
-      mechanicId: values.mechanicId || null,
-      driverId: values.driverId || null,
-      driverContact: values.driverContact || null,
-      approvedById: values.approvedById || null,
-      requestedById: values.requestedById || null,
-      locationId: values.locationId || null,
-      settledOdo: values.settledOdo ?? null,
-    };
-    setAllWorkOrders((prev) => [...prev, newWo]);
-    setIsWoDialogOpen(false);
-    alert("Work Order berhasil ditambahkan!");
-  };
+  const filteredWorkOrders = useMemo(() => {
+    let data = allWorkOrders;
 
-  // Fungsi untuk menangani submit Invoice baru dari InvoiceDialog
-  const handleAddInvoiceSubmit = (values: InvoiceFormValues) => {
-    if (!selectedWoForInvoice) {
-      console.error("Tidak ada Work Order yang dipilih untuk membuat Invoice.");
-      return;
+    if (activeTab !== "all") {
+      data = data.filter((workOrder) => {
+        const lowerCaseActiveTab = activeTab.toLowerCase();
+        // Cek berdasarkan WoProgresStatus
+        if (Object.values(WoProgresStatus).some(s => s.toLowerCase() === lowerCaseActiveTab)) {
+          return workOrder.progresStatus.toLowerCase() === lowerCaseActiveTab;
+        }
+        // Cek berdasarkan WoPriorityType
+        if (Object.values(WoPriorityType).some(p => p.toLowerCase() === lowerCaseActiveTab)) {
+          return workOrder.priorityType.toLowerCase() === lowerCaseActiveTab;
+        }
+        return false;
+      });
     }
 
-    // Lookup data terkait dari Work Order yang dipilih
-    const vehicle = vehicleData.find(
-      (v) => v.id === selectedWoForInvoice.vehicleId
+    return data.filter((workOrder) =>
+      workOrder.workOrderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      workOrder.workOrderMaster.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      workOrder.remark.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      workOrder.serviceLocation.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (workOrder.notes && workOrder.notes.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      workOrder.vehicleMake.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (workOrder.vehicle?.licensePlate && workOrder.vehicle.licensePlate.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (workOrder.customer?.companyName && workOrder.customer.companyName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (workOrder.carUser?.companyName && workOrder.carUser.companyName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (workOrder.vendor?.companyName && workOrder.vendor.companyName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (workOrder.mechanic?.name && workOrder.mechanic.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (workOrder.driver?.name && workOrder.driver.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (workOrder.driverContact && workOrder.driverContact.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (workOrder.approvedBy?.name && workOrder.approvedBy.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (workOrder.requestedBy?.name && workOrder.requestedBy.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (workOrder.location?.name && workOrder.location.name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-    const customerCompany = companyData.find(
-      (c) => c.id === selectedWoForInvoice.customerId
-    );
-    const carUserCompany = companyData.find(
-      (c) => c.id === selectedWoForInvoice.carUserId
-    );
-    const mechanicUser = userData.find(
-      (u) => u.id === selectedWoForInvoice.mechanicId
-    );
-    const approvedByUser = userData.find(
-      (u) => u.id === selectedWoForInvoice.approvedById
-    );
+  }, [allWorkOrders, activeTab, searchQuery]);
 
-    // Transform partItems dari form values ke InvoiceItem[]
-    const transformedPartItems: InvoiceItem[] =
-      values.partItems?.map((item) => {
-        const sparePart = sparePartData.find(
-          (sp) => sp.id === item.sparePartId
-        );
-        return {
-          id: uuidv4(),
-          invoiceId: "", // Akan diisi saat disimpan ke DB
-          sparePartId: item.sparePartId,
-          itemName: item.itemName,
-          partNumber: item.partNumber,
-          quantity: item.quantity,
-          unit: item.unit,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          sparePart: sparePart, // Sertakan detail spare part untuk tampilan
-        };
-      }) || [];
+  const handleAddNewWorkOrderClick = useCallback(() => {
+    setEditWorkOrderData(undefined);
+    setIsWorkOrderDialogOpen(true);
+  }, []);
 
-    // Transform serviceItems dari form values ke InvoiceService[]
-    const transformedServiceItems: InvoiceService[] =
-      values.serviceItems?.map((item) => {
-        const service = serviceData.find((s) => s.id === item.serviceId);
-        return {
-          id: uuidv4(),
-          invoiceId: "", // Akan diisi saat disimpan ke DB
-          serviceId: item.serviceId,
-          serviceName: item.serviceName,
-          description: item.description ?? null,
-          quantity: item.quantity,
-          price: item.price,
-          totalPrice: item.totalPrice,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          service: service, // Sertakan detail service untuk tampilan
-        };
-      }) || [];
-
-    // 1. Buat objek Invoice baru
-    const newInvoice: Invoice = {
-      id: uuidv4(), // Generate ID unik untuk Invoice
-      invNum:
-        values.invNum ||
-        `INV-${new Date().getFullYear()}-${(new Date().getMonth() + 1)
-          .toString()
-          .padStart(2, "0")}-${uuidv4().substring(0, 5).toUpperCase()}`,
-      date: values.date,
-      requestOdo: values.requestOdo ?? null,
-      actualOdo: values.actualOdo ?? null,
-      remark: values.remark,
-      finished: values.finished,
-      totalAmount: values.totalAmount || 0,
-      woId: selectedWoForInvoice.id, // Link ke Work Order yang dipilih
-
-      // Properti yang diambil dari Work Order untuk tampilan di Invoice
-      woMaster: selectedWoForInvoice.woMaster,
-      vehicleMake: vehicle?.vehicleMake || "",
-      model: vehicle?.model || "",
-      licensePlate: vehicle?.licensePlate || "",
-      vinNum: vehicle?.vinNum || null,
-      engineNum: vehicle?.engineNum || null,
-      customer: customerCompany?.companyName || "",
-      carUser: carUserCompany?.companyName || "",
-      mechanic: mechanicUser?.name || null,
-      approvedBy: approvedByUser?.name || null,
-
-      status: values.status || InvoiceStatus.DRAFT,
-      invoiceItems: transformedPartItems, // Gunakan transformed items
-      invoiceServices: transformedServiceItems, // Gunakan transformed services
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    console.log("Invoice baru ditambahkan:", newInvoice);
-
-    // 2. Tambahkan invoice baru ke state (contoh: allInvoices)
-    setAllInvoices((prev: Invoice[]) => [...prev, newInvoice]);
-
-    // 3. Update status Work Order yang terkait
-    setAllWorkOrders((prevWorkOrders: WorkOrder[]) =>
-      prevWorkOrders.map((wo) =>
-        wo.id === selectedWoForInvoice.id
-          ? { ...wo, progresStatus: WoProgresStatus.INVOICE_CREATED }
-          : wo
-      )
-    );
-
-    // 4. Tutup dialog Invoice dan reset state
-    setIsInvoiceDialogOpen(false);
-    setSelectedWoForInvoice(null);
-    alert("Invoice berhasil dibuat dan status Work Order diperbarui!");
-  };
-
-  const handleWoDialogClose = () => {
-    setIsWoDialogOpen(false);
-  };
-
-  const handleInvoiceDialogClose = () => {
-    setIsInvoiceDialogOpen(false);
-    setSelectedWoForInvoice(null); // Penting: Reset selectedWoForInvoice
-  };
+  const handleWorkOrderDialogClose = useCallback(() => {
+    setIsWorkOrderDialogOpen(false);
+    setEditWorkOrderData(undefined);
+  }, []);
 
   return (
     <>
       <TableMain<WorkOrder>
         searchQuery={searchQuery}
         data={filteredWorkOrders}
-        columns={woColumns}
-        tabItems={woTabItems}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        showAddButton={false}
+        columns={workOrderColumns}
+        tabItems={workOrderTabItems} 
+        activeTab={activeTab}       
+        onTabChange={setActiveTab}   
+        showAddButton={true}
+        onAddClick={handleAddNewWorkOrderClick}
         showDownloadPrintButtons={true}
-        emptyMessage="Tidak ada Work Order ditemukan."
-        // Properti dialog untuk WO (bisa dipertahankan jika ada flow edit WO atau tambah manual dari halaman lain)
-        isDialogOpen={isWoDialogOpen}
-        onOpenChange={setIsWoDialogOpen}
-        // dialogContent={<InvDialog onClose={handleWoDialogClose} />}
-        dialogTitle="Buat Work Order Baru (Manual)"
-        // extraButtonLabel="Buat WO Baru"
-        dialogDescription="Isi detail Work Order secara manual."
+        emptyMessage={
+          loading ? "Memuat data..." : error ? `Error: ${error}` : "Tidak ada Work Order ditemukan."
+        }
       />
 
-      {/* Dialog untuk membuat Invoice dari WO yang dipilih */}
-      {isInvoiceDialogOpen &&
-        selectedWoForInvoice && ( // Render hanya jika dialog terbuka dan ada WO yang dipilih
-          <TableMain // Re-use TableMain's Dialog wrapper capabilities
-            isDialogOpen={isInvoiceDialogOpen}
-            onOpenChange={setIsInvoiceDialogOpen}
-            dialogContent={
-              <InvoiceDialog
-                initialWoData={selectedWoForInvoice} // Teruskan data WO yang dipilih
-                onSubmitInvoice={handleAddInvoiceSubmit}
-                onClose={handleInvoiceDialogClose}
-              />
-            }
-            dialogTitle={`Buat Invoice dari WO: ${
-              selectedWoForInvoice?.woNumber || "N/A"
-            }`}
-            dialogDescription="Isi detail invoice berdasarkan Work Order yang dipilih."
-            // Props ini tidak digunakan oleh TableMain jika hanya sebagai wrapper Dialog,
-            // tetapi harus ada agar tidak ada error TypeScript jika TableMain mengharapkan semua props ini.
-            searchQuery={""}
-            data={[]}
-            columns={[]}
-            tabItems={[]}
-            activeTab={""}
-            onTabChange={() => {}}
-          />
-        )}
+      <Dialog open={isWorkOrderDialogOpen} onOpenChange={setIsWorkOrderDialogOpen}>
+        <WorkOrderDialogWrapper 
+          onClose={handleWorkOrderDialogClose}
+          initialData={editWorkOrderData}
+          onSubmit={handleSubmitWorkOrder}
+        />
+      </Dialog>
+
+      <AlertDialog open={!!workOrderToDelete} onOpenChange={(open) => !open && setWorkOrderToDelete(undefined)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus Work Order &quot;
+              {workOrderToDelete?.workOrderNumber}&quot;? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setWorkOrderToDelete(undefined)}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => workOrderToDelete && handleDeleteWorkOrder(workOrderToDelete.id)}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

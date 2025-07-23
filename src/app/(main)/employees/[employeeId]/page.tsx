@@ -1,287 +1,131 @@
-// src/app/(admin)/(auth)/(main)/employees/[employeeId]/page.tsx
 "use client";
 
-import { useParams } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  fetchEmployeeById,
-  updateEmployee,
-} from "@/store/slices/employeeSlice";
-import {
-  Employee,
-  EmployeeFormValues,
-  EmployeeRole,
-  EmployeeStatus,
-} from "@/types/employee";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
-import { id as localeId } from "date-fns/locale";
-import { fetchCompanies } from "@/store/slices/companySlice";
+import { useRouter, useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import EmployeeDialog from "@/components/dialog/employeeDialog/_component";
+import { Employee, RawEmployeeApiResponse } from "@/types/employee"; 
+import { EmployeeStatus, EmployeeRole, Gender } from "@prisma/client"; // <--- IMPORT GENDER DARI @PRISMA/CLIENT
+import { Button } from "@/components/ui/button";
+
+// ... sisa import lainnya
 
 export default function EmployeeDetailPage() {
+  const router = useRouter();
   const params = useParams();
-  const employeeId = params.employeeId as string;
-  const dispatch = useAppDispatch();
   const { toast } = useToast();
+  const employeeId = params.employeeId as string;
 
-  const allEmployees = useAppSelector((state) => state.employee.employees);
-  const employeeStatus = useAppSelector((state) => state.employee.status);
-  const employeeError = useAppSelector((state) => state.employee.error);
+  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [isEmployeeDialogOpen, setIsEmployeeDialogOpen] =
-    useState<boolean>(false);
-  const [editEmployeeData, setEditEmployeeData] = useState<
-    Employee | undefined
-  >(undefined);
-  const [localEmployee, setLocalEmployee] = useState<Employee | undefined>(
-    undefined
-  );
-
-  const employeeFromStore = allEmployees.find((emp) => emp.id === employeeId);
-
-  useEffect(() => {
-    if (employeeFromStore) {
-      setLocalEmployee(employeeFromStore);
-    } else if (employeeId && employeeStatus !== "loading") {
-      dispatch(fetchEmployeeById(employeeId))
-        .unwrap()
-        .then((employee) => {
-          setLocalEmployee(employee);
-        })
-        .catch((error) => {
-          toast({
-            title: "Error",
-            description: error.message || "Gagal memuat detail karyawan.",
-            variant: "destructive",
-          });
-        });
-    } else if (!employeeId) {
-      toast({
-        title: "Error",
-        description: "ID karyawan tidak valid atau tidak ditemukan di URL.",
-        variant: "destructive",
-      });
-      console.error("EmployeeDetailPage: employeeId is undefined or null.");
+  const getAuthToken = useCallback(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("jwt_token");
     }
-    dispatch(fetchCompanies());
-  }, [employeeId, employeeFromStore, dispatch, employeeStatus, toast]);
-
-  const handleEditClick = useCallback(() => {
-    if (localEmployee) {
-      setEditEmployeeData(localEmployee);
-      setIsEmployeeDialogOpen(true);
-    }
-  }, [localEmployee]);
-
-  const handleSaveEmployee = useCallback(
-    async (values: EmployeeFormValues) => {
-      if (values.id) {
-        try {
-          await dispatch(updateEmployee(values)).unwrap();
-          toast({
-            title: "Sukses",
-            description: "Karyawan berhasil diperbarui.",
-          });
-          dispatch(fetchEmployeeById(values.id));
-        } catch (error: any) {
-          toast({
-            title: "Error",
-            description: error.message || "Gagal memperbarui karyawan.",
-            variant: "destructive",
-          });
-        }
-      }
-      setIsEmployeeDialogOpen(false);
-      setEditEmployeeData(undefined);
-    },
-    [dispatch, toast]
-  );
-
-  const handleDialogClose = useCallback(() => {
-    setIsEmployeeDialogOpen(false);
-    setEditEmployeeData(undefined);
+    return null;
   }, []);
 
-  if (employeeStatus === "loading" && !localEmployee) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <p className="text-lg text-gray-600">Memuat detail karyawan...</p>
-      </div>
-    );
-  }
+  const fetchEmployee = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const token = getAuthToken();
 
-  if (employeeStatus === "failed" && !localEmployee) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <p className="text-lg text-red-500">Error: {employeeError}</p>
-      </div>
-    );
-  }
+    if (!token) {
+      setError("Tidak ada token otentikasi. Silakan login kembali.");
+      setLoading(false);
+      router.push("/login"); 
+      return;
+    }
 
-  if (!localEmployee) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <p className="text-lg text-gray-600">Karyawan tidak ditemukan.</p>
-      </div>
-    );
-  }
+    try {
+      const response = await fetch(`http://localhost:3000/api/employees/${employeeId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-  const displayEmployee = localEmployee;
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          toast({
+            title: "Sesi Habis",
+            description: "Token tidak valid atau kadaluarsa. Silakan login kembali.",
+            variant: "destructive",
+          });
+          router.push("/");
+          return;
+        }
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil data karyawan.");
+      }
+
+      const rawData: RawEmployeeApiResponse = await response.json();
+      const formattedData: Employee = {
+        ...rawData,
+        tanggalLahir: rawData.tanggalLahir ? new Date(rawData.tanggalLahir) : null,
+        tanggalBergabung: rawData.tanggalBergabung ? new Date(rawData.tanggalBergabung) : null,
+        createdAt: new Date(rawData.createdAt),
+        updatedAt: new Date(rawData.updatedAt),
+        role: rawData.role as EmployeeRole,
+        status: rawData.status as EmployeeStatus,
+        gender: rawData.gender as Gender, // Konversi string ke Gender Enum dari @prisma/client
+      };
+
+      setEmployee(formattedData);
+      console.log("Data Karyawan yang diterima dari API (formatted):", formattedData);
+    } catch (err: any) {
+      setError(err.message);
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [employeeId, getAuthToken, router, toast]);
+
+  useEffect(() => {
+    if (employeeId) {
+      fetchEmployee();
+    }
+  }, [employeeId, fetchEmployee]);
+
+  if (loading) return <div>Memuat detail karyawan...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!employee) return <div>Karyawan tidak ditemukan.</div>;
 
   return (
-    <div className="container mx-auto py-8 space-y-3 ">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl font-bold">
-              {displayEmployee.name}
-            </CardTitle>
-            <CardDescription className="text-arkBg-600">
-              Detail Lengkap Karyawan
-            </CardDescription>
-          </div>
-          <Button onClick={handleEditClick}>Edit Karyawan</Button>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg">
-          <div className="space-y-3 text-sm">
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">User ID</p>
-              <p>: {displayEmployee.userId || "N/A"}</p>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Detail Karyawan: {employee.name}</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <p><strong>ID Karyawan:</strong> {employee.employeeId}</p>
+          <p><strong>Nama:</strong> {employee.name}</p>
+          <p><strong>Email:</strong> {employee.email || 'N/A'}</p>
+          <p><strong>Telepon:</strong> {employee.phone || 'N/A'}</p>
+          <p><strong>Alamat:</strong> {employee.address || 'N/A'}</p>
+          <p><strong>Posisi:</strong> {employee.position || 'N/A'}</p>
+          <p><strong>Departemen:</strong> {employee.department || 'N/A'}</p>
+          <p><strong>Role:</strong> {employee.role}</p>
+          <p><strong>Status:</strong> {employee.status}</p>
+          <p><strong>Jenis Kelamin:</strong> {employee.gender}</p> 
+          <p><strong>Tanggal Lahir:</strong> {employee.tanggalLahir ? new Intl.DateTimeFormat("id-ID").format(employee.tanggalLahir) : 'N/A'}</p>
+          <p><strong>Tanggal Bergabung:</strong> {employee.tanggalBergabung ? new Intl.DateTimeFormat("id-ID").format(employee.tanggalBergabung) : 'N/A'}</p>
+          <p><strong>Perusahaan:</strong> {employee.company?.companyName || 'N/A'}</p>
+          <p><strong>Dibuat Pada:</strong> {new Intl.DateTimeFormat("id-ID").format(employee.createdAt)}</p>
+          <p><strong>Diperbarui Pada:</strong> {new Intl.DateTimeFormat("id-ID").format(employee.updatedAt)}</p>
+        </div>
+        <div>
+          {employee.photo && (
+            <div className="mb-4">
+              <strong>Foto:</strong>
+              <img src={employee.photo} alt="Foto Karyawan" className="mt-2 rounded-md max-w-xs" />
             </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Email</p>
-              <p>: {displayEmployee.email || "N/A"}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Telepon</p>
-              <p>: {displayEmployee.phone || "N/A"}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Posisi</p>
-              <p>: {displayEmployee.position || "N/A"}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Departemen</p>
-              <p>: {displayEmployee.department || "N/A"}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Role</p>
-              <p>
-                :
-                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
-                  {displayEmployee.role.replace(/_/g, " ")}
-                </span>
-              </p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Status</p>
-              <p>
-                :
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-semibold
-                    ${
-                      displayEmployee.status === EmployeeStatus.ACTIVE
-                        ? "bg-green-100 text-green-800"
-                        : displayEmployee.status === EmployeeStatus.INACTIVE
-                        ? "bg-red-100 text-red-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
-                >
-                  {displayEmployee.status?.replace(/_/g, " ")}
-                </span>
-              </p>
-            </div>
-          </div>
-          <div className="space-y-3 text-sm">
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Alamat</p>
-              <p>: {displayEmployee.address || "N/A"}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Perusahaan</p>
-              <p>: {displayEmployee.company?.companyName || "N/A"}</p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Tanggal Lahir</p>
-              <p>
-                :
-                {displayEmployee.tanggalLahir
-                  ? format(
-                      new Date(displayEmployee.tanggalLahir),
-                      "dd MMMM yyyy",
-                      { locale: localeId }
-                    )
-                  : "N/A"}
-              </p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Tanggal Bergabung</p>
-              <p>
-                :
-                {displayEmployee.tanggalBergabung
-                  ? format(
-                      new Date(displayEmployee.tanggalBergabung),
-                      "dd MMMM yyyy",
-                      { locale: localeId }
-                    )
-                  : "N/A"}
-              </p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Dibuat Pada</p>
-              <p>
-                :
-                {format(
-                  new Date(displayEmployee.createdAt),
-                  "dd MMMM yyyy HH:mm",
-                  { locale: localeId }
-                )}
-              </p>
-            </div>
-            <div className="grid grid-cols-[180px_1fr] items-baseline">
-              <p className="font-bold">Di Update pada</p>
-              <p>
-                :
-                {format(
-                  new Date(displayEmployee.updatedAt),
-                  "dd MMMM yyyy HH:mm",
-                  { locale: localeId }
-                )}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      <Card className="py-4 border-0 shadow-none">
-        <CardContent>
-          {isEmployeeDialogOpen && (
-            <EmployeeDialog
-              isOpen={isEmployeeDialogOpen}
-              onClose={handleDialogClose}
-              initialData={editEmployeeData}
-              onSubmit={handleSaveEmployee}
-              dialogTitle={
-                editEmployeeData ? "Edit Karyawan" : "Tambahkan Karyawan Baru"
-              }
-              dialogDescription={
-                editEmployeeData
-                  ? "Edit detail karyawan yang sudah ada."
-                  : "Isi detail karyawan untuk menambah data karyawan baru ke sistem."
-              }
-            />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      <Button onClick={() => router.back()} className="mt-4">Kembali</Button>
     </div>
   );
 }

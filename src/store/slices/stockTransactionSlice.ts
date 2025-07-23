@@ -1,94 +1,73 @@
-import {
-  StockTransaction,
-  StockTransactionFormValues,
-} from "@/types/stockTransaction";
+// src/store/slices/stockTransactionSlice.ts
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { stockTransactionData as initialStockTransactionData } from "@/data/sampleStockTransactionData";
-import { v4 as _uuidv4 } from "uuid";
-import { resolve } from "path";
-import { stat } from "fs";
+import { StockTransaction, RawStockTransactionApiResponse } from "@/types/stockTransaction";
+import { api } from "@/lib/utils/api";
+import { StockTransactionType } from "@prisma/client";
+
+export const formatStockTransactionDates = (
+  rawTransaction: RawStockTransactionApiResponse
+): StockTransaction => {
+  return {
+    ...rawTransaction,
+    transactionDate: new Date(rawTransaction.transactionDate),
+    createdAt: new Date(rawTransaction.createdAt),
+    updatedAt: new Date(rawTransaction.updatedAt),
+    type: rawTransaction.type as StockTransactionType,
+    // Relasi akan di-map jika disertakan dalam respons API
+    sparePart: rawTransaction.sparePart
+      ? {
+          id: rawTransaction.sparePart.id,
+          partNumber: rawTransaction.sparePart.partNumber,
+          partName: rawTransaction.sparePart.partName,
+          unit: rawTransaction.sparePart.unit,
+        }
+      : undefined,
+    sourceWarehouse: rawTransaction.sourceWarehouse
+      ? {
+          // Perubahan
+          id: rawTransaction.sourceWarehouse.id,
+          name: rawTransaction.sourceWarehouse.name,
+        }
+      : undefined,
+    targetWarehouse: rawTransaction.targetWarehouse
+      ? {
+          // Perubahan
+          id: rawTransaction.targetWarehouse.id,
+          name: rawTransaction.targetWarehouse.name,
+        }
+      : undefined,
+    processedBy: rawTransaction.processedBy
+      ? {
+          id: rawTransaction.processedBy.id,
+          name: rawTransaction.processedBy.name,
+        }
+      : undefined,
+  };
+};
 
 interface StockTransactionState {
-  transactions: StockTransaction[];
+  stockTransactions: StockTransaction[];
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
 }
 
 const initialState: StockTransactionState = {
-  transactions: initialStockTransactionData,
+  stockTransactions: [],
   status: "idle",
   error: null,
 };
 
-// ambil semua data transaksi
 export const fetchStockTransactions = createAsyncThunk(
   "stockTransactions/fetchStockTransactions",
-  async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    // API beneran
-    // return await api.get('/stock-transactions')
-    return initialStockTransactionData;
-  }
-);
-
-// transaksi baru
-export const createStockTransaction = createAsyncThunk(
-  "stockTransactions/createStockTransaction",
-  async (
-    newTransactionData: StockTransactionFormValues,
-    { rejectWithValue }
-  ) => {
+  async (_, { rejectWithValue }) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const newTransaction: StockTransaction = {
-        ...newTransactionData,
-        id: _uuidv4(),
-        date: newTransactionData.date,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        targetWarehouseId: newTransactionData.targetWarehouseId || null,
-        remark: newTransactionData.remark || null,
-      };
-      //   const response = await api.post("/stock-transactions", newTransaction);
-      //   return response.data;
-      return newTransaction;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.message || "Gagal membuat stok transaksi baru"
+      const response = await api.get<RawStockTransactionApiResponse[]>(
+        "http://localhost:3000/api/stock-transactions"
       );
-    }
-  }
-);
-
-// update transaksi
-export const updateStockTransaction = createAsyncThunk(
-  "stockTransactions/updateStockTransaction",
-  async (updatedTransactionData: StockTransaction, { rejectWithValue }) => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      // API beneran
-      // const response = await api.put(`/stock-transactions/${updatedTransactionData.id}`, updatedTransactionData)
-      // return response.data
-      return { ...updatedTransactionData, updatedAt: new Date() };
+      return response.map(formatStockTransactionDates);
     } catch (error: any) {
-      return rejectWithValue(
-        error.message || "Gagal mengupdate stok transaksi"
-      );
-    }
-  }
-);
-
-// delete transaksi
-export const deleteStockTransaction = createAsyncThunk(
-  "stockTransactions/deleteStockTransaction",
-  async (transactionId: string, { rejectWithValue }) => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      // API beneran
-      // await api.delete(`/stock-transactions/${transactionId}`)
-      return transactionId;
-    } catch (error: any) {
-      return rejectWithValue(error.message || "Gagal menghapus stok transaksi");
+      console.error("Error fetching stock transactions:", error);
+      return rejectWithValue(error.message || "Gagal memuat daftar Transaksi Stok.");
     }
   }
 );
@@ -96,88 +75,22 @@ export const deleteStockTransaction = createAsyncThunk(
 const stockTransactionSlice = createSlice({
   name: "stockTransactions",
   initialState,
-  reducers: {
-    resetStockTransactionStatus: (state) => {
-      state.status = "idle";
-      state.error = null;
-    },
-  },
-
+  reducers: {},
   extraReducers: (builder) => {
     builder
-      // ambil data
       .addCase(fetchStockTransactions.pending, (state) => {
         state.status = "loading";
       })
-      .addCase(
-        fetchStockTransactions.fulfilled,
-        (state, action: PayloadAction<StockTransaction[]>) => {
-          state.status = "succeeded";
-          state.transactions = action.payload;
-        }
-      )
+      .addCase(fetchStockTransactions.fulfilled, (state, action: PayloadAction<StockTransaction[]>) => {
+        state.status = "succeeded";
+        state.stockTransactions = action.payload;
+      })
       .addCase(fetchStockTransactions.rejected, (state, action) => {
         state.status = "failed";
-        state.error =
-          action.error.message || "Gagal memuat daftar stok transaksi";
-      })
-
-      // create data
-      .addCase(createStockTransaction.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(
-        createStockTransaction.fulfilled,
-        (state, action: PayloadAction<StockTransaction>) => {
-          state.status = "succeeded";
-          state.transactions.unshift(action.payload);
-        }
-      )
-      .addCase(createStockTransaction.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = (action.payload as string) || "Gagal membuat transaksi";
-      })
-
-      //update data
-      .addCase(updateStockTransaction.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(
-        updateStockTransaction.fulfilled,
-        (state, action: PayloadAction<StockTransaction>) => {
-          state.status = "succeeded";
-          const index = state.transactions.findIndex(
-            (t) => t.id === action.payload.id
-          );
-          if (index !== -1) {
-            state.transactions[index] = action.payload;
-          }
-        }
-      )
-      .addCase(updateStockTransaction.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = (action.payload as string) || "Gagal mengupdate";
-      })
-
-      //   delete data
-      .addCase(deleteStockTransaction.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(
-        deleteStockTransaction.fulfilled,
-        (state, action: PayloadAction<string>) => {
-          state.status = "succeeded";
-          state.transactions = state.transactions.filter(
-            (t) => t.id !== action.payload
-          );
-        }
-      )
-      .addCase(deleteStockTransaction.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = (action.payload as string) || "Gagal menghapus";
+        state.error = (action.payload as string) || "Gagal memuat daftar Transaksi Stok.";
       });
   },
 });
 
-export const { resetStockTransactionStatus } = stockTransactionSlice.actions;
+export const {} = stockTransactionSlice.actions;
 export default stockTransactionSlice.reducer;

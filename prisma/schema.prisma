@@ -143,6 +143,11 @@ enum EmployeeStatus {
   TERMINATED
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
 /// Consolidated PartVariant enum (formerly VariantPart and PartVariant)
 enum PartVariant {
   OEM
@@ -150,6 +155,36 @@ enum PartVariant {
   RECONDITIONED
   USED
   GBOX /// Genuine Box? Sesuaikan penamaan
+}
+
+// Enum untuk kategori spare part
+enum SparePartCategory {
+  ENGINE
+  BRAKE
+  SUSPENSION
+  ELECTRICAL
+  BODY
+  TIRE
+  LIGHTING
+  EXHAUST
+  COOLING
+  STEERING
+  TRANSMISSION
+  INTERIOR
+  EXTERIOR
+  FILTERS
+  FLUIDS
+  TOOLS
+  ACCESSORIES
+  OTHER
+}
+
+/// Enum untuk status spare part
+enum SparePartStatus {
+  AVAILABLE
+  LOW_STOCK
+  OUT_OF_STOCK
+  DISCONTINUED
 }
 
 /// Consolidated Work Order Progress Status enum (formerly WkProgressStatus and WoProgresStatus)
@@ -162,6 +197,14 @@ enum WoProgresStatus {
   FINISHED /// Pekerjaan selesai, menunggu invoice
   CANCELED
   INVOICE_CREATED /// Ditambahkan dari WkProgressStatus
+}
+
+enum WorkOrderTaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELED
 }
 
 enum WoPriorityType {
@@ -202,17 +245,39 @@ enum PurchaseOrderStatus {
   PARTIALLY_RECEIVED
 }
 
-enum TransactionType {
+/// Enum untuk tipe transaksi stok
+enum StockTransactionType {
   IN
   OUT
-  TRANSFER_IN
-  TRANSFER_OUT
+  ADJUSTMENT
+  TRANSFER
+  RETURN
 }
 
 enum WarehouseType {
   CENTRAL_WAREHOUSE
   BRANCH_WAREHOUSE
   SERVICE_CAR_WAREHOUSE
+}
+
+/// Enum untuk tipe unit
+enum UnitType {
+  MEASUREMENT
+  CURRENCY
+  TIME
+  OTHER
+}
+
+/// Enum untuk kategori unit
+enum UnitCategory {
+  LENGTH
+  WEIGHT
+  VOLUME
+  AREA
+  COUNT
+  CURRENCY
+  DURATION
+  OTHER
 }
 
 // =================================================================
@@ -252,6 +317,9 @@ model Company {
   vendorWorkOrders       WorkOrder[]     @relation("VendorWorkOrders")
   /// Company bisa punya banyak Purchase Orders (sebagai supplier)
   suppliedPurchaseOrders PurchaseOrder[] @relation("SupplierPurchaseOrders")
+
+  /// Relasi untuk SparePart (sebagai supplier)
+  suppliedSpareParts SparePart[] @relation("SparePartSuppliers") // <--- TAMBAHKAN INI
 
   ///TimeStamp
   createdAt DateTime @default(now()) @map("created_at")
@@ -307,40 +375,56 @@ model Vehicle {
 /// Karyawan (Pegawai Bengkel, Driver, PIC Customer/Vendor)
 /// =================================================================
 
+/// =================================================================
+/// Employee
+/// =================================================================
 model Employee {
   id               String         @id @default(uuid())
-  userId           String?        @unique @map("user_id") /// ID karyawan internal (opsional jika UUID sudah cukup)
+  userId           String?        @unique @map("user_id")
   name             String
   email            String?        @unique
   password         String?        @map("password")
-  photo            String? /// URL foto
+  photo            String?
   phone            String?        @map("phone_number")
   address          String?        @map("address")
   position         String?        @map("position")
-  role             EmployeeRole   @default(USER) /// Menggunakan Enum
+  role             EmployeeRole   @default(USER)
   department       String?
   status           EmployeeStatus @default(ACTIVE) @map("status")
   tanggalLahir     DateTime?      @map("tanggal_lahir")
   tanggalBergabung DateTime?      @map("tanggal_bergabung")
-  companyId        String?        @map("company_id") /// ID perusahaan tempat karyawan bekerja (jika karyawan internal/vendor)
+  gender           Gender
+  companyId        String?        @map("company_id")
   company          Company?       @relation(fields: [companyId], references: [id])
 
   /// Relasi untuk Work Orders
-  mechanicWorkOrders      WorkOrder[]     @relation("MechanicWorkOrders")
-  driverWorkOrders        WorkOrder[]     @relation("DriverWorkOrders")
-  approvedWorkOrders      WorkOrder[]     @relation("ApprovedByWorkOrders")
-  requestedWorkOrders     WorkOrder[]     @relation("RequestedByWorkOrders")
-  accountingInvoices      Invoice[]       @relation("AccountingInvoices")
-  approvedInvoices        Invoice[]       @relation("ApprovedByInvoices")
-  mechanicEstimations     Estimation[]    @relation("MechanicEstimations")
-  approvedEstimations     Estimation[]    @relation("ApprovedByEstimations")
-  estimationAccountants   Estimation[]    @relation("EstimationAccountants")
+  mechanicWorkOrders  WorkOrder[] @relation("MechanicWorkOrders")
+  driverWorkOrders    WorkOrder[] @relation("DriverWorkOrders")
+  approvedWorkOrders  WorkOrder[] @relation("ApprovedByWorkOrders")
+  requestedWorkOrders WorkOrder[] @relation("RequestedByWorkOrders")
+
+  /// Relasi untuk Invoices
+  accountingInvoices Invoice[] @relation("AccountingInvoices")
+  approvedInvoices   Invoice[] @relation("ApprovedByInvoices")
+
+  /// Relasi untuk Estimations (Pastikan nama relasi ini cocok dengan yang di model Estimation)
+  mechanicEstimations   Estimation[] @relation("MechanicEstimations")
+  approvedEstimations   Estimation[] @relation("ApprovedByEstimations")
+  estimationAccountants Estimation[] @relation("EstimationAccountants")
+
+  /// Relasi untuk Purchase Orders
   requestedPurchaseOrders PurchaseOrder[] @relation("RequestedByPurchaseOrders")
   approvedPurchaseOrders  PurchaseOrder[] @relation("ApprovedByPurchaseOrders")
 
+  /// Relasi untuk Stock Transactions
+  processedStockTransactions StockTransaction[] @relation("ProcessedByStockTransactions") // Relasi balik dari StockTransaction
+
+  assignedWorkOrderTasks WorkOrderTask[] @relation("AssignedWorkOrderTasks")
+
   /// Timestamps
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  WorkOrderTask WorkOrderTask[]
 
   @@map("employees")
 }
@@ -350,32 +434,34 @@ model Employee {
 /// =================================================================
 
 model SparePart {
-  id           String      @id @default(uuid())
-  partNumber   String      @unique @map("part_number")
-  sku          String?
-  partName     String      @map("part_name")
-  variant      PartVariant
-  make         String?
-  price        Decimal     @db.Decimal(10, 2)
-  unit         String
-  description  String?
-  stock        Int         @default(0)
-  initialStock Int         @default(0) @map("initial_stock")
-  brand        String?     @map("brand")
-  manufacturer String?     @map("manufacturer")
+  id                        String                     @id @default(uuid())
+  partNumber                String                     @unique @map("part_number")
+  partName                  String                     @map("part_name")
+  description               String?
+  unit                      String
+  price                     Float
+  category                  String?
+  subCategory               String?
+  stockQuantity             Int                        @default(0) @map("stock_quantity")
+  minStockLevel             Int                        @default(0) @map("min_stock_level")
+  maxStockLevel             Int                        @default(0) @map("max_stock_level")
+  imageUrl                  String?                    @map("image_url")
+  supplierId                String?                    @map("supplier_id")
+  serviceRequiredSpareParts ServiceRequiredSparePart[]
+  estimationItems           EstimationItem[]
 
-  /// Relasi (jika sparepart bisa jadi bagian dari PurchaseOrder, Invoice, Estimation)
-  invoiceItems             InvoiceItem[]
-  estimationItems          EstimationItem[]
-  purchaseOrderItems       PurchaseOrderItem[]
+  // Relasi
+  supplier Company? @relation("SparePartSuppliers", fields: [supplierId], references: [id]) // <--- TAMBAHKAN NAMA RELASI DI SINI
+
+  createdAt                DateTime                   @default(now()) @map("created_at")
+  updatedAt                DateTime                   @updatedAt @map("updated_at")
+  InvoiceItem              InvoiceItem[]
+  PurchaseOrderItem        PurchaseOrderItem[]
   SparePartSuitableVehicle SparePartSuitableVehicle[]
-  serviceRequiredParts     ServiceRequiredSparePart[]
-  warehouseStocks          WarehouseStock[]
-  stockTransactions        StockTransaction[] // DITAMBAHKAN: Relasi ke StockTransaction
-
-  /// Timestamps
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  WarehouseStock           WarehouseStock[]
+  StockTransaction         StockTransaction[]
+  WorkOrderSparePart       WorkOrderSparePart[]
+  WorkOrderItem            WorkOrderItem[]
 
   @@map("spare_parts")
 }
@@ -431,11 +517,122 @@ model WorkOrder {
   invoice    Invoice?
   estimation Estimation?
 
+  WorkOrderTask      WorkOrderTask[]
   /// Timestamps
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  WorkOrderService   WorkOrderService[]
+  WorkOrderSparePart WorkOrderSparePart[]
+  WorkOrderImage     WorkOrderImage[]
+  WorkOrderItem      WorkOrderItem[]
+
+  @@map("work_orders")
+}
+
+/// =================================================================
+/// Work Order Task
+/// =================================================================
+model WorkOrderTask {
+  id           String              @id @default(uuid())
+  workOrderId  String              @map("work_order_id")
+  taskName     String              @map("task_name")
+  description  String?
+  status       WorkOrderTaskStatus @default(PENDING)
+  assignedToId String?             @map("assigned_to_id")
+  startTime    DateTime?           @map("start_time")
+  endTime      DateTime?           @map("end_time")
+  notes        String?
+
+  workOrder  WorkOrder @relation(fields: [workOrderId], references: [id])
+  assignedTo Employee? @relation("AssignedWorkOrderTasks", fields: [assignedToId], references: [id])
+
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  Employee   Employee? @relation(fields: [employeeId], references: [id])
+  employeeId String?
+
+  @@map("work_order_tasks")
+}
+
+/// =================================================================
+/// Work Order Service 
+/// =================================================================
+model WorkOrderService {
+  id          String  @id @default(uuid())
+  workOrderId String  @map("work_order_id")
+  serviceId   String  @map("service_id")
+  quantity    Int
+  unitPrice   Decimal @map("unit_price") @db.Decimal(10, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(10, 2)
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+  service   Service   @relation(fields: [serviceId], references: [id])
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("work_orders")
+  @@unique([workOrderId, serviceId])
+  @@map("work_order_services")
+}
+
+/// =================================================================
+/// Work Order Spare Part
+/// =================================================================
+model WorkOrderSparePart {
+  id          String  @id @default(uuid())
+  workOrderId String  @map("work_order_id")
+  sparePartId String  @map("spare_part_id")
+  quantity    Int
+  unitPrice   Decimal @map("unit_price") @db.Decimal(10, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(10, 2)
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+  sparePart SparePart @relation(fields: [sparePartId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([workOrderId, sparePartId])
+  @@map("work_order_spare_parts")
+}
+
+/// =================================================================
+/// Work Order Image
+/// =================================================================
+model WorkOrderImage {
+  id          String  @id @default(uuid())
+  workOrderId String  @map("work_order_id")
+  imageUrl    String  @map("image_url")
+  description String?
+  uploadedBy  String? @map("uploaded_by") // ID Karyawan yang mengunggah
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("work_order_images")
+}
+
+/// =================================================================
+/// NEW MODEL: Work Order Item (BARU)
+/// =================================================================
+model WorkOrderItem {
+  id          String  @id @default(uuid())
+  workOrderId String  @map("work_order_id")
+  sparePartId String  @map("spare_part_id")
+  quantity    Int
+  unitPrice   Decimal @map("unit_price") @db.Decimal(10, 2)
+  totalPrice  Decimal @map("total_price") @db.Decimal(10, 2)
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+  sparePart SparePart @relation(fields: [sparePartId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([workOrderId, sparePartId])
+  @@map("work_order_items")
 }
 
 /// =================================================================
@@ -494,36 +691,46 @@ model InvoiceItem {
   @@map("invoice_items")
 }
 
-/// Jasa yang dikerjakan di Invoice (Tabel terpisah untuk jasa)
+/// =================================================================
+/// Service
+/// =================================================================
 model Service {
-  id                 String                     @id @default(uuid())
-  name               String                     @unique @map("service_name")
-  description        String?
-  price              Decimal                    @db.Decimal(10, 2)
-  category           String?
-  subCategory        String?
-  tasks              String[]
-  requiredSpareParts ServiceRequiredSparePart[]
-  invoiceServices    InvoiceService[]
-  estimationServices EstimationService[]
+  id                        String                     @id @default(uuid())
+  name                      String
+  description               String?
+  price                     Float
+  category                  String?
+  subCategory               String?
+  tasks                     String[]
+  serviceRequiredSpareParts ServiceRequiredSparePart[] // <--- TAMBAHKAN INI
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  InvoiceService    InvoiceService[]
+  EstimationService EstimationService[]
+  WorkOrderService  WorkOrderService[]
 
   @@map("services")
 }
 
+/// =================================================================
+/// Service Required Spare Part
+/// =================================================================
+
 model ServiceRequiredSparePart {
-  serviceId   String    @map("service_id")
-  service     Service   @relation(fields: [serviceId], references: [id])
-  sparePartId String    @map("spare_part_id")
-  sparePart   SparePart @relation(fields: [sparePartId], references: [id])
+  id          String @id @default(uuid())
+  serviceId   String @map("service_id")
+  sparePartId String @map("spare_part_id")
   quantity    Int
+
+  // Relasi
+  service   Service   @relation(fields: [serviceId], references: [id])
+  sparePart SparePart @relation(fields: [sparePartId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@id([serviceId, sparePartId])
+  @@unique([serviceId, sparePartId]) // Memastikan kombinasi service dan spare part unik
   @@map("service_required_spare_parts")
 }
 
@@ -545,41 +752,34 @@ model InvoiceService {
 }
 
 /// =================================================================
-/// Estimation (Estimasi Biaya)
+/// Estimation
 /// =================================================================
 model Estimation {
-  id                   String           @id @default(uuid())
-  estimationNumber     String           @unique @map("estimation_number")
-  estimationDate       DateTime         @map("estimation_date")
-  requestOdo           Int              @map("request_odo")
-  actualOdo            Int              @map("actual_odo")
+  id                   String              @id @default(uuid())
+  estimationNumber     String              @unique @map("estimation_number")
+  estimationDate       DateTime            @map("estimation_date")
+  requestOdo           Int                 @map("request_odo")
+  actualOdo            Int                 @map("actual_odo")
   remark               String
-  notes                String?          @map("notes")
-  finishedDate         DateTime?        @map("finished_date")
-  totalEstimatedAmount Decimal          @default(0) @map("total_estimated_amount") @db.Decimal(10, 2)
-  status               EstimationStatus @default(DRAFT)
+  notes                String?
+  finishedDate         DateTime?           @map("finished_date")
+  totalEstimatedAmount Float               @map("total_estimated_amount")
+  status               EstimationStatus
+  workOrderId          String              @unique @map("work_order_id")
+  vehicleId            String              @map("vehicle_id")
+  mechanicId           String?             @map("mechanic_id")
+  accountantId         String?             @map("accountant_id")
+  approvedById         String?             @map("approved_by_id")
+  estimationItems      EstimationItem[]
+  estimationServices   EstimationService[]
 
-  /// Relasi (one-to-one dengan WorkOrder)
-  workOrderId String    @unique @map("wo_id")
-  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
-
-  vehicleId String  @map("vehicle_id")
-  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
-
-  mechanicId String?   @map("mechanic_id")
+  // Relasi (Pastikan nama relasi ini cocok dengan yang di model Employee)
+  workOrder  WorkOrder @relation(fields: [workOrderId], references: [id])
+  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id])
   mechanic   Employee? @relation("MechanicEstimations", fields: [mechanicId], references: [id])
+  accountant Employee? @relation("EstimationAccountants", fields: [accountantId], references: [id])
+  approvedBy Employee? @relation("ApprovedByEstimations", fields: [approvedById], references: [id])
 
-  accountantId String?   @map("accountant_id")
-  accountant   Employee? @relation("EstimationAccountants", fields: [accountantId], references: [id])
-
-  approvedById String?   @map("approved_by_id")
-  approvedBy   Employee? @relation("ApprovedByEstimations", fields: [approvedById], references: [id])
-
-  /// Items di Estimasi
-  estimationItems    EstimationItem[]
-  estimationServices EstimationService[]
-
-  /// Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -587,20 +787,26 @@ model Estimation {
 }
 
 /// Item Spare Part di Estimasi
+/// =================================================================
+/// Estimation Item
+/// =================================================================
+
 model EstimationItem {
-  id           String     @id @default(uuid())
-  estimationId String     @map("estimation_id")
-  estimation   Estimation @relation(fields: [estimationId], references: [id])
-  sparePartId  String     @map("spare_part_id")
-  sparePart    SparePart  @relation(fields: [sparePartId], references: [id])
+  id           String @id @default(uuid())
+  estimationId String @map("estimation_id")
+  sparePartId  String @map("spare_part_id")
   quantity     Int
-  unitPrice    Decimal    @map("unit_price") @db.Decimal(10, 2)
-  totalPrice   Decimal    @map("total_price") @db.Decimal(10, 2)
+  price        Float // Harga per item pada saat estimasi dibuat
+  subtotal     Float
+
+  // Relasi
+  estimation Estimation @relation(fields: [estimationId], references: [id])
+  sparePart  SparePart  @relation(fields: [sparePartId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@unique([estimationId, sparePartId])
+  @@unique([estimationId, sparePartId]) // Memastikan kombinasi estimasi dan spare part unik
   @@map("estimation_items")
 }
 
@@ -700,7 +906,7 @@ model SparePartSuitableVehicle {
 }
 
 // =================================================================
-// NEW MODEL: Warehouse
+// Warehouse
 // =================================================================
 model Warehouse {
   id            String        @id @default(uuid())
@@ -719,7 +925,7 @@ model Warehouse {
 }
 
 // =================================================================
-// NEW MODEL: WarehouseStock
+// WarehouseStock
 // =================================================================
 model WarehouseStock {
   id           String    @id @default(uuid())
@@ -736,36 +942,50 @@ model WarehouseStock {
   @@map("warehouse_stocks")
 }
 
-// =================================================================
-// NEW MODEL: StockTransaction
-// =================================================================
-model StockTransaction {
-  id                String          @id @default(uuid())
-  date              DateTime        @map("transaction_date")
-  sparePartId       String          @map("spare_part_id")
-  sparePart         SparePart       @relation(fields: [sparePartId], references: [id])
-  quantity          Int
-  transactionType   TransactionType @map("transaction_type")
-  originWarehouseId String          @map("source_warehouse_id")
-  sourceWarehouse   Warehouse       @relation("SourceWarehouseTransactions", fields: [originWarehouseId], references: [id])
-  targetWarehouseId String?         @map("target_warehouse_id")
-  targetWarehouse   Warehouse?      @relation("TargetWarehouseTransactions", fields: [targetWarehouseId], references: [id])
-  remark            String?
+/// =================================================================
+/// Stock Transaction
+/// =================================================================
 
+model StockTransaction {
+  id                String               @id @default(uuid())
+  transactionNumber String               @unique @map("transaction_number")
+  transactionDate   DateTime             @map("transaction_date")
+  type              StockTransactionType @map("type")
+  sparePartId       String               @map("spare_part_id")
+
+  // Dua foreign key untuk warehouse
+  sourceWarehouseId String  @map("source_warehouse_id") // Gudang asal (wajib)
+  targetWarehouseId String? @map("target_warehouse_id") // Gudang tujuan (opsional, untuk TRANSFER)
+
+  quantity      Int
+  notes         String?
+  processedById String? @map("processed_by_id") // Ini adalah foreign key yang benar ke Employee
+
+  // Relasi: Pastikan nama relasi di sini cocok dengan yang di Warehouse dan Employee
+  sparePart       SparePart  @relation(fields: [sparePartId], references: [id])
+  sourceWarehouse Warehouse  @relation("SourceWarehouseTransactions", fields: [sourceWarehouseId], references: [id])
+  targetWarehouse Warehouse? @relation("TargetWarehouseTransactions", fields: [targetWarehouseId], references: [id])
+  processedBy     Employee?  @relation("ProcessedByStockTransactions", fields: [processedById], references: [id])
+
+  /// Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("stock_transactions")
 }
 
-// =================================================================
-// NEW MODEL: StockTransactionItem
-// =================================================================
+/// =================================================================
+/// Unit
+/// =================================================================
 model Unit {
-  id          String  @id @default(uuid())
-  name        String  @unique
-  description String?
+  id           String       @id @default(uuid())
+  name         String       @unique
+  symbol       String?
+  unitType     UnitType     @map("unit_type")
+  unitCategory UnitCategory @map("unit_category")
+  description  String?
 
+  /// Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

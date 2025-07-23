@@ -1,191 +1,246 @@
+// src/app/(admin)/(auth)/(main)/employees/[employeeId]/page.tsx
 "use client";
-import TableMain from "@/components/common/table/TableMain";
-import { userData } from "@/lib/sampleTableDataa";
-import { useAppSelector } from "@/store/hooks";
-// import { User, UserStatus } from "@/types/user";
-import { useMemo, useState } from "react";
-import { ColumnDef } from "@tanstack/react-table";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
+import { useParams } from "next/navigation";
+import React, { useCallback, useEffect, useState } from "react";
+
+import { Employee, EmployeeFormValues} from "@/types/employee";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MoreVertical } from "lucide-react";
-import WoDialog from "@/components/dialog/woDialog/_components/WoDialog";
-import { Employee } from "@/types/employee";
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
+import EmployeeDialog from "@/components/dialog/employeeDialog/_component/EmployeeDialog";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { useToast } from "@/hooks/use-toast";
+import { fetchEmployeeById, updateEmployee } from "@/store/slices/employeeSlice";
+import { fetchCompanies } from "@/store/slices/companySlice";
 import { EmployeeStatus } from "@prisma/client";
 
-export default function EmployeePage() {
-  const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
-  // const [allUsers] = useState<Employee[]>(emplyeeDa);
-  const [activeTab, setActiveTab] = useState<string>("all`");
-  const [isNewWoDialogOpen, setIsNewWoDialogOpen] = useState(false);
+export default function EmployeeDetailPage() {
+  const params = useParams();
+  const employeeId = params.employeeId as string;
+  const dispatch = useAppDispatch();
+  const { toast } = useToast();
 
-  const userColumns: ColumnDef<Employee>[] = useMemo(
-    () => [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
-      { accessorKey: "name", header: "Name" },
-      { accessorKey: "email", header: "Email" },
-      { accessorKey: "department", header: "Department" },
-      { accessorKey: "role", header: "Role" },
-      {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => {
-          const status = row.original.status as EmployeeStatus;
-          let statusColor = "";
-          switch (status) {
-            case EmployeeStatus.ACTIVE:
-              statusColor = "bg-arkBlue-500 text-arkBlue-50";
-              break;
-            case EmployeeStatus.ON_LEAVE:
-              statusColor = "bg-arkBg-500 text-arkBg-50";
-              break;
-            case EmployeeStatus.ACTIVE:
-              statusColor = "bg-arkRed-500 text-arkRed-50";
-            case EmployeeStatus.ACTIVE:
-              statusColor = "bg-arkYellow-500 text-arkYellow-50";
-              break;
-            default:
-              statusColor = "bg-gray-500 text-gray-50";
-          }
-          return (
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColor}`}
-            >
-              {status}
-            </span>
-          );
-        },
-      },
-      {
-        id: "actions",
-        enableHiding: false,
-        cell: ({ row }) => {
-          const userData = row.original;
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open Menu</span>
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => alert(`View User ${userData.id}`)}
-                >
-                  View User
-                </DropdownMenuItem>
-                <DropdownMenuItem>Edit User</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
-        },
-      },
-    ],
-    []
+  const allEmployees = useAppSelector((state) => state.employee.employees);
+  const employeeStatus = useAppSelector((state) => state.employee.status);
+  const employeeError = useAppSelector((state) => state.employee.error);
+
+  const [isEmployeeDialogOpen, setIsEmployeeDialogOpen] = useState<boolean>(false);
+  const [editEmployeeData, setEditEmployeeData] = useState<Employee | undefined>(undefined);
+  const [localEmployee, setLocalEmployee] = useState<Employee | undefined>(undefined);
+
+  const employeeFromStore = allEmployees.find((emp) => emp.id === employeeId);
+
+  useEffect(() => {
+    if (employeeFromStore) {
+      setLocalEmployee(employeeFromStore);
+    } else if (employeeId && employeeStatus !== "loading") {
+      dispatch(fetchEmployeeById(employeeId))
+        .unwrap()
+        .then((employee) => {
+          setLocalEmployee(employee);
+        })
+        .catch((error) => {
+          toast({
+            title: "Error",
+            description: error.message || "Gagal memuat detail karyawan.",
+            variant: "destructive",
+          });
+        });
+    } else if (!employeeId) {
+      toast({
+        title: "Error",
+        description: "ID karyawan tidak valid atau tidak ditemukan di URL.",
+        variant: "destructive",
+      });
+      console.error("EmployeeDetailPage: employeeId is undefined or null.");
+    }
+    dispatch(fetchCompanies());
+  }, [employeeId, employeeFromStore, dispatch, employeeStatus, toast]);
+
+  const handleEditClick = useCallback(() => {
+    if (localEmployee) {
+      setEditEmployeeData(localEmployee);
+      setIsEmployeeDialogOpen(true);
+    }
+  }, [localEmployee]);
+
+  const handleSaveEmployee = useCallback(
+    async (values: EmployeeFormValues) => {
+      if (values.id) {
+        try {
+          await dispatch(updateEmployee(values)).unwrap();
+          toast({
+            title: "Sukses",
+            description: "Karyawan berhasil diperbarui.",
+          });
+          dispatch(fetchEmployeeById(values.id));
+        } catch (error: any) {
+          toast({
+            title: "Error",
+            description: error.message || "Gagal memperbarui karyawan.",
+            variant: "destructive",
+          });
+        }
+      }
+      setIsEmployeeDialogOpen(false);
+      setEditEmployeeData(undefined);
+    },
+    [dispatch, toast]
   );
 
-  // Data yang difilter berdasarkan tab dan search query
-  const filteredUsers = useMemo(() => {
-    let currentUsers = allUsers;
-    if (activeTab !== "all") {
-      currentUsers = currentUsers.filter((u) => {
-        if (activeTab === "on_duty") return u.status === UserStatus.ON_DUTY;
-        if (activeTab === "on_leave") return u.status === UserStatus.ON_LEAVE;
-        if (activeTab === "off_duty") return u.status === UserStatus.OFF_DUTY;
-        if (activeTab === "suspended") return u.status === UserStatus.SUSPENDED;
-        return true;
-      });
-    }
-    if (searchQuery) {
-      const lowerCaseQuery = searchQuery.toLowerCase();
-      currentUsers = currentUsers.filter((u) =>
-        Object.values(u).some(
-          (value) =>
-            typeof value === "string" &&
-            value.toLowerCase().includes(lowerCaseQuery)
-        )
-      );
-    }
-    return currentUsers;
-  }, [allUsers, activeTab, searchQuery]);
+  const handleDialogClose = useCallback(() => {
+    setIsEmployeeDialogOpen(false);
+    setEditEmployeeData(undefined);
+  }, []);
 
-  const userTabItems = useMemo(() => {
-    return [
-      { value: "all", label: "All", count: allUsers.length },
-      {
-        value: "on_duty",
-        label: "On Duty",
-        count: allUsers.filter((u) => u.status === UserStatus.ON_DUTY).length,
-      },
-      {
-        value: "on_leave",
-        label: "On Leave",
-        count: allUsers.filter((u) => u.status === UserStatus.ON_LEAVE).length,
-      },
-      {
-        value: "off_duty",
-        label: "Off Duty",
-        count: allUsers.filter((u) => u.status === UserStatus.OFF_DUTY).length,
-      },
-      {
-        value: "suspended",
-        label: "Suspended",
-        count: allUsers.filter((u) => u.status === UserStatus.SUSPENDED).length,
-      },
-    ];
-  }, [allUsers]);
+  if (employeeStatus === "loading" && !localEmployee) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <p className="text-lg text-gray-600">Memuat detail karyawan...</p>
+      </div>
+    );
+  }
 
-  const handleDialogClose = () => {
-    setIsNewWoDialogOpen(false);
-  };
+  if (employeeStatus === "failed" && !localEmployee) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <p className="text-lg text-red-500">Error: {employeeError}</p>
+      </div>
+    );
+  }
+
+  if (!localEmployee) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <p className="text-lg text-gray-600">Karyawan tidak ditemukan.</p>
+      </div>
+    );
+  }
+
+  const displayEmployee = localEmployee;
 
   return (
-    <TableMain<User>
-      searchQuery={searchQuery} // Menggunakan TablesArea dan memberikan tipe Invoice
-      data={filteredUsers}
-      columns={userColumns}
-      tabItems={userTabItems}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      showAddButton={true}
-      showDownloadPrintButtons={true}
-      emptyMessage="No invoices found."
-      isDialogOpen={isNewWoDialogOpen}
-      onOpenChange={setIsNewWoDialogOpen}
-      dialogContent={<WoDialog onClose={handleDialogClose} />}
-      dialogTitle="Create New Work Order"
-      dialogDescription="Fill in the details to create a new work order."
-    />
+    <div className="container mx-auto py-8 space-y-3 ">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-2xl font-bold">{displayEmployee.name}</CardTitle>
+            <CardDescription className="text-arkBg-600">Detail Lengkap Karyawan</CardDescription>
+          </div>
+          <Button onClick={handleEditClick}>Edit Karyawan</Button>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg">
+          <div className="space-y-3 text-sm">
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">User ID</p>
+              <p>: {displayEmployee.employeeId || "N/A"}</p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Email</p>
+              <p>: {displayEmployee.email || "N/A"}</p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Telepon</p>
+              <p>: {displayEmployee.phone || "N/A"}</p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Posisi</p>
+              <p>: {displayEmployee.position || "N/A"}</p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Departemen</p>
+              <p>: {displayEmployee.department || "N/A"}</p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Role</p>
+              <p>
+                :
+                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
+                  {displayEmployee.role.replace(/_/g, " ")}
+                </span>
+              </p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Status</p>
+              <p>
+                :
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-semibold
+                    ${
+                      displayEmployee.status === EmployeeStatus.ACTIVE
+                        ? "bg-green-100 text-green-800"
+                        : displayEmployee.status === EmployeeStatus.INACTIVE
+                        ? "bg-red-100 text-red-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                >
+                  {displayEmployee.status?.replace(/_/g, " ")}
+                </span>
+              </p>
+            </div>
+          </div>
+          <div className="space-y-3 text-sm">
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Alamat</p>
+              <p>: {displayEmployee.address || "N/A"}</p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Perusahaan</p>
+              <p>: {displayEmployee.company?.companyName || "N/A"}</p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Tanggal Lahir</p>
+              <p>
+                :
+                {displayEmployee.tanggalLahir
+                  ? format(new Date(displayEmployee.tanggalLahir), "dd MMMM yyyy", { locale: localeId })
+                  : "N/A"}
+              </p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Tanggal Bergabung</p>
+              <p>
+                :
+                {displayEmployee.tanggalBergabung
+                  ? format(new Date(displayEmployee.tanggalBergabung), "dd MMMM yyyy", { locale: localeId })
+                  : "N/A"}
+              </p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Dibuat Pada</p>
+              <p>
+                :{format(new Date(displayEmployee.createdAt), "dd MMMM yyyy HH:mm", { locale: localeId })}
+              </p>
+            </div>
+            <div className="grid grid-cols-[180px_1fr] items-baseline">
+              <p className="font-bold">Di Update pada</p>
+              <p>
+                :{format(new Date(displayEmployee.updatedAt), "dd MMMM yyyy HH:mm", { locale: localeId })}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="py-4 border-0 shadow-none">
+        <CardContent>
+          {isEmployeeDialogOpen && (
+            <EmployeeDialog
+              isOpen={isEmployeeDialogOpen}
+              onClose={handleDialogClose}
+              initialData={editEmployeeData}
+              onSubmit={handleSaveEmployee}
+              dialogTitle={editEmployeeData ? "Edit Karyawan" : "Tambahkan Karyawan Baru"}
+              dialogDescription={
+                editEmployeeData
+                  ? "Edit detail karyawan yang sudah ada."
+                  : "Isi detail karyawan untuk menambah data karyawan baru ke sistem."
+              }
+            />
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

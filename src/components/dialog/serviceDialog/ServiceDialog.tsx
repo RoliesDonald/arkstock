@@ -1,300 +1,208 @@
-import React, { useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+"use client";
 
-import {
-  Service,
-  ServiceFormValues,
-  serviceFormSchema,
-} from "@/types/services";
-import { SparePart } from "@/types/sparepart"; // Import SparePart type
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+
+import { Service } from "@/types/services"; 
+import { serviceFormSchema, ServiceFormValues } from "@/schemas/service"; 
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { PlusCircle, XCircle } from "lucide-react"; // Untuk ikon tambah/hapus
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea"; // Import Textarea
 
 interface ServiceDialogProps {
   onClose: () => void;
-  onSubmitService: (values: ServiceFormValues) => void;
+  onSubmit: (values: ServiceFormValues) => Promise<void>;
   initialData?: Service;
-  availableSpareParts: SparePart[];
+  // Jika ada data tambahan yang dibutuhkan dari Redux (misal daftar spare part untuk ServiceRequiredSparePart),
+  // maka akan diteruskan di sini sebagai props. Untuk saat ini, tidak ada langsung di dialog ini.
 }
 
-const createDefaultValues = (initialData?: Service): ServiceFormValues => {
-  return initialData
-    ? {
-        ...initialData,
-        tasks:
-          initialData.tasks && initialData.tasks.length > 0
-            ? initialData.tasks
-            : [""],
-        requiredSpareParts:
-          initialData.requiredSpareParts &&
-          initialData.requiredSpareParts.length > 0
-            ? initialData.requiredSpareParts
-            : [{ sparePartId: "", quantity: 1 }],
-      }
-    : {
-        serviceName: "",
-        category: "",
-        subCategory: "",
-        description: "",
-        unitPrice: 0,
-        tasks: [""],
-        requiredSpareParts: [{ sparePartId: "", quantity: 1 }],
-      };
-};
-
-const ServiceDialog: React.FC<ServiceDialogProps> = ({
+export default function ServiceDialog({
   onClose,
-  onSubmitService,
   initialData,
-  availableSpareParts,
-}) => {
+  onSubmit,
+}: ServiceDialogProps) {
+
+  const mapServiceToFormValues = (service: Service): ServiceFormValues => {
+    return {
+      id: service.id,
+      name: service.name,
+      description: service.description || null,
+      price: service.price,
+      category: service.category || null,
+      subCategory: service.subCategory || null,
+      tasks: service.tasks, // Array of strings
+    };
+  };
+
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceFormSchema),
-    defaultValues: createDefaultValues(initialData),
+    defaultValues: initialData ? mapServiceToFormValues(initialData) : {
+      name: "",
+      description: null,
+      price: 0,
+      category: null,
+      subCategory: null,
+      tasks: [], // Default empty array
+    },
   });
 
-  // Untuk mengelola daftar tugas secara dinamis
-  const {
-    fields: taskFields,
-    append: appendTask,
-    remove: removeTask,
-  } = useFieldArray<ServiceFormValues>({
-    control: form.control,
-    name: "tasks", // This is correct for tasks
-  });
-
-  // Untuk mengelola daftar spare part yang dibutuhkan secara dinamis
-  const {
-    fields: sparePartFields,
-    append: appendSparePart,
-    remove: removeSparePart,
-  } = useFieldArray<ServiceFormValues>({
-    control: form.control,
-    name: "requiredSpareParts",
-  });
-
-  // Setel nilai form jika initialData berubah (untuk mode edit)
   useEffect(() => {
-    form.reset(createDefaultValues(initialData));
-  }, [initialData, form.reset, form]);
+    if (initialData) {
+      form.reset(mapServiceToFormValues(initialData));
+    } else {
+      form.reset({
+        name: "",
+        description: null,
+        price: 0,
+        category: null,
+        subCategory: null,
+        tasks: [],
+      });
+    }
+  }, [initialData, form]);
 
-  const onSubmit = (values: ServiceFormValues) => {
-    // Filter tugas dan spare part yang kosong sebelum submit
-    const filteredTasks =
-      values.tasks?.filter((task) => task.trim() !== "") || [];
-    const filteredSpareParts =
-      values.requiredSpareParts?.filter((sp) => sp.sparePartId !== "") || [];
-
-    onSubmitService({
+  const handleSubmit = async (values: ServiceFormValues) => {
+    // Pastikan tasks dikirim sebagai array of strings
+    const payload = {
       ...values,
-      tasks: filteredTasks,
-      requiredSpareParts: filteredSpareParts,
-    });
-    onClose(); // Tutup dialog setelah submit
+      tasks: values.tasks ? (Array.isArray(values.tasks) ? values.tasks : String(values.tasks).split(',').map(task => task.trim()).filter(task => task !== '')) : [],
+    };
+    await onSubmit(payload);
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4">
-        <FormField
-          control={form.control}
-          name="serviceName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nama Jasa</FormLabel>
-              <FormControl>
-                <Input placeholder="Nama Jasa" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="category"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Kategori</FormLabel>
-              <FormControl>
-                <Input placeholder="Contoh: Perawatan berkala" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="subCategory"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Sub-Kategori</FormLabel>
-              <FormControl>
-                <Input placeholder="Contoh: Service Ringan" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Deskripsi (Opsional)</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Deskripsi jasa" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="unitPrice"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Harga Satuan</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="0" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {/* Bagian Daftar Pekerjaan */}
-        <div>
-          <Label className="block mb-2">Daftar Pekerjaan</Label>
-          {taskFields.map((item, index) => (
-            <div key={item.id} className="flex items-center space-x-2 mb-2">
-              <FormField
-                control={form.control}
-                name={`tasks.${index}`}
-                render={({ field }) => (
-                  <FormItem className="flex-grow">
-                    <FormControl>
-                      <Input
-                        placeholder={`Pekerjaan ${index + 1}`}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => removeTask(index)}
-              >
-                <XCircle className="h-4 w-4 text-red-500" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => appendTask("")} // Append an empty string for a new task
-            className="mt-2"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" /> Tambah Pekerjaan
-          </Button>
-        </div>
-
-        {/* Bagian Daftar Spare Part yang Dibutuhkan */}
-        <div>
-          <Label className="block mb-2">Spare Part yang Dibutuhkan</Label>
-          {sparePartFields.map((item, index) => (
-            <div key={item.id} className="flex items-center space-x-2 mb-2">
-              <FormField
-                control={form.control}
-                name={`requiredSpareParts.${index}.sparePartId`}
-                render={({ field }) => (
-                  <FormItem className="flex-grow">
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih Spare Part" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {availableSpareParts.map((sp) => (
-                          <SelectItem key={sp.id} value={sp.id}>
-                            {sp.name} ({sp.partNumber})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name={`requiredSpareParts.${index}.quantity`}
-                render={({ field }) => (
-                  <FormItem className="w-24">
-                    <FormControl>
-                      <Input type="number" placeholder="Qty" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => removeSparePart(index)}
-              >
-                <XCircle className="h-4 w-4 text-red-500" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => appendSparePart({ sparePartId: "", quantity: 1 })}
-            className="mt-2"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" /> Tambah Spare Part
-          </Button>
-        </div>
-
-        <div className="flex justify-end gap-2 mt-6">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Batal
-          </Button>
-          <Button type="submit">Simpan Jasa</Button>
-        </div>
-      </form>
-    </Form>
+    <DialogContent className="sm:max-w-[425px] md:max-w-[700px] lg:max-w-[900px]">
+      <DialogHeader>
+        <DialogTitle>{initialData ? "Edit Jasa" : "Tambahkan Jasa Baru"}</DialogTitle>
+        <DialogDescription>
+          {initialData ? "Edit detail jasa yang sudah ada." : "Isi detail jasa untuk menambah data jasa baru ke sistem."}
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Field Name */}
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nama Jasa</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ganti Oli" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Price */}
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Harga</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Category */}
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Kategori (Opsional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Perawatan Mesin" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Sub Category */}
+            <FormField
+              control={form.control}
+              name="subCategory"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sub Kategori (Opsional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Oli Mesin" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Description */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Deskripsi (Opsional)</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Deskripsi lengkap jasa..." {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Tasks (String[]) */}
+            <FormField
+              control={form.control}
+              name="tasks"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tugas-tugas (Pisahkan dengan koma)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Cek filter udara, Ganti oli, Cek busi"
+                      {...field}
+                      value={Array.isArray(field.value) ? field.value.join(', ') : field.value || ""}
+                      onChange={(e) => field.onChange(e.target.value.split(',').map(task => task.trim()).filter(task => task !== ''))}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Masukkan tugas-tugas yang terkait dengan jasa ini, pisahkan dengan koma.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Batal
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
   );
-};
-
-export default ServiceDialog;
+}

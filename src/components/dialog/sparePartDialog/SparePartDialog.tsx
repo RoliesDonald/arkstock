@@ -1,16 +1,21 @@
 "use client";
 
-import React, { useMemo, useEffect, useCallback } from "react";
-import {
-  useForm,
-  useFieldArray,
-  useWatch,
-  SubmitHandler,
-} from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { useEffect } from "react";
+
+import { SparePart } from "@/types/sparepart"; 
+import { sparePartFormSchema, SparePartFormValues } from "@/schemas/sparePart"; 
+import { PartVariant, SparePartCategory, SparePartStatus } from "@prisma/client"; 
 
 import { Button } from "@/components/ui/button";
+import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -18,10 +23,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -29,164 +32,100 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-import {
-  SparePartFormValues,
-  sparePartFormSchema,
-  PartVariant,
-} from "@/types/sparepart";
-
-// Redux
-import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { fetchUnits } from "@/store/slices/unitSlice";
-
-// Data dummy (akan diganti dengan Redux store di masa depan)
-import { vehicleData } from "@/data/sampleVehicleData";
-
-// Import SKU formatter
-import { generateSku } from "@/lib/skuFormatter";
 
 interface SparePartDialogProps {
   onClose: () => void;
-  onSubmitSparePart: (values: SparePartFormValues) => void;
-  initialData?: SparePartFormValues; // Data awal untuk mode edit
+  onSubmit: (values: SparePartFormValues) => Promise<void>;
+  initialData?: SparePart;
+  // Jika ada data tambahan yang dibutuhkan dari Redux (misal daftar vehicles untuk SparePartSuitableVehicle),
+  // maka akan diteruskan di sini sebagai props. Untuk saat ini, tidak ada.
 }
 
-const SparePartDialog: React.FC<SparePartDialogProps> = ({
+export default function SparePartDialog({
   onClose,
-  onSubmitSparePart,
   initialData,
-}) => {
-  const dispatch = useAppDispatch();
-  const availableUnits = useAppSelector((state) => state.units.units);
-  const unitStatus = useAppSelector((state) => state.units.status);
+  onSubmit,
+}: SparePartDialogProps) {
 
-  useEffect(() => {
-    if (unitStatus === "idle") {
-      dispatch(fetchUnits());
-    }
-  }, [dispatch, unitStatus]);
+  const mapSparePartToFormValues = (sparePart: SparePart): SparePartFormValues => {
+    return {
+      id: sparePart.id,
+      partNumber: sparePart.partNumber,
+      sku: sparePart.sku || null,
+      partName: sparePart.partName,
+      variant: sparePart.variant,
+      make: sparePart.make || null,
+      price: sparePart.price,
+      unit: sparePart.unit,
+      description: sparePart.description || null,
+      stock: sparePart.stock,
+      initialStock: sparePart.initialStock,
+      brand: sparePart.brand || null,
+      manufacturer: sparePart.manufacturer || null,
+      category: sparePart.category,
+      status: sparePart.status,
+    };
+  };
 
   const form = useForm<SparePartFormValues>({
     resolver: zodResolver(sparePartFormSchema),
-    defaultValues: useMemo(() => {
-      return initialData
-        ? {
-            ...initialData,
-            description:
-              initialData.description === null ? null : initialData.description,
-            minStock:
-              initialData.minStock === null ? null : initialData.minStock,
-            compatibility: initialData.compatibility || [],
-          }
-        : {
-            sku: "", // Akan diisi otomatis
-            name: "",
-            partNumber: "",
-            description: null,
-            unit: "",
-            initialStock: 0,
-            minStock: null,
-            price: 0,
-            variant: PartVariant.OEM,
-            brand: "",
-            manufacturer: "",
-            compatibility: [],
-          };
-    }, [initialData]),
+    defaultValues: initialData ? mapSparePartToFormValues(initialData) : {
+      partNumber: "",
+      sku: null,
+      partName: "",
+      variant: PartVariant.OEM, // Default variant
+      make: null,
+      price: 0,
+      unit: "",
+      description: null,
+      stock: 0, // Default stock
+      initialStock: 0, // Default initial stock
+      brand: null,
+      manufacturer: null,
+      category: SparePartCategory.ENGINE, // Default category
+      status: SparePartStatus.AVAILABLE, // Default status
+    },
   });
 
-  const {
-    fields: compatibilityFields,
-    append: appendCompatibility,
-    remove: removeCompatibility,
-  } = useFieldArray({
-    control: form.control,
-    name: "compatibility",
-  });
-
-  // Watch fields for SKU generation
-  const watchedPartNumber = form.watch("partNumber");
-  const watchedVariant = form.watch("variant");
-  const watchedBrand = form.watch("brand");
-
-  // Effect to generate SKU automatically
   useEffect(() => {
-    const generatedSku = generateSku(
-      watchedPartNumber,
-      watchedVariant,
-      watchedBrand
-    );
-    form.setValue("sku", generatedSku, { shouldValidate: true });
-  }, [watchedPartNumber, watchedVariant, watchedBrand, form]);
+    if (initialData) {
+      form.reset(mapSparePartToFormValues(initialData));
+    } else {
+      form.reset({
+        partNumber: "",
+        sku: null,
+        partName: "",
+        variant: PartVariant.OEM,
+        make: null,
+        price: 0,
+        unit: "",
+        description: null,
+        stock: 0,
+        initialStock: 0,
+        brand: null,
+        manufacturer: null,
+        category: SparePartCategory.ENGINE,
+        status: SparePartStatus.AVAILABLE,
+      });
+    }
+  }, [initialData, form]);
 
-  const availableVehicleMakes = useMemo(() => {
-    const makes = new Set<string>();
-    vehicleData.forEach((v) => makes.add(v.vehicleMake));
-    return Array.from(makes);
-  }, []);
-
-  const getModelsByMake = useCallback((make: string) => {
-    const models = new Set<string>();
-    vehicleData
-      .filter((v) => v.vehicleMake === make)
-      .forEach((v) => models.add(v.model));
-    return Array.from(models);
-  }, []);
-
-  const onSubmit: SubmitHandler<SparePartFormValues> = async (values) => {
-    console.log("Mengirim data suku cadang:", values);
-    onSubmitSparePart(values);
-    onClose();
-    form.reset();
+  const handleSubmit = async (values: SparePartFormValues) => {
+    await onSubmit(values);
   };
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4"
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>Detail Suku Cadang</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="sku"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>SKU (Stock Keeping Unit)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Akan otomatis terisi"
-                      {...field}
-                      disabled
-                    />
-                  </FormControl>
-                  <FormMessage />
-                  <FormDescription>
-                    SKU akan otomatis terisi berdasarkan Nomor Part, Varian, dan
-                    Merek.
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nama Suku Cadang</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Contoh: Kampas Rem Depan" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <DialogContent className="sm:max-w-[425px] md:max-w-[700px] lg:max-w-[900px]">
+      <DialogHeader>
+        <DialogTitle>{initialData ? "Edit Spare Part" : "Tambahkan Spare Part Baru"}</DialogTitle>
+        <DialogDescription>
+          {initialData ? "Edit detail spare part yang sudah ada." : "Isi detail spare part untuk menambah data spare part baru ke sistem."}
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Field Part Number */}
             <FormField
               control={form.control}
               name="partNumber"
@@ -194,57 +133,57 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 <FormItem>
                   <FormLabel>Nomor Part</FormLabel>
                   <FormControl>
-                    <Input placeholder="Contoh: 45022-TGL-T00" {...field} />
+                    <Input placeholder="PN-001" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field SKU */}
             <FormField
               control={form.control}
-              name="brand"
+              name="sku"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Merek (Brand)</FormLabel>
+                  <FormLabel>SKU (Opsional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Contoh: Honda, Brembo" {...field} />
+                    <Input placeholder="SKU-XYZ" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Part Name */}
             <FormField
               control={form.control}
-              name="manufacturer"
+              name="partName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Produsen</FormLabel>
+                  <FormLabel>Nama Part</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Contoh: PT Astra Honda Motor"
-                      {...field}
-                    />
+                    <Input placeholder="Filter Oli" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Variant */}
             <FormField
               control={form.control}
-              name="unit"
+              name="variant"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Satuan</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <FormLabel>Varian Part</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih satuan..." />
+                        <SelectValue placeholder="Pilih Varian" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {availableUnits.map((unit) => (
-                        <SelectItem key={unit.id} value={unit.name}>
-                          {unit.name}
+                      {Object.values(PartVariant).map((variant) => (
+                        <SelectItem key={variant} value={variant}>
+                          {variant.replace(/_/g, " ")}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -253,6 +192,77 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 </FormItem>
               )}
             />
+            {/* Field Make */}
+            <FormField
+              control={form.control}
+              name="make"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Merk (Opsional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Toyota" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Price */}
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Harga</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Unit */}
+            <FormField
+              control={form.control}
+              name="unit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Unit</FormLabel>
+                  <FormControl>
+                    <Input placeholder="pcs" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Description */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Deskripsi (Opsional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Deskripsi spare part..." {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Stock */}
+            <FormField
+              control={form.control}
+              name="stock"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Stok Saat Ini</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {/* Field Initial Stock */}
             <FormField
               control={form.control}
               name="initialStock"
@@ -260,72 +270,57 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 <FormItem>
                   <FormLabel>Stok Awal</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
+                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(Number(e.target.value))} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Brand */}
             <FormField
               control={form.control}
-              name="minStock"
+              name="brand"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Stok Minimum (Opsional)</FormLabel>
+                  <FormLabel>Brand (Opsional)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      {...{ ...field, value: field.value ?? "" }}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        field.onChange(value === "" ? null : Number(value));
-                      }}
-                    />
+                    <Input placeholder="Denso" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Manufacturer */}
             <FormField
               control={form.control}
-              name="price"
+              name="manufacturer"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Harga (Satuan)</FormLabel>
+                  <FormLabel>Manufaktur (Opsional)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
+                    <Input placeholder="PT Manufaktur Jaya" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            {/* Field Category */}
             <FormField
               control={form.control}
-              name="variant"
+              name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Varian</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <FormLabel>Kategori</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih varian..." />
+                        <SelectValue placeholder="Pilih kategori" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.values(PartVariant).map((variant) => (
-                        <SelectItem key={variant} value={variant}>
-                          {variant}
+                      {Object.values(SparePartCategory).map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category.replace(/_/g, " ")}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -334,184 +329,42 @@ const SparePartDialog: React.FC<SparePartDialogProps> = ({
                 </FormItem>
               )}
             />
+            {/* Field Status */}
             <FormField
               control={form.control}
-              name="description"
+              name="status"
               render={({ field }) => (
-                <FormItem className="col-span-1 md:col-span-2">
-                  <FormLabel>Deskripsi (Opsional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Deskripsi lengkap suku cadang..."
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(SparePartStatus).map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </CardContent>
-        </Card>
-
-        {/* Kompatibilitas Kendaraan */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Kompatibilitas Kendaraan</CardTitle>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                appendCompatibility({
-                  vehicleMake: "",
-                  model: "",
-                  trimLevel: null,
-                  modelYear: null,
-                })
-              }
-            >
-              <PlusCircle className="mr-2 h-4 w-4" /> Tambah Kompatibilitas
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Batal
             </Button>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {compatibilityFields.map((field, index) => (
-              <div
-                key={field.id}
-                className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end border-b pb-4"
-              >
-                <FormField
-                  control={form.control}
-                  name={`compatibility.${index}.vehicleMake`}
-                  render={({ field: compatField }) => (
-                    <FormItem>
-                      <FormLabel>Merek Kendaraan</FormLabel>
-                      <Select
-                        onValueChange={compatField.onChange}
-                        value={compatField.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih merek..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {availableVehicleMakes.map((make) => (
-                            <SelectItem key={make} value={make}>
-                              {make}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name={`compatibility.${index}.model`}
-                  render={({ field: compatField }) => (
-                    <FormItem>
-                      <FormLabel>Model Kendaraan</FormLabel>
-                      <Select
-                        onValueChange={compatField.onChange}
-                        value={compatField.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih model..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {getModelsByMake(
-                            form.watch(`compatibility.${index}.vehicleMake`)
-                          ).map((model) => (
-                            <SelectItem key={model} value={model}>
-                              {model}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name={`compatibility.${index}.trimLevel`}
-                  render={({ field: compatField }) => (
-                    <FormItem>
-                      <FormLabel>Varian (Opsional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Contoh: G, E, S"
-                          {...compatField}
-                          value={compatField.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name={`compatibility.${index}.modelYear`}
-                  render={({ field: compatField }) => (
-                    <FormItem>
-                      <FormLabel>Tahun Model (Opsional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="2020"
-                          {...{
-                            ...compatField,
-                            value: compatField.value ?? "",
-                          }}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            compatField.onChange(
-                              value === "" ? null : Number(value)
-                            );
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="col-span-full flex justify-end">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeCompatibility(index)}
-                    className="text-red-500"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {compatibilityFields.length === 0 && (
-              <p className="text-center text-muted-foreground text-sm">
-                Belum ada kompatibilitas ditambahkan.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* <-- KOREKSI: Ganti DialogFooter dengan div biasa */}
-        <div className="flex justify-end gap-2 pt-6">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Batal
-          </Button>
-          <Button type="submit">
-            {initialData ? "Simpan Perubahan" : "Tambah Suku Cadang"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
   );
-};
-
-export default SparePartDialog;
+}

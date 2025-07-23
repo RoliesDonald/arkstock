@@ -1,4 +1,3 @@
-// src/app/(main)/purchase-orders/page.tsx
 "use client";
 
 import TableMain from "@/components/common/table/TableMain";
@@ -11,157 +10,160 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-// Nanti akan ada Redux slices untuk PO
-// import { fetchPurchaseOrders, createPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder } from "@/store/slices/purchaseOrderSlice";
-
-import {
-  PurchaseOrder,
-  PurchaseOrderFormValues,
-  PurchaseOrderStatus,
-} from "@/types/purchaseOrder";
-import { Company } from "@/types/companies";
-import { Employee } from "@/types/employee";
-import { SparePart } from "@/types/sparepart";
-
-// Data dummy (akan diganti dengan Redux store di masa depan)
-import { purchaseOrderData as initialPurchaseOrderData } from "@/data/samplePurchaseOrderData";
-import { companyData } from "@/data/sampleCompanyData";
-import { employeeData } from "@/data/sampleEmployeeData";
-import { sparePartData } from "@/data/sampleSparePartData";
-
+import { PurchaseOrder, RawPurchaseOrderApiResponse } from "@/types/purchaseOrder"; 
+import { PurchaseOrderFormValues } from "@/schemas/purchaseOrder"; 
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreVertical } from "lucide-react";
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Dialog } from "@/components/ui/dialog"; 
+import { useToast } from "@/hooks/use-toast";
+import { fetchPurchaseOrders, formatPurchaseOrderDates } from "@/store/slices/purchaseOrderSlice"; 
+import { PurchaseOrderStatus } from "@prisma/client"; 
+import { api } from "@/lib/utils/api"; 
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { v4 as uuidv4 } from "uuid"; // Import uuidv4 for new PO creation
-import PurchaseOrderDialog from "@/components/dialog/purchaseOrderDialog/_component/PurchaseOrderDialog";
+import PurchaseOrderDialogWrapper from "@/components/dialog/purchaseOrderDialog/_component/PurchaseOrderDialogWrapper";
 
 export default function PurchaseOrderListPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const dispatch = useAppDispatch();
+
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
-  // const dispatch = useAppDispatch(); // Akan diaktifkan saat Redux slice PO tersedia
+  const allPurchaseOrders = useAppSelector((state) => state.purchaseOrders.purchaseOrders);
+  const loading = useAppSelector((state) => state.purchaseOrders.status === 'loading');
+  const error = useAppSelector((state) => state.purchaseOrders.error);
 
-  const [allPurchaseOrders, setAllPurchaseOrders] = useState<PurchaseOrder[]>(
-    initialPurchaseOrderData
-  );
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [isPoDialogOpen, setIsPoDialogOpen] = useState<boolean>(false);
-  const [editPoData, setEditPoData] = useState<
-    PurchaseOrderFormValues | undefined
-  >(undefined);
+  const [isPurchaseOrderDialogOpen, setIsPurchaseOrderDialogOpen] = useState<boolean>(false);
+  const [editPurchaseOrderData, setEditPurchaseOrderData] = useState<PurchaseOrder | undefined>(undefined);
+  const [purchaseOrderToDelete, setPurchaseOrderToDelete] = useState<PurchaseOrder | undefined>(undefined);
 
-  // Helper untuk mendapatkan nama perusahaan/karyawan/sparepart berdasarkan ID
-  const getCompanyNameById = useCallback(
-    (companyId: string | null | undefined) => {
-      if (!companyId) return "N/A";
-      const company = companyData.find((c) => c.id === companyId);
-      return company ? company.companyName : "Tidak Dikenal";
-    },
-    []
-  );
-
-  const getEmployeeNameById = useCallback(
-    (employeeId: string | null | undefined) => {
-      if (!employeeId) return "N/A";
-      const employee = employeeData.find((e) => e.id === employeeId);
-      return employee ? employee.name : "Tidak Dikenal";
-    },
-    []
-  );
-
-  const getSparePartNameById = useCallback(
-    (sparePartId: string | null | undefined) => {
-      if (!sparePartId) return "N/A";
-      const sparePart = sparePartData.find((sp) => sp.id === sparePartId);
-      return sparePart
-        ? `${sparePart.name} (${sparePart.partNumber})`
-        : "Tidak Dikenal";
-    },
-    []
-  );
-
-  const handleEditPurchaseOrder = useCallback((po: PurchaseOrder) => {
-    // Konversi PurchaseOrder ke PurchaseOrderFormValues untuk edit
-    setEditPoData({
-      id: po.id,
-      poNumber: po.poNumber,
-      date: po.date,
-      vendorId: po.vendorId,
-      requestedById: po.requestedById,
-      approvedById: po.approvedById,
-      rejectionReason: po.rejectionReason,
-      status: po.status,
-      remark: po.remark,
-      items: po.items.map((item) => ({
-        id: item.id,
-        sparePartId: item.sparePartId,
-        itemName: item.itemName, // <-- PERUBAHAN: Menambahkan itemName
-        partNumber: item.partNumber, // <-- PERUBAHAN: Menambahkan partNumber
-        quantity: item.quantity,
-        unit: item.unit, // <-- PERUBAHAN: Menambahkan unit
-        unitPrice: item.unitPrice,
-      })),
-    });
-    setIsPoDialogOpen(true);
-  }, []);
-
-  const handleSavePurchaseOrder = useCallback(
-    async (values: PurchaseOrderFormValues) => {
-      // Hitung totalAmount di sini
-      const totalAmount = values.items.reduce(
-        (sum, item) => sum + item.quantity * item.unitPrice,
-        0
-      );
-
-      if (values.id) {
-        // Mode edit
-        setAllPurchaseOrders((prev) =>
-          prev.map((po) =>
-            po.id === values.id
-              ? {
-                  ...po,
-                  ...values,
-                  items: values.items.map((item) => ({
-                    ...item,
-                    totalPrice: item.quantity * item.unitPrice,
-                  })),
-                  totalAmount: totalAmount,
-                  updatedAt: new Date(),
-                }
-              : po
-          )
-        );
-      } else {
-        // Mode tambah baru
-        const newPo: PurchaseOrder = {
-          id: uuidv4(),
-          ...values,
-          items: values.items.map((item) => ({
-            ...item,
-            totalPrice: item.quantity * item.unitPrice,
-          })),
-          poNumber: values.poNumber!, // poNumber seharusnya sudah terisi otomatis
-          totalAmount: totalAmount,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        setAllPurchaseOrders((prev) => [newPo, ...prev]);
-      }
-      setIsPoDialogOpen(false);
-      setEditPoData(undefined);
-    },
-    []
-  );
-
-  const handleDeletePurchaseOrder = useCallback((poId: string) => {
-    if (
-      window.confirm("Apakah Anda yakin ingin menghapus Purchase Order ini?")
-    ) {
-      setAllPurchaseOrders((prev) => prev.filter((po) => po.id !== poId));
+  const getAuthToken = useCallback(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("jwt_token");
     }
+    return null;
   }, []);
+
+  useEffect(() => {
+    dispatch(fetchPurchaseOrders());
+  }, [dispatch]);
+
+  const handleDetailPurchaseOrder = useCallback(
+    (purchaseOrder: PurchaseOrder) => {
+      router.push(`/purchase-orders/${purchaseOrder.id}`);
+    },
+    [router]
+  );
+
+  const handleEditPurchaseOrder = useCallback((purchaseOrder: PurchaseOrder) => {
+    setEditPurchaseOrderData(purchaseOrder);
+    setIsPurchaseOrderDialogOpen(true);
+  }, []);
+
+  const handleSubmitPurchaseOrder = useCallback(
+    async (values: PurchaseOrderFormValues) => {
+      console.log("Submit Purchase Order:", values);
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Tidak ada token otentikasi. Silakan login kembali.",
+          variant: "destructive",
+        });
+        router.push("/login");
+        return;
+      }
+
+      try {
+        const url = `http://localhost:3000/api/purchase-orders${values.id ? `/${values.id}` : ''}`;
+        
+        let response;
+        if (values.id) {
+          response = await api.put<PurchaseOrder | RawPurchaseOrderApiResponse>(url, values, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+        } else {
+          response = await api.post<PurchaseOrder | RawPurchaseOrderApiResponse>(url, values, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+        }
+
+        toast({
+          title: "Sukses",
+          description: `Purchase Order berhasil di${values.id ? "perbarui" : "tambahkan"}.`,
+        });
+        setIsPurchaseOrderDialogOpen(false);
+        setEditPurchaseOrderData(undefined);
+        dispatch(fetchPurchaseOrders()); 
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err.message || "Terjadi kesalahan saat menyimpan Purchase Order.",
+          variant: "destructive",
+        });
+      }
+    },
+    [dispatch, toast, getAuthToken, router]
+  );
+
+  const handleDeletePurchaseOrder = useCallback(
+    async (purchaseOrderId: string) => {
+      console.log("Delete Purchase Order ID:", purchaseOrderId);
+      const token = getAuthToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Tidak ada token otentikasi. Silakan login kembali.",
+          variant: "destructive",
+        });
+        router.push("/login");
+        return;
+      }
+
+      try {
+        await api.delete(`http://localhost:3000/api/purchase-orders/${purchaseOrderId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        toast({
+          title: "Sukses",
+          description: "Purchase Order berhasil dihapus.",
+        });
+        setPurchaseOrderToDelete(undefined);
+        dispatch(fetchPurchaseOrders()); 
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err.message || "Terjadi kesalahan saat menghapus Purchase Order.",
+          variant: "destructive",
+        });
+      }
+    },
+    [dispatch, toast, getAuthToken, router]
+  );
 
   const purchaseOrderColumns: ColumnDef<PurchaseOrder>[] = useMemo(
     () => [
@@ -169,14 +171,9 @@ export default function PurchaseOrderListPage() {
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
+            checked={table.getIsAllPageRowsSelected() ? true : (table.getIsSomePageRowsSelected() ? 'indeterminate' : false)}
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all rows"
           />
         ),
         cell: ({ row }) => (
@@ -191,32 +188,12 @@ export default function PurchaseOrderListPage() {
       },
       { accessorKey: "poNumber", header: "Nomor PO" },
       {
-        accessorKey: "date",
+        accessorKey: "poDate",
         header: "Tanggal PO",
-        cell: ({ row }) =>
-          format(row.original.date, "dd-MM-yyyy", { locale: localeId }),
+        cell: ({ row }) => format(row.original.poDate, "PPP", { locale: localeId }),
       },
-      {
-        accessorKey: "vendorId",
-        header: "Vendor",
-        cell: ({ row }) => getCompanyNameById(row.original.vendorId),
-      },
-      {
-        accessorKey: "requestedById",
-        header: "Diminta Oleh",
-        cell: ({ row }) => getEmployeeNameById(row.original.requestedById),
-      },
-      {
-        accessorKey: "approvedById",
-        header: "Disetujui Oleh",
-        cell: ({ row }) => getEmployeeNameById(row.original.approvedById),
-      },
-      {
-        accessorKey: "totalAmount",
-        header: "Total Jumlah",
-        cell: ({ row }) =>
-          `Rp${row.original.totalAmount.toLocaleString("id-ID")}`,
-      },
+      { accessorKey: "supplier.companyName", header: "Supplier" },
+      { accessorKey: "totalAmount", header: "Total Jumlah", cell: ({ row }) => `Rp${row.original.totalAmount.toLocaleString('id-ID')}` },
       {
         accessorKey: "status",
         header: "Status",
@@ -233,37 +210,40 @@ export default function PurchaseOrderListPage() {
             case PurchaseOrderStatus.APPROVED:
               statusColor = "bg-green-200 text-green-800";
               break;
-            case PurchaseOrderStatus.RECEIVED:
+            case PurchaseOrderStatus.REJECTED:
               statusColor = "bg-red-200 text-red-800";
               break;
             case PurchaseOrderStatus.COMPLETED:
               statusColor = "bg-blue-200 text-blue-800";
               break;
             case PurchaseOrderStatus.CANCELED:
-              statusColor = "bg-purple-220 text-purple-800";
+              statusColor = "bg-purple-200 text-purple-800";
+              break;
+            case PurchaseOrderStatus.ORDERED:
+              statusColor = "bg-indigo-200 text-indigo-800";
+              break;
+            case PurchaseOrderStatus.SHIPPED:
+              statusColor = "bg-teal-200 text-teal-800";
+              break;
+            case PurchaseOrderStatus.RECEIVED:
+              statusColor = "bg-lime-200 text-lime-800";
+              break;
+            case PurchaseOrderStatus.PARTIALLY_RECEIVED:
+              statusColor = "bg-orange-200 text-orange-800";
               break;
             default:
-              statusColor = "bg-gray-100 text-gray-700";
+              statusColor = "bg-gray-400 text-gray-800";
           }
           return (
-            <span
-              className={`${statusColor} px-2 py-1 rounded-full text-xs font-semibold`}
-            >
-              {status.replace(/_/g, " ")}
-            </span>
+            <span className={`${statusColor} px-2 py-1 rounded-full text-xs font-semibold`}>{status.replace(/_/g, " ")}</span>
           );
         },
-      },
-      {
-        accessorKey: "remark",
-        header: "Catatan",
-        cell: ({ row }) => row.original.remark || "-",
       },
       {
         id: "actions",
         enableHiding: false,
         cell: ({ row }) => {
-          const po = row.original;
+          const purchaseOrder = row.original;
           return (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -273,35 +253,14 @@ export default function PurchaseOrderListPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                <DropdownMenuItem
-                  onClick={() => alert(`Lihat detail PO ${po.poNumber}`)}
-                >
+                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleDetailPurchaseOrder(purchaseOrder)}>
                   Lihat Detail
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleEditPurchaseOrder(po)}>
+                <DropdownMenuItem onClick={() => handleEditPurchaseOrder(purchaseOrder)}>
                   Edit Purchase Order
                 </DropdownMenuItem>
-                {po.status === PurchaseOrderStatus.PENDING_APPROVAL && (
-                  <>
-                    <DropdownMenuItem
-                      onClick={() => alert(`Approve PO ${po.poNumber}`)}
-                      className="text-green-600"
-                    >
-                      Setujui PO
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => alert(`Tolak PO ${po.poNumber}`)}
-                      className="text-red-600"
-                    >
-                      Tolak PO
-                    </DropdownMenuItem>
-                  </>
-                )}
-                <DropdownMenuItem
-                  onClick={() => handleDeletePurchaseOrder(po.id)}
-                  className="text-red-600"
-                >
+                <DropdownMenuItem onClick={() => setPurchaseOrderToDelete(purchaseOrder)} className="text-red-600">
                   Hapus Purchase Order
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -310,108 +269,143 @@ export default function PurchaseOrderListPage() {
         },
       },
     ],
-    [
-      getCompanyNameById,
-      getEmployeeNameById,
-      handleEditPurchaseOrder,
-      handleDeletePurchaseOrder,
-    ]
+    [handleDetailPurchaseOrder, handleEditPurchaseOrder]
   );
 
-  const filteredPurchaseOrders = useMemo(() => {
-    let currentPurchaseOrders = allPurchaseOrders;
-
-    if (activeTab !== "all") {
-      currentPurchaseOrders = currentPurchaseOrders.filter(
-        (po) => po.status.toLowerCase() === activeTab
-      );
-    }
-
-    if (searchQuery) {
-      const lowerCaseQuery = searchQuery.toLowerCase();
-      currentPurchaseOrders = currentPurchaseOrders.filter(
-        (po) =>
-          Object.values(po).some(
-            (value) =>
-              (typeof value === "string" &&
-                value.toLowerCase().includes(lowerCaseQuery)) ||
-              (value instanceof Date &&
-                format(value, "dd-MM-yyyy").includes(lowerCaseQuery)) ||
-              (typeof value === "number" &&
-                value.toString().includes(lowerCaseQuery))
-          ) ||
-          getCompanyNameById(po.vendorId)
-            .toLowerCase()
-            .includes(lowerCaseQuery) ||
-          getEmployeeNameById(po.requestedById)
-            .toLowerCase()
-            .includes(lowerCaseQuery) ||
-          getEmployeeNameById(po.approvedById)
-            .toLowerCase()
-            .includes(lowerCaseQuery) ||
-          po.items.some((item) =>
-            getSparePartNameById(item.sparePartId)
-              .toLowerCase()
-              .includes(lowerCaseQuery)
-          )
-      );
-    }
-    return currentPurchaseOrders;
-  }, [
-    allPurchaseOrders,
-    activeTab,
-    searchQuery,
-    getCompanyNameById,
-    getEmployeeNameById,
-    getSparePartNameById,
-  ]);
-
   const purchaseOrderTabItems = useMemo(() => {
-    const allCount = allPurchaseOrders.length;
-    const tabItems = [{ value: "all", label: "Semua PO", count: allCount }];
-
-    Object.values(PurchaseOrderStatus).forEach((status) => {
-      tabItems.push({
-        value: status.toLowerCase(),
-        label: status.replace(/_/g, " "),
-        count: allPurchaseOrders.filter((po) => po.status === status).length,
-      });
-    });
-
-    return tabItems;
+    return [
+      { value: "all", label: "All", count: allPurchaseOrders.length },
+      // Tabs for PurchaseOrderStatus
+      {
+        value: PurchaseOrderStatus.DRAFT.toLowerCase(),
+        label: "Draft",
+        count: allPurchaseOrders.filter((po) => po.status === PurchaseOrderStatus.DRAFT).length,
+      },
+      {
+        value: PurchaseOrderStatus.PENDING_APPROVAL.toLowerCase(),
+        label: "Menunggu Persetujuan",
+        count: allPurchaseOrders.filter((po) => po.status === PurchaseOrderStatus.PENDING_APPROVAL).length,
+      },
+      {
+        value: PurchaseOrderStatus.APPROVED.toLowerCase(),
+        label: "Disetujui",
+        count: allPurchaseOrders.filter((po) => po.status === PurchaseOrderStatus.APPROVED).length,
+      },
+      {
+        value: PurchaseOrderStatus.REJECTED.toLowerCase(),
+        label: "Ditolak",
+        count: allPurchaseOrders.filter((po) => po.status === PurchaseOrderStatus.REJECTED).length,
+      },
+      {
+        value: PurchaseOrderStatus.COMPLETED.toLowerCase(),
+        label: "Selesai",
+        count: allPurchaseOrders.filter((po) => po.status === PurchaseOrderStatus.COMPLETED).length,
+      },
+      {
+        value: PurchaseOrderStatus.CANCELED.toLowerCase(),
+        label: "Dibatalkan",
+        count: allPurchaseOrders.filter((po) => po.status === PurchaseOrderStatus.CANCELED).length,
+      },
+      {
+        value: PurchaseOrderStatus.ORDERED.toLowerCase(),
+        label: "Dipesan",
+        count: allPurchaseOrders.filter((po) => po.status === PurchaseOrderStatus.ORDERED).length,
+      },
+      {
+        value: PurchaseOrderStatus.SHIPPED.toLowerCase(),
+        label: "Dikirim",
+        count: allPurchaseOrders.filter((po) => po.status === PurchaseOrderStatus.SHIPPED).length,
+      },
+      {
+        value: PurchaseOrderStatus.RECEIVED.toLowerCase(),
+        label: "Diterima",
+        count: allPurchaseOrders.filter((po) => po.status === PurchaseOrderStatus.RECEIVED).length,
+      },
+      {
+        value: PurchaseOrderStatus.PARTIALLY_RECEIVED.toLowerCase(),
+        label: "Diterima Sebagian",
+        count: allPurchaseOrders.filter((po) => po.status === PurchaseOrderStatus.PARTIALLY_RECEIVED).length,
+      },
+    ];
   }, [allPurchaseOrders]);
 
+  const filteredPurchaseOrders = useMemo(() => {
+    let data = allPurchaseOrders;
+
+    if (activeTab !== "all") {
+      data = data.filter((po) => {
+        const lowerCaseActiveTab = activeTab.toLowerCase();
+        // Cek berdasarkan PurchaseOrderStatus
+        if (Object.values(PurchaseOrderStatus).some(s => s.toLowerCase() === lowerCaseActiveTab)) {
+          return po.status.toLowerCase() === lowerCaseActiveTab;
+        }
+        return false;
+      });
+    }
+
+    return data.filter((po) =>
+      po.poNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (po.deliveryAddress && po.deliveryAddress.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (po.remark && po.remark.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (po.rejectionReason && po.rejectionReason.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (po.supplier?.companyName && po.supplier.companyName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (po.requestedBy?.name && po.requestedBy.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (po.approvedBy?.name && po.approvedBy.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [allPurchaseOrders, activeTab, searchQuery]);
+
+  const handleAddNewPurchaseOrderClick = useCallback(() => {
+    setEditPurchaseOrderData(undefined);
+    setIsPurchaseOrderDialogOpen(true);
+  }, []);
+
+  const handlePurchaseOrderDialogClose = useCallback(() => {
+    setIsPurchaseOrderDialogOpen(false);
+    setEditPurchaseOrderData(undefined);
+  }, []);
+
   return (
-    <TableMain<PurchaseOrder>
-      searchQuery={searchQuery}
-      data={filteredPurchaseOrders}
-      columns={purchaseOrderColumns}
-      tabItems={purchaseOrderTabItems}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      showAddButton={true}
-      showDownloadPrintButtons={true}
-      emptyMessage="Tidak ada Purchase Order ditemukan."
-      isDialogOpen={isPoDialogOpen}
-      onOpenChange={setIsPoDialogOpen}
-      dialogContent={
-        <PurchaseOrderDialog
-          onClose={() => {
-            setIsPoDialogOpen(false);
-            setEditPoData(undefined);
-          }}
-          onSubmitPurchaseOrder={handleSavePurchaseOrder}
-          initialData={editPoData}
+    <>
+      <TableMain<PurchaseOrder>
+        searchQuery={searchQuery}
+        data={filteredPurchaseOrders}
+        columns={purchaseOrderColumns}
+        tabItems={purchaseOrderTabItems} 
+        activeTab={activeTab}       
+        onTabChange={setActiveTab}   
+        showAddButton={true}
+        onAddClick={handleAddNewPurchaseOrderClick}
+        showDownloadPrintButtons={true}
+        emptyMessage={
+          loading ? "Memuat data..." : error ? `Error: ${error}` : "Tidak ada Purchase Order ditemukan."
+        }
+      />
+
+      <Dialog open={isPurchaseOrderDialogOpen} onOpenChange={setIsPurchaseOrderDialogOpen}>
+        <PurchaseOrderDialogWrapper 
+          onClose={handlePurchaseOrderDialogClose}
+          initialData={editPurchaseOrderData}
+          onSubmit={handleSubmitPurchaseOrder}
         />
-      }
-      dialogTitle={
-        editPoData ? "Edit Purchase Order" : "Buat Purchase Order Baru"
-      }
-      dialogDescription={
-        editPoData
-          ? "Perbarui detail Purchase Order ini."
-          : "Isi detail Purchase Order untuk pengadaan suku cadang."
-      }
-    />
+      </Dialog>
+
+      <AlertDialog open={!!purchaseOrderToDelete} onOpenChange={(open) => !open && setPurchaseOrderToDelete(undefined)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus Purchase Order &quot;
+              {purchaseOrderToDelete?.poNumber}&quot;? Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPurchaseOrderToDelete(undefined)}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => purchaseOrderToDelete && handleDeletePurchaseOrder(purchaseOrderToDelete.id)}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -1,16 +1,77 @@
 // src/store/slices/workOrderSlice.ts
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { WorkOrder, RawWorkOrderApiResponse } from "@/types/workOrder";
+import { api } from "@/lib/utils/api";
+import { WoProgresStatus, WoPriorityType } from "@prisma/client";
 
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import {
-  WorkOrder,
-  WorkOrderFormValues,
-  WoProgresStatus,
-  WoPriorityType,
-} from "@/types/workOrder";
-import { v4 as uuidv4 } from "uuid";
-import { workOrderData as initialWorkOrderData } from "@/data/sampleWorkOrderData";
-import { resolve } from "path";
-import { stat } from "fs";
+export const formatWorkOrderDates = (rawWorkOrder: RawWorkOrderApiResponse): WorkOrder => {
+  return {
+    ...rawWorkOrder,
+    date: new Date(rawWorkOrder.date),
+    schedule: rawWorkOrder.schedule ? new Date(rawWorkOrder.schedule) : null,
+    createdAt: new Date(rawWorkOrder.createdAt),
+    updatedAt: new Date(rawWorkOrder.updatedAt),
+    progresStatus: rawWorkOrder.progresStatus as WoProgresStatus,
+    priorityType: rawWorkOrder.priorityType as WoPriorityType,
+    // Relasi akan di-map jika disertakan dalam respons API
+    vehicle: rawWorkOrder.vehicle
+      ? {
+          id: rawWorkOrder.vehicle.id,
+          licensePlate: rawWorkOrder.vehicle.licensePlate,
+          vehicleMake: rawWorkOrder.vehicle.vehicleMake,
+          model: rawWorkOrder.vehicle.model,
+        }
+      : undefined,
+    customer: rawWorkOrder.customer
+      ? {
+          id: rawWorkOrder.customer.id,
+          companyName: rawWorkOrder.customer.companyName,
+        }
+      : undefined,
+    carUser: rawWorkOrder.carUser
+      ? {
+          id: rawWorkOrder.carUser.id,
+          companyName: rawWorkOrder.carUser.companyName,
+        }
+      : undefined,
+    vendor: rawWorkOrder.vendor
+      ? {
+          id: rawWorkOrder.vendor.id,
+          companyName: rawWorkOrder.vendor.companyName,
+        }
+      : undefined,
+    mechanic: rawWorkOrder.mechanic
+      ? {
+          id: rawWorkOrder.mechanic.id,
+          name: rawWorkOrder.mechanic.name,
+        }
+      : undefined,
+    driver: rawWorkOrder.driver
+      ? {
+          id: rawWorkOrder.driver.id,
+          name: rawWorkOrder.driver.name,
+        }
+      : undefined,
+    approvedBy: rawWorkOrder.approvedBy
+      ? {
+          id: rawWorkOrder.approvedBy.id,
+          name: rawWorkOrder.approvedBy.name,
+        }
+      : undefined,
+    requestedBy: rawWorkOrder.requestedBy
+      ? {
+          id: rawWorkOrder.requestedBy.id,
+          name: rawWorkOrder.requestedBy.name,
+        }
+      : undefined,
+    location: rawWorkOrder.location
+      ? {
+          id: rawWorkOrder.location.id,
+          name: rawWorkOrder.location.name,
+        }
+      : undefined,
+  };
+};
 
 interface WorkOrderState {
   workOrders: WorkOrder[];
@@ -19,65 +80,20 @@ interface WorkOrderState {
 }
 
 const initialState: WorkOrderState = {
-  workOrders: [], // ini diisi dari data dummy atau fetch awal
+  workOrders: [],
   status: "idle",
   error: null,
 };
 
 export const fetchWorkOrders = createAsyncThunk(
-  "workOrders/fetch",
-  async () => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return initialWorkOrderData;
-  }
-);
-
-export const createNewWorkOrder = createAsyncThunk(
-  "workOrders/createNew",
-  async (newWoData: WorkOrderFormValues, { rejectWithValue }) => {
+  "workOrders/fetchWorkOrders",
+  async (_, { rejectWithValue }) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const newWorkOrder: WorkOrder = {
-        ...(newWoData as WorkOrder),
-        id: uuidv4(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      return newWorkOrder;
-
-      // API Call
-      // const response = await apiService.post('/api/work-orders', simulatedNewWorkOrder);
-      // return response.data; // Kembalikan data WorkOrder yang dibuat dari backend
+      const response = await api.get<RawWorkOrderApiResponse[]>("http://localhost:3000/api/work-orders");
+      return response.map(formatWorkOrderDates);
     } catch (error: any) {
-      return rejectWithValue(error.message || "Gagal membuat Work Order");
-    }
-  }
-);
-
-// Work order bisa di update untuk penambahan part atau pekerjaan
-export const updateWorkOrder = createAsyncThunk(
-  "workOrders/updateWorkOrder",
-  async (updateWorkOrderData: WorkOrderFormValues, { rejectWithValue }) => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return {
-        ...(updateWorkOrderData as WorkOrder),
-        updatedAt: new Date(),
-      } as WorkOrder;
-    } catch (error: any) {
-      return rejectWithValue(error.message || "Gagal mengupdate Work Order");
-    }
-  }
-);
-
-export const deleteWorkOrder = createAsyncThunk(
-  "workOrders/deleteWorkOrder",
-  async (workOrderId: string, { rejectWithValue }) => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return workOrderId;
-    } catch (error: any) {
-      return rejectWithValue(error.message || "Gagal menghapus Work Order");
+      console.error("Error fetching work orders:", error);
+      return rejectWithValue(error.message || "Gagal memuat daftar Work Order.");
     }
   }
 );
@@ -85,84 +101,22 @@ export const deleteWorkOrder = createAsyncThunk(
 const workOrderSlice = createSlice({
   name: "workOrders",
   initialState,
-  reducers: {
-    resetWorkOrderStatus: (state) => {
-      state.status = "idle";
-      state.error = null;
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(fetchWorkOrders.pending, (state) => {
         state.status = "loading";
       })
-
-      .addCase(
-        fetchWorkOrders.fulfilled,
-        (state, action: PayloadAction<WorkOrder[]>) => {
-          state.status = "succeeded";
-          state.workOrders = action.payload;
-        }
-      )
+      .addCase(fetchWorkOrders.fulfilled, (state, action: PayloadAction<WorkOrder[]>) => {
+        state.status = "succeeded";
+        state.workOrders = action.payload;
+      })
       .addCase(fetchWorkOrders.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.error.message || "Gagal Memuat Data Work Order";
-      })
-      .addCase(createNewWorkOrder.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(
-        createNewWorkOrder.fulfilled,
-        (state, action: PayloadAction<WorkOrder>) => {
-          state.status = "succeeded";
-          state.workOrders.unshift(action.payload);
-        }
-      )
-      .addCase(createNewWorkOrder.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = (action.payload as string) || "Gagal membuat Work Order";
-      })
-      .addCase(updateWorkOrder.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(
-        updateWorkOrder.fulfilled,
-        (state, action: PayloadAction<WorkOrder>) => {
-          state.status = "succeeded";
-          const index = state.workOrders.findIndex(
-            (v) => v.id === action.payload.id
-          );
-          if (index !== -1) {
-            state.workOrders[index] = action.payload;
-          }
-        }
-      )
-      .addCase(updateWorkOrder.rejected, (state, action) => {
-        state.status = "failed";
-        state.error =
-          (action.payload as string) || "Gagal mengupdate Work Order";
-      })
-
-      .addCase(deleteWorkOrder.pending, (state) => {
-        state.status = "loading";
-      })
-
-      .addCase(
-        deleteWorkOrder.fulfilled,
-        (state, action: PayloadAction<string>) => {
-          state.status = "succeeded";
-          state.workOrders = state.workOrders.filter(
-            (v) => v.id !== action.payload
-          );
-        }
-      )
-      .addCase(deleteWorkOrder.rejected, (state, action) => {
-        state.status = "failed";
-        state.error =
-          (action.payload as string) || "Gagal menghapus Work Order";
+        state.error = (action.payload as string) || "Gagal memuat daftar Work Order.";
       });
   },
 });
 
-export const { resetWorkOrderStatus } = workOrderSlice.actions;
+export const {} = workOrderSlice.actions;
 export default workOrderSlice.reducer;

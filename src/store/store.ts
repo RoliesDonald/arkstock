@@ -4,7 +4,6 @@ import tableSearchReducer from "./slices/tableSearchSlice";
 import workOrdersReducer from "./slices/workOrderSlice";
 import vehiclesReducer from "./slices/vehicleSlice";
 import companiesReducer from "./slices/companySlice";
-import warehousesReducer from "./slices/warehouseSlice";
 import stockTransactionsReducer from "./slices/stockTransactionSlice";
 import warehouseStockReducer from "./slices/warehouseStockSlice";
 import unitsReducer from "./slices/unitSlice";
@@ -15,24 +14,56 @@ import tableSearchSlice from "./slices/tableSearchSlice";
 import employeeReducer from "./slices/employeeSlice";
 import serviceReducer from "./slices/serviceSlice";
 import estimationReducer from "./slices/estimationSlice";
+import locationReducer from "./slices/locationSlice";
+import invoiceReducer from "./slices/invoiceSlice";
+import warehouseReducer from "./slices/warehouseSlice";
+import purchaseOrderReducer from "./slices/purchaseOrderSlice";
+import serviceRequiredSparePartReducer from "./slices/serviceRequiredSparePartSlice";
+import estimationItemReducer from "./slices/estimationItemSlice";
+import estimationServiceReducer from "./slices/estimationServiceSlice";
+import purchaseOrderItemReducer from "./slices/purchaseOrderItemSlice";
+import invoiceItemReducer from "./slices/invoiceItemSlice";
+import invoiceServiceReducer from "./slices/invoiceServiceSlice";
+import sparePartSuitableVehicleReducer from "./slices/sparePartSuitableVehicleSlice";
+import workOrderTaskReducer from "./slices/workOrderTaskSlice";
+import workOrderServiceReducer from "./slices/workOrderServiceSlice";
+import workOrderSparePartReducer from "./slices/workOrderSparePartSlice";
+import workOrderImageReducer from "./slices/workOrderImageSlice";
+import workOrderItemReducer from "./slices/workOrderItemSlice";
 
 export const store = configureStore({
   reducer: {
     user: userReducer,
     app: appReducer,
-    // tableSearch: tableSearchReducer,
+    tableSearch: tableSearchReducer,
     workOrders: workOrdersReducer,
     vehicles: vehiclesReducer,
     companies: companiesReducer,
-    warehouses: warehousesReducer,
+    warehouses: warehouseReducer,
     stockTransactions: stockTransactionsReducer,
     warehouseStock: warehouseStockReducer,
     units: unitsReducer,
     spareParts: sparePartsReducer,
-    tableSearch: tableSearchSlice,
+    // tableSearch: tableSearchSlice,
     employee: employeeReducer,
     services: serviceReducer,
     estimations: estimationReducer,
+    location: locationReducer,
+    invoices: invoiceReducer,
+    purchaseOrders: purchaseOrderReducer,
+    serviceRequiredSpareParts: serviceRequiredSparePartReducer,
+    estimationItems: estimationItemReducer,
+    estimationServices: estimationServiceReducer,
+    purchaseOrderItems: purchaseOrderItemReducer,
+    invoiceItems: invoiceItemReducer,
+    invoiceServices: invoiceServiceReducer,
+    sparePartSuitableVehicles: sparePartSuitableVehicleReducer,
+    warehouseStocks: warehouseStockReducer,
+    workOrderTasks: workOrderTaskReducer,
+    workOrderServices: workOrderServiceReducer,
+    workOrderSpareParts: workOrderSparePartReducer,
+    workOrderImages: workOrderImageReducer,
+    workOrderItems: workOrderItemReducer,
   },
   // Middleware untuk menangani objek Date agar tidak diserialisasi
   middleware: (getDefaultMiddleware) =>
@@ -80,3 +111,4 @@ export const store = configureStore({
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
+export type AppStore = typeof store;
