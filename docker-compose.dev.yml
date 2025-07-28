@@ -6,7 +6,9 @@ services:
       target: runner # Pastikan service 'app' menggunakan tahap 'runner'
     ports:
       - "3000:3000"
-    # HAPUS BARIS INI: - .:/app
+    # BARIS INI TIDAK ADA UNTUK SERVICE 'APP'
+    # volumes:
+    #   - .:/app
     environment:
       - NODE_ENV=development # Atau production jika ini untuk produksi
       - DATABASE_URL=${DATABASE_URL} # Pastikan variabel lingkungan database diteruskan
@@ -22,7 +24,7 @@ services:
       dockerfile: Dockerfile
       target: builder # Service ini akan menggunakan tahap 'builder' dari Dockerfile
     volumes:
-      - .:/app # Mount direktori lokal Anda ke /app di dalam kontainer CLI
+      - .:/app # <--- PASTIKAN BARIS INI ADA UNTUK SERVICE 'CLI'
     environment:
       - NODE_ENV=development # Penting untuk alat pengembangan
       - DATABASE_URL=${DATABASE_URL} # Pastikan variabel lingkungan database diteruskan
