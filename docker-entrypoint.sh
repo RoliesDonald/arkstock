@@ -1,20 +1,34 @@
 #!/bin/sh
+set -e
 
-# Ini adalah script entrypoint untuk kontainer pengembangan.
-# Ini akan memastikan dependensi diinstal dan Prisma Client digenerate.
+echo "--- Starting docker-entrypoint.sh ---"
 
-# KUNCI PERBAIKAN: Hapus seluruh folder node_modules untuk instalasi yang benar-benar bersih.
-echo "--- Cleaning up node_modules directory ---"
-rm -rf node_modules
-echo "--- node_modules directory cleaned ---"
+# Diagnostik: Periksa direktori kerja saat ini
+echo "Current working directory: $(pwd)"
 
-echo "--- Running npm install --force (in container) ---"
-npm install --force # <--- TAMBAHKAN --force DI SINI
-echo "--- npm install completed (in container) ---"
+# Diagnostik: Periksa apakah server.js ada di direktori kerja
+echo "Checking for server.js in current directory:"
+ls -la server.js || echo "server.js not found in current directory."
 
-echo "--- Running npx prisma generate --force (in container) ---"
-npx prisma generate --force # <--- PASTIKAN --force JUGA ADA DI SINI
-echo "--- npx prisma generate completed (in container) ---"
+# Diagnostik: Periksa isi direktori /app
+echo "Listing contents of /app:"
+ls -la /app/ || true
 
-# Jalankan perintah utama yang diteruskan ke entrypoint (yaitu "npm run dev -- -H 0.0.0.0 -p 3000")
-exec "$@"
+# Diagnostik: Cari server.js di /app secara rekursif
+echo "Searching for server.js in /app (recursive):"
+find /app -name "server.js" || true
+
+# Jika argumen pertama adalah "node", maka jalankan server Next.js
+# Ini adalah cara standar untuk menjalankan Next.js standalone
+if [ "$1" = "node" ]; then
+  echo "Executing Next.js server with: node server.js"
+  # Pastikan kita berada di direktori /app sebelum menjalankan node server.js
+  cd /app
+  exec node server.js
+else
+  # Jika tidak, jalankan perintah yang diberikan sebagai argumen
+  echo "Executing command: $@"
+  exec "$@"
+fi
+
+echo "--- Exiting docker-entrypoint.sh ---"

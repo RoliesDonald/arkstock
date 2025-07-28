@@ -6,8 +6,7 @@ services:
       target: runner # Pastikan service 'app' menggunakan tahap 'runner'
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app # Mount direktori lokal Anda ke /app di dalam kontainer
+    # HAPUS BARIS INI: - .:/app
     environment:
       - NODE_ENV=development # Atau production jika ini untuk produksi
       - DATABASE_URL=${DATABASE_URL} # Pastikan variabel lingkungan database diteruskan
@@ -16,14 +15,14 @@ services:
     # Jika Anda ingin menjalankan server produksi, gunakan:
     # command: "node server.js"
 
-  # Service baru untuk menjalankan perintah CLI seperti Prisma dan seeding
+  # Service untuk menjalankan perintah CLI seperti Prisma dan seeding
   cli:
     build:
       context: .
       dockerfile: Dockerfile
       target: builder # Service ini akan menggunakan tahap 'builder' dari Dockerfile
     volumes:
-      - .:/app # Mount direktori lokal Anda ke /app di dalam kontainer
+      - .:/app # Mount direktori lokal Anda ke /app di dalam kontainer CLI
     environment:
       - NODE_ENV=development # Penting untuk alat pengembangan
       - DATABASE_URL=${DATABASE_URL} # Pastikan variabel lingkungan database diteruskan

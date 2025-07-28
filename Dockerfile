@@ -7,12 +7,9 @@ FROM node:20 AS builder
 WORKDIR /app
 
 # Salin SELURUH KODE APLIKASI terlebih dahulu
-# Ini memastikan semua file yang dibutuhkan (termasuk prisma/schema.prisma, package.json, package-lock.json, postcss.config.mjs)
-# ada sebelum instalasi dependensi, termasuk script postinstall Prisma.
 COPY . .
 
 # Hapus node_modules SAJA
-# Ini untuk memastikan instalasi benar-benar bersih sambil tetap mempertahankan package-lock.json
 RUN set -eux; \
     echo "--- Cleaning up potential cached node_modules ---"; \
     rm -rf node_modules; \
@@ -29,8 +26,6 @@ RUN set -eux; \
 ENV PRISMA_CLI_BINARY_TARGETS="debian-openssl-3.0.x"
 
 # Instal dependensi Node.js secara bersih
-# Gunakan npm ci untuk instalasi yang konsisten berdasarkan package-lock.json
-# Tambahkan npm rebuild untuk memastikan semua dependensi (terutama yang mungkin memiliki komponen biner) dibangun kembali untuk lingkungan kontainer.
 RUN set -eux; \
     echo "--- Updating npm to latest version ---"; \
     npm install -g npm@latest; \
@@ -44,23 +39,20 @@ RUN set -eux; \
     npm rebuild; \
     echo "--- npm rebuild completed ---"; \
     \
-    # KUNCI DIAGNOSTIK: Verifikasi versi autoprefixer dan postcss yang terinstal
     echo "--- Verifying installed versions of autoprefixer and postcss ---"; \
     npm ls autoprefixer postcss || true; \
     echo "--- Autoprefixer and PostCSS modules verification completed ---"; \
     \
-    # Verifikasi Prisma client files
     echo "--- Verifying Prisma schema and client files ---"; \
     ls -l prisma/schema.prisma || true; \
     ls -l node_modules/@prisma/client/runtime/library.d.ts || true; \
     ls -l node_modules/.prisma/client/runtime/ || true; \
     echo "--- Prisma schema and client files verification completed ---"; \
     \
-    # Mengubah kepemilikan direktori /app ke user 'node'
+    # Mengubah kepemilikan direktori /app ke user 'node' di builder stage
     chown -R node:node /app; \
     echo "--- Ownership of /app changed to node user ---"
 
-# Kembali ke user non-root 'node' untuk langkah-langkah berikutnya
 USER node
 
 # Jalankan build produksi Next.js.
@@ -69,40 +61,53 @@ RUN set -eux; \
     npm run build; \
     echo "--- Next.js build completed ---"; \
     \
-    # --- DIAGNOSTIK KRUSIAL SETELAH BUILD ---
-    echo "--- Listing contents of /app/.next after build ---"; \
-    ls -la /app/.next/ || true; \
-    echo "--- Listing contents of /app/.next/standalone after build ---"; \
-    ls -la /app/.next/standalone/ || true; \
-    echo "--- Listing contents of /app/.next/static after build ---"; \
-    ls -la /app/.next/static/ || true; \
-    echo "--- Searching for 'standalone' directory in /app ---"; \
-    find /app -name "standalone" || true; \
-    echo "--- DIAGNOSTIK END ---"
+    # --- DIAGNOSTIK SETELAH BUILD (DI BUILDER) ---
+    echo "--- Listing contents of /app/.next (recursive) after build ---"; \
+    ls -laR /app/.next/ || true; \
+    echo "--- Searching for server.js in /app/.next/standalone ---"; \
+    find /app/.next/standalone -name "server.js" || true; \
+    echo "--- Searching for server.js in /app ---"; \
+    find /app -name "server.js" || true; \
+    echo "--- DIAGNOSTIK END (DI BUILDER) ---"
 
 # --- Stage 2: Runner ---
-# Menggunakan base image Node.js resmi yang sama untuk konsistensi
 FROM node:20 AS runner
 
 WORKDIR /app
 
 ENV NODE_ENV production
-# Set PRISMA_CLI_BINARY_TARGETS di runner juga.
 ENV PRISMA_CLI_BINARY_TARGETS="debian-openssl-3.0.x"
 
-# Salin hasil build dari builder stage
+# Salin hasil build dari builder stage (ini akan dijalankan sebagai root secara default)
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-# Salin node_modules dari builder stage (penting untuk standalone)
 COPY --from=builder /app/node_modules /app/node_modules
-# Salin package.json dan package-lock.json (jika diperlukan oleh runtime)
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
 
+# --- DIAGNOSTIK KRUSIAL DI RUNNER SETELAH SEMUA COPY ---
+RUN set -eux; \
+    echo "--- Listing contents of /app in runner after ALL copies ---"; \
+    ls -la /app/ || true; \
+    echo "--- Searching for server.js in /app in runner after ALL copies ---"; \
+    find /app -name "server.js" || true; \
+    echo "--- DIAGNOSTIK END (DI RUNNER) ---"
+
+# Set up non-root user for security and runtime
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Salin docker-entrypoint.sh dan berikan izin eksekusi SEBAGAI ROOT
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 RUN ls -l /usr/local/bin/docker-entrypoint.sh
+
+# Change ownership of /app to the non-root user
+RUN chown -R nextjs:nodejs /app
+
+# Switch to the non-root user
+USER nextjs
 
 EXPOSE 3000
 
