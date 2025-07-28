@@ -1,3 +1,4 @@
+// src/store/slices/sparePartSuitableVehicleSlice.ts
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
   SparePartSuitableVehicle,
@@ -7,17 +8,17 @@ import { api } from "@/lib/utils/api";
 
 // Fungsi format data (tanpa tanggal karena tidak ada createdAt/updatedAt di model ini)
 export const formatSparePartSuitableVehicleData = (
-  rawSrsv: RawSparePartSuitableVehicleApiResponse
+  rawSpsv: RawSparePartSuitableVehicleApiResponse
 ): SparePartSuitableVehicle => {
   return {
-    ...rawSrsv,
+    ...rawSpsv,
     // Relasi akan di-map jika disertakan dalam respons API
-    sparePart: rawSrsv.sparePart
+    sparePart: rawSpsv.sparePart
       ? {
-          id: rawSrsv.sparePart.id,
-          partNumber: rawSrsv.sparePart.partNumber,
-          partName: rawSrsv.sparePart.partName,
-          unit: rawSrsv.sparePart.unit,
+          id: rawSpsv.sparePart.id,
+          partNumber: rawSpsv.sparePart.partNumber,
+          partName: rawSpsv.sparePart.partName,
+          unit: rawSpsv.sparePart.unit,
         }
       : undefined,
   };

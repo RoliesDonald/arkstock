@@ -1,11 +1,12 @@
-"use client"; // Pastikan ini ada di baris paling atas
+// src/components/dialog/sparePartSuitableVehicleDialog/_components/SparePartSuitableVehicleDialog.tsx
+"use client";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 
 import { SparePartSuitableVehicle } from "@/types/sparePartSuitableVehicles"; 
-import { SparePart } from "@/types/sparepart"; 
+import { SparePart } from "@/types/sparepart"; // Import SparePart type
 import { sparePartSuitableVehicleFormSchema, SparePartSuitableVehicleFormValues } from "@/schemas/sparePartSuitableVehicle"; 
 
 import { Button } from "@/components/ui/button";
@@ -36,12 +37,11 @@ import {
 interface SparePartSuitableVehicleDialogProps {
   onClose: () => void;
   onSubmit: (values: SparePartSuitableVehicleFormValues) => Promise<void>;
-  initialData?: SparePartSuitableVehicle; // Menggunakan SparePartSuitableVehicle sebagai initialData
-  spareParts: SparePart[];
-  sparePartsStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  initialData?: SparePartSuitableVehicle;
+  spareParts: SparePart[]; // Props untuk daftar Spare Part
+  sparePartsStatus: 'idle' | 'loading' | 'succeeded' | 'failed'; // Status loading Spare Part
 }
 
-// PASTIKAN ADA 'export default function' DI SINI
 export default function SparePartSuitableVehicleDialog({
   onClose,
   initialData,
@@ -50,20 +50,19 @@ export default function SparePartSuitableVehicleDialog({
   sparePartsStatus,
 }: SparePartSuitableVehicleDialogProps) {
 
-  // Fungsi untuk memetakan data awal ke nilai form
-  const mapSrsvToFormValues = (srsv: SparePartSuitableVehicle): SparePartSuitableVehicleFormValues => {
+  const mapSparePartSuitableVehicleToFormValues = (spsv: SparePartSuitableVehicle): SparePartSuitableVehicleFormValues => {
     return {
-      sparePartId: srsv.sparePartId,
-      vehicleMake: srsv.vehicleMake,
-      vehicleModel: srsv.vehicleModel,
-      trimLevel: srsv.trimLevel || null,
-      modelYear: srsv.modelYear || null,
+      sparePartId: spsv.sparePartId,
+      vehicleMake: spsv.vehicleMake,
+      vehicleModel: spsv.vehicleModel,
+      trimLevel: spsv.trimLevel,
+      modelYear: spsv.modelYear,
     };
   };
 
   const form = useForm<SparePartSuitableVehicleFormValues>({
     resolver: zodResolver(sparePartSuitableVehicleFormSchema),
-    defaultValues: initialData ? mapSrsvToFormValues(initialData) : {
+    defaultValues: initialData ? mapSparePartSuitableVehicleToFormValues(initialData) : {
       sparePartId: "",
       vehicleMake: "",
       vehicleModel: "",
@@ -74,7 +73,7 @@ export default function SparePartSuitableVehicleDialog({
 
   useEffect(() => {
     if (initialData) {
-      form.reset(mapSrsvToFormValues(initialData));
+      form.reset(mapSparePartSuitableVehicleToFormValues(initialData));
     } else {
       form.reset({
         sparePartId: "",
@@ -93,9 +92,9 @@ export default function SparePartSuitableVehicleDialog({
   return (
     <DialogContent className="sm:max-w-[425px] md:max-w-[700px] lg:max-w-[900px]">
       <DialogHeader>
-        <DialogTitle>{initialData ? "Edit Kendaraan yang Cocok" : "Tambahkan Kendaraan yang Cocok Baru"}</DialogTitle>
+        <DialogTitle>{initialData ? "Edit Kendaraan Cocok Spare Part" : "Tambahkan Kendaraan Cocok Spare Part Baru"}</DialogTitle>
         <DialogDescription>
-          {initialData ? "Edit detail kendaraan yang cocok untuk spare part ini." : "Isi detail kendaraan yang cocok untuk menambah data baru ke sistem."}
+          {initialData ? "Edit detail kendaraan yang cocok dengan spare part ini." : "Isi detail kendaraan yang cocok dengan spare part untuk menambah data baru."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -108,7 +107,7 @@ export default function SparePartSuitableVehicleDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Spare Part</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!initialData}> {/* Disable if editing */}
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Pilih Spare Part" />
@@ -142,9 +141,9 @@ export default function SparePartSuitableVehicleDialog({
               name="vehicleMake"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Merk Kendaraan</FormLabel>
+                  <FormLabel>Merek Kendaraan</FormLabel>
                   <FormControl>
-                    <Input placeholder="Toyota" {...field} disabled={!!initialData} /> {/* Disable if editing */}
+                    <Input placeholder="Toyota" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -158,7 +157,7 @@ export default function SparePartSuitableVehicleDialog({
                 <FormItem>
                   <FormLabel>Model Kendaraan</FormLabel>
                   <FormControl>
-                    <Input placeholder="Camry" {...field} disabled={!!initialData} /> {/* Disable if editing */}
+                    <Input placeholder="Avanza" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -170,9 +169,9 @@ export default function SparePartSuitableVehicleDialog({
               name="trimLevel"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tingkat Trim (Opsional)</FormLabel>
+                  <FormLabel>Level Trim (Opsional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="LE" {...field} value={field.value || ""} />
+                    <Input placeholder="G" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -186,7 +185,16 @@ export default function SparePartSuitableVehicleDialog({
                 <FormItem>
                   <FormLabel>Tahun Model (Opsional)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="2023" {...field} onChange={e => field.onChange(e.target.value ? Number(e.target.value) : null)} value={field.value || ""} />
+                    <Input 
+                      type="number" 
+                      placeholder="2020" 
+                      {...field} 
+                      value={field.value !== null ? field.value : ''} // Handle null for empty input
+                      onChange={e => {
+                        const val = e.target.value;
+                        field.onChange(val === '' ? null : Number(val));
+                      }} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

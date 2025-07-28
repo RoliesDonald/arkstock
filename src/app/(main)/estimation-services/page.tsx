@@ -239,7 +239,7 @@ export default function EstimationServiceListPage() {
       (es.estimation?.estimationNumber && es.estimation.estimationNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (es.service?.name && es.service.name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [allEstimationServices, activeTab, searchQuery]);
+  }, [allEstimationServices, searchQuery]);
 
   const handleAddNewEstimationServiceClick = useCallback(() => {
     setEditEstimationServiceData(undefined);

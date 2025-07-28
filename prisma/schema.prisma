@@ -136,6 +136,16 @@ enum EmployeeRole {
   PIC
 }
 
+enum EmployeePosition {
+  STAFF
+  SUPERVISOR
+  MANAGER
+  SENIOR_MANAGER
+  DIRECTOR
+  VICE_PRESIDENT
+  CHIEF_LEVEL
+}
+
 enum EmployeeStatus {
   ACTIVE
   INACTIVE
@@ -287,7 +297,7 @@ enum UnitCategory {
 model Company {
   id            String        @id @default(uuid()) @map("id") /// UUID untuk ID publik
   companyId     String        @unique @map("company_id") /// ID perusahaan dalam sistem (contoh: kode perusahaan)
-  companyName   String        @map("company_name") /// Nama perusahaan")
+  companyName   String        @unique @map("company_name") /// Nama perusahaan")
   companyEmail  String?       @map("company_email") /// Email perusahaan
   logo          String?
   contact       String? /// Nomro telpon perusahaan
@@ -372,30 +382,26 @@ model Vehicle {
 }
 
 /// =================================================================
-/// Karyawan (Pegawai Bengkel, Driver, PIC Customer/Vendor)
-/// =================================================================
-
-/// =================================================================
 /// Employee
 /// =================================================================
 model Employee {
-  id               String         @id @default(uuid())
-  userId           String?        @unique @map("user_id")
+  id               String            @id @default(uuid())
+  userId           String?           @unique @map("user_id")
   name             String
-  email            String?        @unique
-  password         String?        @map("password")
+  email            String?           @unique
+  password         String?           @map("password")
   photo            String?
-  phone            String?        @map("phone_number")
-  address          String?        @map("address")
-  position         String?        @map("position")
-  role             EmployeeRole   @default(USER)
+  phone            String?           @map("phone_number")
+  address          String?           @map("address")
+  position         EmployeePosition?
+  role             EmployeeRole      @default(USER)
   department       String?
-  status           EmployeeStatus @default(ACTIVE) @map("status")
-  tanggalLahir     DateTime?      @map("tanggal_lahir")
-  tanggalBergabung DateTime?      @map("tanggal_bergabung")
+  status           EmployeeStatus    @default(ACTIVE) @map("status")
+  tanggalLahir     DateTime?         @map("tanggal_lahir")
+  tanggalBergabung DateTime?         @map("tanggal_bergabung")
   gender           Gender
-  companyId        String?        @map("company_id")
-  company          Company?       @relation(fields: [companyId], references: [id])
+  companyId        String?           @map("company_id")
+  company          Company?          @relation(fields: [companyId], references: [id])
 
   /// Relasi untuk Work Orders
   mechanicWorkOrders  WorkOrder[] @relation("MechanicWorkOrders")

@@ -1,4 +1,4 @@
-import { PartVariant } from "@/types/sparepart";
+import { PartVariant } from "@prisma/client";
 
 export const getPartVariantShortCode = (variant: PartVariant): string => {
   switch (variant) {
@@ -22,11 +22,7 @@ export const getBrandShortCode = (brand?: string): string => {
   return brand.trim().substring(0, 3).toUpperCase();
 };
 
-export const generateSku = (
-  partNumber: string,
-  variant: PartVariant,
-  brand?: string | null
-): string => {
+export const generateSku = (partNumber: string, variant: PartVariant, brand?: string | null): string => {
   if (!partNumber) {
     return "";
   }

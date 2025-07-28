@@ -7,16 +7,24 @@ import { SparePartFormValues } from "@/schemas/sparePart";
 // maka logika fetch akan ditambahkan di sini.
 import SparePartDialog from "./SparePartDialog";
 
+interface EnumsApiResponse {
+  SparePartCategory: string[];
+  SparePartStatus: string[];
+  PartVariant: string[];
+}
+
 interface SparePartDialogWrapperProps {
   onClose: () => void;
   onSubmit: (values: SparePartFormValues) => Promise<void>;
   initialData?: SparePart;
+  enums: EnumsApiResponse |null;
 }
 
 export default function SparePartDialogWrapper({
   onClose,
   onSubmit,
   initialData,
+  enums
 }: SparePartDialogWrapperProps) {
   // Tidak ada logika fetch data Redux di sini untuk saat ini.
   // Jika diperlukan, bisa ditambahkan di sini, mirip dengan CompanyDialogWrapper.
@@ -26,6 +34,7 @@ export default function SparePartDialogWrapper({
       onClose={onClose}
       initialData={initialData}
       onSubmit={onSubmit}
+      enums={enums}
     />
   );
 }

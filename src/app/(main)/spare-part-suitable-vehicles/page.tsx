@@ -246,7 +246,7 @@ export default function SparePartSuitableVehicleListPage() {
       (srsv.vehicleModel.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (srsv.trimLevel && srsv.trimLevel.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [allSparePartSuitableVehicles, activeTab, searchQuery]);
+  }, [allSparePartSuitableVehicles, searchQuery]);
 
   const handleAddNewSparePartSuitableVehicleClick = useCallback(() => {
     setEditSparePartSuitableVehicleData(undefined);

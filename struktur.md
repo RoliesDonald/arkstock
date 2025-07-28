@@ -159,3 +159,67 @@
 
 superadmin@arkstok.com
 passwordaman123
+
+    # docker-compose.dev.yml
+    # Hapus baris 'version: '3.8'' dari sini
+
+    # Mengimpor konfigurasi dasar dari docker-compose.yml
+    services:
+      app:
+        image: node:20 
+        
+        build:
+          context: .
+          dockerfile: Dockerfile
+        
+        entrypoint: /bin/sh -c "/app/docker-entrypoint.sh && exec npm run dev -- -H 0.0.0.0 -p 3000" 
+        
+        environment:
+          NODE_ENV: development
+          DATABASE_URL: "postgresql://arkstokuser:arkstokpassword@db:5432/arkstokdb?schema=public"
+          JWT_SECRET: "eN3dY6qPzXk9Tj8H2f5mB4xL7sR0vC1aQ2uW7yF0bVpL6zJ5cK8oI7hG9pM0qY1rX2wZ3xV1yT4xY7hF0cK9oP6tQ2wZ3xV1yT4xY7hF0cK9"
+          HOST: 0.0.0.0
+          PORT: 3000
+          # PRISMA_CLI_BINARY_TARGETS: "linux-musl" 
+        
+        volumes:
+          - .:/app
+          - /app/.next 
+
+    
+
+    #!/bin/sh
+
+# Ini adalah script entrypoint untuk kontainer pengembangan.
+# Ini akan memastikan dependensi diinstal, Prisma Client digenerate,
+# dan cache Next.js dibersihkan sebelum memulai aplikasi.
+
+echo "--- Cleaning up .next directory ---"
+rm -rf .next # <--- PERUBAHAN DI SINI: Hapus folder .next
+echo "--- .next directory cleaned ---"
+
+echo "--- Running npm install (in container) ---"
+npm install
+echo "--- npm install completed (in container) ---"
+
+echo "--- Running npx prisma generate (in container) ---"
+npx prisma generate
+echo "--- npx prisma generate completed (in container) ---"
+
+# Jalankan perintah utama yang diteruskan ke entrypoint (yaitu "npm run dev -- -H 0.0.0.0 -p 3000")
+exec "$@"
+
+
+docker compose -f docker-compose.yml -f docker-compose.dev.yml build --no-cache
+
+
+
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+
+
+docker compose exec app sh -c "npx prisma migrate dev --name add_employee_position_enum"
+
+
+
+docker compose exec app sh -c "npm run seed"

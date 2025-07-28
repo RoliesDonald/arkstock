@@ -1,13 +1,21 @@
 export interface RawEmployeeApiResponse {
   id: string;
-  userId: string | null;
+  employeeId: string | null;
   name: string;
   email: string | null;
   password?: string; // Opsional dan tidak boleh di-fetch ke frontend
   photo: string | null;
   phone: string | null;
   address: string | null;
-  position: string | null;
+  position:
+    | "STAFF"
+    | "SUPERVISOR"
+    | "MANAGER"
+    | "SENIOR_MANAGER"
+    | "DIRECTOR"
+    | "VICE_PRESIDENT"
+    | "CHIEF_LEVEL"
+    | null;
   role:
     | "SUPER_ADMIN"
     | "ADMIN"
@@ -34,6 +42,8 @@ export interface RawEmployeeApiResponse {
   tanggalBergabung: string | null; // ISO string
   gender: "MALE" | "FEMALE";
   companyId: string | null;
+  createdAt: string; // Dari API, akan berupa string ISO
+  updatedAt: string; // Dari API, akan berupa string ISO
 
   // Relasi opsional jika disertakan dalam respons API
   company?: {
@@ -45,13 +55,21 @@ export interface RawEmployeeApiResponse {
 // Interface untuk data Employee yang sudah diformat di frontend (dengan Date objects)
 export interface Employee {
   id: string;
-  userId: string | null;
+  employeeId: string | null;
   name: string;
   email: string | null;
   photo: string | null;
   phone: string | null;
   address: string | null;
-  position: string | null;
+  position:
+    | "STAFF"
+    | "SUPERVISOR"
+    | "MANAGER"
+    | "SENIOR_MANAGER"
+    | "DIRECTOR"
+    | "VICE_PRESIDENT"
+    | "CHIEF_LEVEL"
+    | null;
   role:
     | "SUPER_ADMIN"
     | "ADMIN"
@@ -78,6 +96,8 @@ export interface Employee {
   tanggalBergabung: Date | null;
   gender: "MALE" | "FEMALE";
   companyId: string | null;
+  createdAt: Date; // Date object
+  updatedAt: Date; // Date object
 
   // Relasi opsional
   company?: {

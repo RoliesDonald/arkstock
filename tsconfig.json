@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": false,
@@ -20,18 +24,41 @@
     "baseUrl": ".", // PASTIKAN INI ADA DAN DISETEL KE "."
     "paths": {
       // Alias untuk src/
-      "@/*": ["./src/*"],
-
+      "@/*": [
+        "./src/*"
+      ],
       // Alias spesifik (jika Anda menggunakannya)
-      "@/components/*": ["./src/components/*"],
-      "@/lib/*": ["./src/lib/*"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/app/*": ["./src/app/*"],
-      "@/types/*": ["./src/types/*"],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/utils/*": [
+        "./src/utils/*"
+      ],
+      "@/app/*": [
+        "./src/app/*"
+      ],
+      "@/types/*": [
+        "./src/types/*"
+      ],
       // Alias untuk Prisma Client (penting untuk IntelliSense Prisma)
-      "@/generated/prisma": ["./node_modules/.prisma/client"]
+      "@/generated/prisma": [
+        "./node_modules/.prisma/client"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx",
+    "prisma/seed.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

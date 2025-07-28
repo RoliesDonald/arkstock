@@ -241,7 +241,7 @@ export default function InvoiceItemListPage() {
       (ii.sparePart?.partName && ii.sparePart.partName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (ii.sparePart?.partNumber && ii.sparePart.partNumber.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [allInvoiceItems, activeTab, searchQuery]);
+  }, [allInvoiceItems, searchQuery]);
 
   const handleAddNewInvoiceItemClick = useCallback(() => {
     setEditInvoiceItemData(undefined);

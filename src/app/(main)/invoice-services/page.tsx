@@ -239,7 +239,7 @@ export default function InvoiceServiceListPage() {
       (is.invoice?.invoiceNumber && is.invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (is.service?.name && is.service.name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [allInvoiceServices, activeTab, searchQuery]);
+  }, [allInvoiceServices, searchQuery]);
 
   const handleAddNewInvoiceServiceClick = useCallback(() => {
     setEditInvoiceServiceData(undefined);

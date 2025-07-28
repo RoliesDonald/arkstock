@@ -1,4 +1,3 @@
-"use client";
 
 import React, { useState, useMemo, useCallback } from "react";
 import {
@@ -110,6 +109,8 @@ TableMainProps<TData>) {
           )}
         </div>
       </div>
+      <div className="overflow-x-auto whitespace-nowrap max-w-full">
+
       <Tabs value={activeTab} onValueChange={onTabChange} className="mb-4">
         <TabsList>
           {tabItems.map((item) => (
@@ -119,6 +120,7 @@ TableMainProps<TData>) {
           ))}
         </TabsList>
       </Tabs>
+          </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>

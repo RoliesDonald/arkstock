@@ -240,7 +240,7 @@ export default function ServiceRequiredSparePartListPage() {
       (srsp.sparePart?.partName && srsp.sparePart.partName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (srsp.sparePart?.partNumber && srsp.sparePart.partNumber.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [allServiceRequiredSpareParts, activeTab, searchQuery]);
+  }, [allServiceRequiredSpareParts, searchQuery]);
 
   const handleAddNewServiceRequiredSparePartClick = useCallback(() => {
     setEditServiceRequiredSparePartData(undefined);

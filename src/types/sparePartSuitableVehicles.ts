@@ -1,9 +1,13 @@
+// src/types/sparePartSuitableVehicles.ts
+
+// Interface untuk data mentah yang diterima langsung dari API
 export interface RawSparePartSuitableVehicleApiResponse {
   sparePartId: string;
   vehicleMake: string;
   vehicleModel: string;
   trimLevel: string | null;
   modelYear: number | null;
+  // Tidak ada createdAt/updatedAt di model ini berdasarkan schema.prisma
 
   // Relasi opsional jika disertakan dalam respons API
   sparePart?: {
@@ -22,6 +26,7 @@ export interface SparePartSuitableVehicle {
   vehicleModel: string;
   trimLevel: string | null;
   modelYear: number | null;
+  // Tidak ada createdAt/updatedAt di model ini berdasarkan schema.prisma
 
   // Relasi opsional
   sparePart?: {

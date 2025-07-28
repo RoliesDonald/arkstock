@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Employee, RawEmployeeApiResponse } from "@/types/employee"; 
 import { EmployeeStatus, EmployeeRole, Gender } from "@prisma/client"; // <--- IMPORT GENDER DARI @PRISMA/CLIENT
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 // ... sisa import lainnya
 
@@ -120,7 +121,7 @@ export default function EmployeeDetailPage() {
           {employee.photo && (
             <div className="mb-4">
               <strong>Foto:</strong>
-              <img src={employee.photo} alt="Foto Karyawan" className="mt-2 rounded-md max-w-xs" />
+              <Image src={employee.photo} alt="Foto Karyawan" className="mt-2 rounded-md max-w-xs" />
             </div>
           )}
         </div>

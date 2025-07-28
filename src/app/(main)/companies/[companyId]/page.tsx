@@ -7,6 +7,7 @@ import { Company, RawCompanyApiResponse } from "@/types/companies";
 import { CompanyType, CompanyStatus, CompanyRole } from "@prisma/client"; 
 import { api } from "@/lib/utils/api"; 
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export default function CompanyDetailPage() {
   const router = useRouter();
@@ -105,7 +106,7 @@ export default function CompanyDetailPage() {
           {company.logo && (
             <div className="mb-4">
               <strong>Logo:</strong>
-              <img src={company.logo} alt="Logo Perusahaan" className="mt-2 rounded-md max-w-xs" />
+              <Image src={company.logo} alt="Logo Perusahaan" className="mt-2 rounded-md max-w-xs" />
             </div>
           )}
         </div>

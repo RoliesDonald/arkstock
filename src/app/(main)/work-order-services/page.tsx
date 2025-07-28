@@ -239,7 +239,7 @@ export default function WorkOrderServiceListPage() {
       (wos.workOrder?.workOrderNumber && wos.workOrder.workOrderNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (wos.service?.name && wos.service.name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [allWorkOrderServices, activeTab, searchQuery]);
+  }, [allWorkOrderServices, searchQuery]);
 
   const handleAddNewWorkOrderServiceClick = useCallback(() => {
     setEditWorkOrderServiceData(undefined);

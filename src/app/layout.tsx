@@ -1,6 +1,3 @@
-// src/app/layout.tsx
-// Hapus baris "use client"; dari sini. Ini harus menjadi Server Component.
-
 import "./globals.css";
 import React from "react";
 import type { Metadata } from "next";

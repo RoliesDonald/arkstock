@@ -241,7 +241,7 @@ export default function WorkOrderSparePartListPage() {
       (wosp.sparePart?.partName && wosp.sparePart.partName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (wosp.sparePart?.partNumber && wosp.sparePart.partNumber.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [allWorkOrderSpareParts, activeTab, searchQuery]);
+  }, [allWorkOrderSpareParts, searchQuery]);
 
   const handleAddNewWorkOrderSparePartClick = useCallback(() => {
     setEditWorkOrderSparePartData(undefined);

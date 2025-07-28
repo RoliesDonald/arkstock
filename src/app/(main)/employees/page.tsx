@@ -1,7 +1,7 @@
+// src/app/(main)/employee/page.tsx
 "use client";
 
 import TableMain from "@/components/common/table/TableMain";
-// import EmployeeDialog from "@/components/dialog/employeeDialog/EmployeeDialog"; // Hapus import ini
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -12,7 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { Employee, RawEmployeeApiResponse } from "@/types/employee"; 
+import { Employee, RawEmployeeApiResponse } from "@/types/employee";
+import { EmployeeFormValues } from "@/schemas/employee";
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreVertical } from "lucide-react";
 import React, { useCallback, useMemo, useState, useEffect } from "react";
@@ -28,14 +29,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Dialog } from "@/components/ui/dialog"; 
+import { Dialog } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { fetchEmployees, formatEmployeeDates } from "@/store/slices/employeeSlice"; 
-import { fetchCompanies } from "@/store/slices/companySlice"; 
-import { EmployeeStatus, EmployeeRole, Gender } from "@prisma/client"; 
-import { api } from "@/lib/utils/api"; 
-import { EmployeeFormValues } from "@/schemas/employee";
-import EmDialogWrapper from "@/components/dialog/employeeDialog/_component/EmDialogWrapper";
+import { fetchEmployees, formatEmployeeDates } from "@/store/slices/employeeSlice";
+import { api } from "@/lib/utils/api";
+import Link from "next/link";
+import EmployeeDialogWrapper from "@/components/dialog/employeeDialog/_component/EmployeeDialogWrapper";
+
+interface EnumsApiResponse {
+  SparePartCategory: string[];
+  SparePartStatus: string[];
+  PartVariant: string[];
+  EmployeeRole: string[];
+  EmployeeStatus: string[];
+  Gender: string[];
+  EmployeePosition: string[];
+}
 
 export default function EmployeeListPage() {
   const router = useRouter();
@@ -44,16 +53,17 @@ export default function EmployeeListPage() {
 
   const searchQuery = useAppSelector((state) => state.tableSearch.searchQuery);
   const allEmployees = useAppSelector((state) => state.employee.employees);
-  const loading = useAppSelector((state) => state.employee.status === 'loading');
+  const loading = useAppSelector((state) => state.employee.status === "loading");
   const error = useAppSelector((state) => state.employee.error);
-
-  const allCompanies = useAppSelector((state) => state.companies.companies);
-  const companyStatus = useAppSelector((state) => state.companies.status);
 
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isEmployeeDialogOpen, setIsEmployeeDialogOpen] = useState<boolean>(false);
   const [editEmployeeData, setEditEmployeeData] = useState<Employee | undefined>(undefined);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | undefined>(undefined);
+
+  const [enums, setEnums] = useState<EnumsApiResponse | null>(null);
+  const [enumsLoading, setEnumsLoading] = useState<boolean>(true);
+  const [enumsError, setEnumsError] = useState<string | null>(null);
 
   const getAuthToken = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -64,15 +74,38 @@ export default function EmployeeListPage() {
 
   useEffect(() => {
     dispatch(fetchEmployees());
-    dispatch(fetchCompanies()); 
-  }, [dispatch]);
 
-  const handleDetailEmployee = useCallback(
-    (employee: Employee) => {
-      router.push(`/employees/${employee.id}`);
-    },
-    [router]
-  );
+    const fetchEnums = async () => {
+      try {
+        const response = await fetch("/api/enums");
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: EnumsApiResponse = await response.json();
+        setEnums(data);
+      } catch (err: any) {
+        console.error("Failed to fetch enums:", err);
+        setEnumsError(err.message || "Gagal mengambil data enum.");
+        toast({
+          title: "Error",
+          description: "Gagal memuat filter kategori. Silakan coba lagi.",
+          variant: "destructive",
+        });
+      } finally {
+        setEnumsLoading(false);
+      }
+    };
+
+    fetchEnums();
+  }, [dispatch, toast]);
+
+  // handleDetailEmployee tidak lagi diperlukan jika nama karyawan yang diklik
+  // const handleDetailEmployee = useCallback(
+  //   (employee: Employee) => {
+  //     router.push(`/employee/${employee.id}`);
+  //   },
+  //   [router]
+  // );
 
   const handleEditEmployee = useCallback((employee: Employee) => {
     setEditEmployeeData(employee);
@@ -94,22 +127,24 @@ export default function EmployeeListPage() {
       }
 
       try {
-        const method = values.id ? 'PUT' : 'POST';
-        const url = values.id ? `http://localhost:3000/api/employees/${values.id}` : 'http://localhost:3000/api/employees';
-        
-        const payload = { ...values };
-        if (!values.password) {
-            delete payload.password; 
-        }
+        const url = `http://localhost:3000/api/employees${values.id ? `/${values.id}` : ""}`;
 
-        const response = await api.post<Employee | RawEmployeeApiResponse>(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        });
+        let response;
+        if (values.id) {
+          response = await api.put<Employee | RawEmployeeApiResponse>(url, values, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        } else {
+          response = await api.post<Employee | RawEmployeeApiResponse>(url, values, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        }
 
         toast({
           title: "Sukses",
@@ -117,7 +152,7 @@ export default function EmployeeListPage() {
         });
         setIsEmployeeDialogOpen(false);
         setEditEmployeeData(undefined);
-        dispatch(fetchEmployees()); 
+        dispatch(fetchEmployees());
       } catch (err: any) {
         toast({
           title: "Error",
@@ -145,9 +180,8 @@ export default function EmployeeListPage() {
 
       try {
         await api.delete(`http://localhost:3000/api/employees/${employeeId}`, {
-          method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -156,7 +190,7 @@ export default function EmployeeListPage() {
           description: "Karyawan berhasil dihapus.",
         });
         setEmployeeToDelete(undefined);
-        dispatch(fetchEmployees()); 
+        dispatch(fetchEmployees());
       } catch (err: any) {
         toast({
           title: "Error",
@@ -174,7 +208,13 @@ export default function EmployeeListPage() {
         id: "select",
         header: ({ table }) => (
           <Checkbox
-            checked={table.getIsAllPageRowsSelected() ? true : (table.getIsSomePageRowsSelected() ? 'indeterminate' : false)}
+            checked={
+              table.getIsAllPageRowsSelected()
+                ? true
+                : table.getIsSomePageRowsSelected()
+                ? "indeterminate"
+                : false
+            }
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
             aria-label="Select all rows"
           />
@@ -190,56 +230,27 @@ export default function EmployeeListPage() {
         enableHiding: false,
       },
       { accessorKey: "employeeId", header: "ID Karyawan" },
-      { accessorKey: "name", header: "Nama" },
+      {
+        accessorKey: "name",
+        header: "Nama",
+        cell: ({ row }) => (
+          <Link href={`/employee/${row.original.id}`} className="text-blue-600 hover:underline">
+            {row.original.name}
+          </Link>
+        ),
+      },
       { accessorKey: "email", header: "Email" },
       { accessorKey: "phone", header: "Telepon" },
-      { accessorKey: "position", header: "Posisi" },
-      { accessorKey: "department", header: "Departemen" },
-      {
-        accessorKey: "gender", 
-        header: "Jenis Kelamin",
-        cell: ({ row }) => {
-          const gender = row.original.gender;
-          let genderColor: string;
-          switch (gender) {
-            case Gender.MALE:
-              genderColor = "bg-blue-200 text-blue-800";
-              break;
-            case Gender.FEMALE:
-              genderColor = "bg-pink-200 text-pink-800";
-              break;
-            default:
-              genderColor = "bg-gray-200 text-gray-800";
-          }
-          return (
-            <span className={`${genderColor} px-2 py-1 rounded-full text-xs font-semibold`}>{gender}</span>
-          );
-        },
-      },
+      { accessorKey: "position", header: "Jabatan" },
       {
         accessorKey: "role",
         header: "Role",
         cell: ({ row }) => {
           const role = row.original.role;
-          let roleColor: string;
-          switch (role) {
-            case EmployeeRole.ADMIN:
-              roleColor = "bg-red-200 text-red-800";
-              break;
-            case EmployeeRole.SERVICE_MANAGER:
-              roleColor = "bg-blue-200 text-blue-800";
-              break;
-            case EmployeeRole.MECHANIC:
-              roleColor = "bg-green-200 text-green-800";
-              break;
-            case EmployeeRole.USER:
-              roleColor = "bg-gray-200 text-gray-800";
-              break;
-            default:
-              roleColor = "bg-gray-400 text-gray-800";
-          }
           return (
-            <span className={`${roleColor} px-2 py-1 rounded-full text-xs font-semibold`}>{role}</span>
+            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-800">
+              {role?.replace(/_/g, " ")}
+            </span>
           );
         },
       },
@@ -250,23 +261,25 @@ export default function EmployeeListPage() {
           const status = row.original.status;
           let statusColor: string;
           switch (status) {
-            case EmployeeStatus.ACTIVE:
+            case "ACTIVE":
               statusColor = "bg-green-500 text-white";
               break;
-            case EmployeeStatus.INACTIVE:
+            case "INACTIVE":
               statusColor = "bg-red-500 text-white";
               break;
-            case EmployeeStatus.ON_LEAVE:
+            case "ON_LEAVE":
               statusColor = "bg-yellow-500 text-black";
               break;
-            case EmployeeStatus.TERMINATED:
+            case "TERMINATED":
               statusColor = "bg-gray-700 text-white";
               break;
             default:
               statusColor = "bg-gray-400 text-gray-800";
           }
           return (
-            <span className={`${statusColor} px-2 py-1 rounded-full text-xs font-semibold`}>{status}</span>
+            <span className={`${statusColor} px-2 py-1 rounded-full text-xs font-semibold`}>
+              {status?.replace(/_/g, " ")}
+            </span>
           );
         },
       },
@@ -285,9 +298,10 @@ export default function EmployeeListPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => handleDetailEmployee(employee)}>
+                {/* KUNCI PERBAIKAN: Hapus DropdownMenuItem "Lihat Detail" */}
+                {/* <DropdownMenuItem onClick={() => handleDetailEmployee(employee)}>
                   Lihat Detail
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
                   Edit Karyawan
                 </DropdownMenuItem>
@@ -300,64 +314,37 @@ export default function EmployeeListPage() {
         },
       },
     ],
-    [handleDetailEmployee, handleEditEmployee]
+    [handleEditEmployee] // handleDetailEmployee dihapus dari dependencies
   );
 
   const employeeTabItems = useMemo(() => {
+    if (!enums) return [];
+
+    const roleTabs = enums.EmployeeRole.map((role) => ({
+      value: role.toLowerCase(),
+      label: role.replace(/_/g, " "),
+      count: allEmployees.filter((emp) => emp.role === role).length,
+    }));
+
+    const statusTabs = enums.EmployeeStatus.map((status) => ({
+      value: status.toLowerCase(),
+      label: status.replace(/_/g, " "),
+      count: allEmployees.filter((emp) => emp.status === status).length,
+    }));
+
+    const genderTabs = enums.Gender.map((gender) => ({
+      value: gender.toLowerCase(),
+      label: gender.replace(/_/g, " "),
+      count: allEmployees.filter((emp) => emp.gender === gender).length,
+    }));
+
     return [
       { value: "all", label: "All", count: allEmployees.length },
-      {
-        value: EmployeeStatus.ACTIVE.toLowerCase(),
-        label: "Aktif",
-        count: allEmployees.filter((emp) => emp.status === EmployeeStatus.ACTIVE).length,
-      },
-      {
-        value: EmployeeStatus.INACTIVE.toLowerCase(),
-        label: "Tidak Aktif",
-        count: allEmployees.filter((emp) => emp.status === EmployeeStatus.INACTIVE).length,
-      },
-      {
-        value: EmployeeStatus.ON_LEAVE.toLowerCase(),
-        label: "Cuti",
-        count: allEmployees.filter((emp) => emp.status === EmployeeStatus.ON_LEAVE).length,
-      },
-      {
-        value: EmployeeStatus.TERMINATED.toLowerCase(),
-        label: "Diberhentikan",
-        count: allEmployees.filter((emp) => emp.status === EmployeeStatus.TERMINATED).length,
-      },
-      {
-        value: EmployeeRole.ADMIN.toLowerCase(),
-        label: "Admin",
-        count: allEmployees.filter((emp) => emp.role === EmployeeRole.ADMIN).length,
-      },
-      {
-        value: EmployeeRole.SERVICE_MANAGER.toLowerCase(),
-        label: "Manager",
-        count: allEmployees.filter((emp) => emp.role === EmployeeRole.SERVICE_MANAGER).length,
-      },
-      {
-        value: EmployeeRole.MECHANIC.toLowerCase(),
-        label: "Staff",
-        count: allEmployees.filter((emp) => emp.role === EmployeeRole.MECHANIC).length,
-      },
-      {
-        value: EmployeeRole.USER.toLowerCase(),
-        label: "User",
-        count: allEmployees.filter((emp) => emp.role === EmployeeRole.USER).length,
-      },
-      { 
-        value: Gender.MALE.toLowerCase(),
-        label: "Pria",
-        count: allEmployees.filter((emp) => emp.gender === Gender.MALE).length,
-      },
-      { 
-        value: Gender.FEMALE.toLowerCase(),
-        label: "Wanita",
-        count: allEmployees.filter((emp) => emp.gender === Gender.FEMALE).length,
-      },
+      ...roleTabs,
+      ...statusTabs,
+      ...genderTabs,
     ];
-  }, [allEmployees]);
+  }, [allEmployees, enums]);
 
   const filteredEmployees = useMemo(() => {
     let data = allEmployees;
@@ -365,31 +352,30 @@ export default function EmployeeListPage() {
     if (activeTab !== "all") {
       data = data.filter((employee) => {
         const lowerCaseActiveTab = activeTab.toLowerCase();
-        // Cek berdasarkan status
-        if (Object.values(EmployeeStatus).some(s => s.toLowerCase() === lowerCaseActiveTab)) {
-          return employee.status.toLowerCase() === lowerCaseActiveTab;
-        }
-        // Cek berdasarkan role
-        if (Object.values(EmployeeRole).some(r => r.toLowerCase() === lowerCaseActiveTab)) {
+
+        if (enums?.EmployeeRole.some((r) => r.toLowerCase() === lowerCaseActiveTab)) {
           return employee.role.toLowerCase() === lowerCaseActiveTab;
         }
-        // Cek berdasarkan gender
-        if (Object.values(Gender).some(g => g.toLowerCase() === lowerCaseActiveTab)) { 
+        if (enums?.EmployeeStatus.some((s) => s.toLowerCase() === lowerCaseActiveTab)) {
+          return employee.status.toLowerCase() === lowerCaseActiveTab;
+        }
+        if (enums?.Gender.some((g) => g.toLowerCase() === lowerCaseActiveTab)) {
           return employee.gender.toLowerCase() === lowerCaseActiveTab;
         }
         return false;
       });
     }
 
-    return data.filter((employee) =>
-      employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      employee.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (employee.email && employee.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (employee.phone && employee.phone.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (employee.position && employee.position.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (employee.department && employee.department.toLowerCase().includes(searchQuery.toLowerCase()))
+    return data.filter(
+      (employee) =>
+        employee.employeeId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.position?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.department?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [allEmployees, activeTab, searchQuery]);
+  }, [allEmployees, activeTab, searchQuery, enums]);
 
   const handleAddNewEmployeeClick = useCallback(() => {
     setEditEmployeeData(undefined);
@@ -401,30 +387,47 @@ export default function EmployeeListPage() {
     setEditEmployeeData(undefined);
   }, []);
 
+  if (enumsLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <p>Memuat filter karyawan...</p>
+      </div>
+    );
+  }
+
+  if (enumsError) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh] text-red-500">
+        <p>Error memuat filter karyawan: {enumsError}</p>
+      </div>
+    );
+  }
+
   return (
     <>
-      <TableMain<Employee>
-        searchQuery={searchQuery}
-        data={filteredEmployees}
-        columns={employeeColumns}
-        tabItems={employeeTabItems} 
-        activeTab={activeTab}       
-        onTabChange={setActiveTab}   
-        showAddButton={true}
-        onAddClick={handleAddNewEmployeeClick}
-        showDownloadPrintButtons={true}
-        emptyMessage={
-          loading ? "Memuat data..." : error ? `Error: ${error}` : "Tidak ada Karyawan ditemukan."
-        }
-      />
+      <div className="overflow-x-auto whitespace-nowrap max-w-full pb-2">
+        <TableMain<Employee>
+          searchQuery={searchQuery}
+          data={filteredEmployees}
+          columns={employeeColumns}
+          tabItems={employeeTabItems}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          showAddButton={true}
+          onAddClick={handleAddNewEmployeeClick}
+          showDownloadPrintButtons={true}
+          emptyMessage={
+            loading ? "Memuat data..." : error ? `Error: ${error}` : "Tidak ada Karyawan ditemukan."
+          }
+        />
+      </div>
 
       <Dialog open={isEmployeeDialogOpen} onOpenChange={setIsEmployeeDialogOpen}>
-        <EmDialogWrapper
+        <EmployeeDialogWrapper
           onClose={handleEmployeeDialogClose}
           initialData={editEmployeeData}
           onSubmit={handleSubmitEmployee}
-          companies={allCompanies} 
-          companyStatus={companyStatus} 
+          enums={enums}
         />
       </Dialog>
 

@@ -11,7 +11,7 @@ export default function SuperAdmin() {
     <div className="flex gap-4 flex-col md:flex-row">
       {/* LEFT SIDE */}
       <div className="w-full md:w-[70%] lg:w-[70%] gap-4 flex-col flex ">
-        <h1>Dashboard untuk Super Admin</h1>
+        <h1 className="text-arkBg-500 font-semibold">Dashboard untuk Super Admin Saja</h1>
         {/* INFO CARDS */}
         <div className="flex gap-2 justify-between flex-wrap">
           <InfoCard type="Saldo" amount="2.123" />

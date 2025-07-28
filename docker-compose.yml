@@ -1,37 +1,36 @@
-services:
-  db:
-    image: postgres:latest
-    restart: always
-    environment:
-      POSTGRES_DB: arkstokdb
-      POSTGRES_USER: arkstokuser
-      POSTGRES_PASSWORD: arkstokpassword
-    ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data # Ini merujuk ke volume bernama 'db_data'
+    # docker-compose.yml
 
-  app:
-    build:
-      context: . 
-      dockerfile: Dockerfile
-      args:
-        DATABASE_URL: "postgresql://arkstokuser:arkstokpassword@db:5432/arkstokdb?schema=public"
-        JWT_SECRET: "eN3dY6qPzXk9Tj8H2f5mB4xL7sR0vC1aQ2uW7yF0bVpL6zJ5cK8oI7hG9pM0qY1rX2wZ3xV1yT4xY7hF0cK9oP6tQ2wZ3xV1yT4xY7hF0cK9"
-    restart: always
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: "postgresql://arkstokuser:arkstokpassword@db:5432/arkstokdb?schema=public"
-      JWT_SECRET: "eN3dY6qPzXk9Tj8H2f5mB4xL7sR0vC1aQ2uW7yF0bVpL6zJ5cK8oI7hG9pM0qY1rX2wZ3xV1yT4xY7hF0cK9oP6tQ2wZ3xV1yT4xY7hF0cK9"
-    depends_on:
-      - db 
-    volumes:
-      # Volume anonim untuk node_modules dan .next untuk kinerja build yang lebih baik
-      # dan untuk mencegah polusi direktori host
-      - /app/node_modules 
-      - /app/.next 
+    services:
+      db:
+        image: postgres:latest
+        restart: always
+        environment:
+          POSTGRES_DB: arkstokdb
+          POSTGRES_USER: arkstokuser
+          POSTGRES_PASSWORD: arkstokpassword
+        ports:
+          - "5432:5432"
+        volumes:
+          - db_data:/var/lib/postgresql/data
 
-volumes: 
-  db_data: 
-    driver: local 
+      app: # Layanan untuk aplikasi Next.js (backend/frontend)
+        build:
+          context: . 
+          dockerfile: Dockerfile # Menggunakan Dockerfile utama
+        restart: always
+        ports:
+          - "3000:3000" # <--- PASTIKAN BARIS INI ADA DAN BENAR
+        environment:
+          DATABASE_URL: "postgresql://arkstokuser:arkstokpassword@db:5432/arkstokdb?schema=public"
+          JWT_SECRET: "eN3dY6qPzXk9Tj8H2f5mB4xL7sR0vC1aQ2uW7yF0bVpL6zJ5cK8oI7hG9pM0qY1rX2wZ3xV1yT4xY7hF0cK9oP6tQ2wZ3xV1yT4xY7hF0cK9"
+          NODE_ENV: production
+        depends_on:
+          - db 
+        volumes:
+          - /app/node_modules 
+          - /app/.next 
+
+    volumes: 
+      db_data: 
+        driver: local 
+    

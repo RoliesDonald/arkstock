@@ -1,0 +1,534 @@
+#1 [internal] load local bake definitions
+#1 reading from stdin 760B done
+#1 DONE 0.0s
+
+#2 [app internal] load build definition from Dockerfile
+#2 transferring dockerfile: 4.25kB done
+#2 transferring dockerfile: 4.25kB done
+#2 DONE 0.0s
+
+#3 [cli internal] load metadata for docker.io/library/node:20
+#3 DONE 3.6s
+
+#4 [app internal] load .dockerignore
+#4 transferring context: 217B done
+#4 DONE 0.0s
+
+#5 [app builder 1/7] FROM docker.io/library/node:20@sha256:2c071012e93673d595e1399564c4a48a70a5c0a0acd7db8211d5e6f6316b431a
+#5 resolve docker.io/library/node:20@sha256:2c071012e93673d595e1399564c4a48a70a5c0a0acd7db8211d5e6f6316b431a 0.0s done
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 0B / 48.49MB 0.1s
+#5 ...
+
+#6 [app internal] load build context
+#6 transferring context: 8.19MB 0.1s done
+#6 DONE 0.2s
+
+#5 [app builder 1/7] FROM docker.io/library/node:20@sha256:2c071012e93673d595e1399564c4a48a70a5c0a0acd7db8211d5e6f6316b431a
+#5 sha256:2c071012e93673d595e1399564c4a48a70a5c0a0acd7db8211d5e6f6316b431a 6.41kB / 6.41kB done
+#5 sha256:4912e0f4b102ce2beb6cd79657b7dc6128019ac682a55a059dec735a547e4772 2.49kB / 2.49kB done
+#5 sha256:d05db19b2fc951de57277a69bef61300129cfa87385b241b9201db91f01376ea 6.63kB / 6.63kB done
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 0B / 24.02MB 0.2s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 0B / 64.40MB 0.2s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 5.24MB / 64.40MB 1.8s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 3.15MB / 48.49MB 2.5s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 2.10MB / 24.02MB 2.8s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 9.44MB / 64.40MB 3.0s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 6.29MB / 48.49MB 3.4s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 4.19MB / 24.02MB 3.5s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 6.29MB / 24.02MB 4.3s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 13.63MB / 64.40MB 4.3s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 9.44MB / 48.49MB 4.5s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 8.39MB / 24.02MB 5.3s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 12.58MB / 48.49MB 5.7s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 10.49MB / 24.02MB 6.5s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 17.83MB / 64.40MB 6.5s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 15.73MB / 48.49MB 7.2s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 12.58MB / 24.02MB 7.2s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 14.68MB / 24.02MB 8.1s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 18.87MB / 48.49MB 8.7s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 16.78MB / 24.02MB 9.0s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 22.02MB / 64.40MB 9.1s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 22.02MB / 48.49MB 9.7s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 18.87MB / 24.02MB 10.3s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 25.17MB / 48.49MB 10.6s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 20.97MB / 24.02MB 11.4s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 28.31MB / 48.49MB 11.7s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 26.21MB / 64.40MB 12.4s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 31.46MB / 48.49MB 12.6s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 23.07MB / 24.02MB 12.6s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 24.02MB / 24.02MB 13.1s done
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 0B / 211.36MB 13.2s
+#5 sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 24.02MB / 24.02MB 13.1s done
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 34.60MB / 48.49MB 13.5s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 37.75MB / 48.49MB 14.3s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 40.89MB / 48.49MB 15.1s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 30.41MB / 64.40MB 15.8s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 44.04MB / 48.49MB 16.3s
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 47.19MB / 48.49MB 17.2s
+#5 extracting sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f
+#5 sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 48.49MB / 48.49MB 17.6s done
+#5 sha256:ce90112df955d4dd33b8ca351a47782e8258d90dff2199b7a56fec929ac71bd5 0B / 3.32kB 17.7s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 7.34MB / 211.36MB 18.3s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 0B / 48.67MB 18.3s
+#5 sha256:ce90112df955d4dd33b8ca351a47782e8258d90dff2199b7a56fec929ac71bd5 3.32kB / 3.32kB 18.2s done
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 34.60MB / 64.40MB 18.5s
+#5 extracting sha256:ebed137c7c18cb1906fb8314eabc10611ddf49a281f8c1b5eab987a7137f749f 1.5s done
+#5 extracting sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a
+#5 extracting sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 0.4s done
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 3.15MB / 48.67MB 19.8s
+#5 extracting sha256:c2e76af9483f2d17a3e370639403df2c53a3da1480d533116a8694cd91f15d5a 0.4s done
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 38.80MB / 64.40MB 20.3s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 6.29MB / 48.67MB 21.0s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 9.44MB / 48.67MB 22.2s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 42.99MB / 64.40MB 22.5s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 17.83MB / 211.36MB 23.3s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 12.58MB / 48.67MB 23.6s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 15.73MB / 48.67MB 24.9s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 47.19MB / 64.40MB 25.1s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 18.87MB / 48.67MB 26.4s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 51.38MB / 64.40MB 27.6s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 22.02MB / 48.67MB 28.0s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 29.36MB / 211.36MB 28.4s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 55.57MB / 64.40MB 29.2s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 25.17MB / 48.67MB 29.9s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 59.77MB / 64.40MB 31.0s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 28.31MB / 48.67MB 31.7s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 64.40MB / 64.40MB 32.5s
+#5 sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 64.40MB / 64.40MB 32.5s done
+#5 extracting sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 0.1s
+#5 sha256:f809fc3353aacdd42e3ec24f041dec70415784866c60e1dbb485eb218394a380 0B / 1.25MB 32.6s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 38.80MB / 211.36MB 33.5s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 31.46MB / 48.67MB 33.5s
+#5 extracting sha256:37f838b71c6b82c581b7543a313255b8c99c23cc9d96c1ad6f9f5f208c942553 1.8s done
+#5 sha256:f809fc3353aacdd42e3ec24f041dec70415784866c60e1dbb485eb218394a380 1.05MB / 1.25MB 34.6s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 34.60MB / 48.67MB 34.8s
+#5 sha256:f809fc3353aacdd42e3ec24f041dec70415784866c60e1dbb485eb218394a380 1.25MB / 1.25MB 34.7s done
+#5 sha256:b02ac2c75cc331e8c16951f908100ff0b021adfffd4877ce0e8588eff6307f64 0B / 448B 34.8s
+#5 sha256:f809fc3353aacdd42e3ec24f041dec70415784866c60e1dbb485eb218394a380 1.25MB / 1.25MB 34.7s done
+#5 sha256:b02ac2c75cc331e8c16951f908100ff0b021adfffd4877ce0e8588eff6307f64 448B / 448B 35.3s done
+#5 sha256:b02ac2c75cc331e8c16951f908100ff0b021adfffd4877ce0e8588eff6307f64 448B / 448B 35.3s done
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 37.75MB / 48.67MB 35.8s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 50.33MB / 211.36MB 36.7s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 40.89MB / 48.67MB 36.7s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 44.04MB / 48.67MB 37.8s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 47.19MB / 48.67MB 38.8s
+#5 sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 48.67MB / 48.67MB 39.2s done
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 61.87MB / 211.36MB 40.0s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 73.40MB / 211.36MB 41.6s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 84.93MB / 211.36MB 43.4s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 96.47MB / 211.36MB 45.4s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 109.05MB / 211.36MB 47.3s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 120.59MB / 211.36MB 49.2s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 132.12MB / 211.36MB 51.2s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 143.65MB / 211.36MB 52.9s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 156.24MB / 211.36MB 54.9s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 167.77MB / 211.36MB 56.8s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 179.31MB / 211.36MB 58.7s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 190.84MB / 211.36MB 60.5s
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 202.38MB / 211.36MB 62.5s
+#5 extracting sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45
+#5 sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 211.36MB / 211.36MB 64.0s done
+#5 extracting sha256:873a4c80287477653c01b20948fc34bb1bacf0f826bcc2ddc3bd2fe25b342d45 4.3s done
+#5 extracting sha256:ce90112df955d4dd33b8ca351a47782e8258d90dff2199b7a56fec929ac71bd5
+#5 extracting sha256:ce90112df955d4dd33b8ca351a47782e8258d90dff2199b7a56fec929ac71bd5 done
+#5 extracting sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 0.1s
+#5 extracting sha256:787104c2d8bcecc48a284535501e5ef07bc31f45b84f14d8ef35cc9cf6f55657 1.5s done
+#5 extracting sha256:f809fc3353aacdd42e3ec24f041dec70415784866c60e1dbb485eb218394a380
+#5 extracting sha256:f809fc3353aacdd42e3ec24f041dec70415784866c60e1dbb485eb218394a380 0.0s done
+#5 extracting sha256:b02ac2c75cc331e8c16951f908100ff0b021adfffd4877ce0e8588eff6307f64 done
+#5 DONE 70.2s
+
+#7 [app builder 2/7] WORKDIR /app
+#7 DONE 2.2s
+
+#8 [app builder 3/7] COPY . .
+#8 DONE 0.2s
+
+#9 [cli builder 4/7] RUN set -eux;     echo "--- Cleaning up potential cached node_modules ---";     rm -rf node_modules;     echo "--- Clean up completed ---"
+#9 0.172 + echo --- Cleaning up potential cached node_modules ---
+#9 0.172 + rm -rf node_modules
+#9 0.172 --- Cleaning up potential cached node_modules ---
+#9 0.174 --- Clean up completed ---
+#9 0.174 + echo --- Clean up completed ---
+#9 DONE 0.2s
+
+#10 [cli builder 5/7] RUN set -eux;     apt-get update;     apt-get install -y openssl curl gzip;     rm -rf /var/lib/apt/lists/*
+#10 0.169 + apt-get update
+#10 0.288 Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+#10 0.377 Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+#10 0.410 Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+#10 0.472 Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8793 kB]
+#10 1.403 Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [756 B]
+#10 1.403 Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [272 kB]
+#10 2.088 Fetched 9320 kB in 2s (4930 kB/s)
+#10 2.088 Reading package lists...
+#10 2.545 + apt-get install -y openssl curl gzip
+#10 2.565 Reading package lists...
+#10 3.016 Building dependency tree...
+#10 3.152 Reading state information...
+#10 3.430 openssl is already the newest version (3.0.16-1~deb12u1).
+#10 3.430 openssl set to manually installed.
+#10 3.430 curl is already the newest version (7.88.1-10+deb12u12).
+#10 3.430 gzip is already the newest version (1.12-1).
+#10 3.430 gzip set to manually installed.
+#10 3.430 0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+#10 3.432 + rm -rf /var/lib/apt/lists/auxfiles /var/lib/apt/lists/deb.debian.org_debian-security_dists_bookworm-security_InRelease /var/lib/apt/lists/deb.debian.org_debian-security_dists_bookworm-security_main_binary-amd64_Packages.lz4 /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm-updates_InRelease /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm-updates_main_binary-amd64_Packages.lz4 /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm_InRelease /var/lib/apt/lists/deb.debian.org_debian_dists_bookworm_main_binary-amd64_Packages.lz4 /var/lib/apt/lists/lock /var/lib/apt/lists/partial
+#10 DONE 3.5s
+
+#11 [cli builder 6/7] RUN set -eux;     echo "--- Updating npm to latest version ---";     npm install -g npm@latest;     echo "--- npm updated ---";         echo "--- Running npm ci (clean install) ---";     npm ci;     echo "--- npm ci completed ---";         echo "--- Running npm rebuild ---";     npm rebuild;     echo "--- npm rebuild completed ---";         echo "--- Verifying installed versions of autoprefixer and postcss ---";     npm ls autoprefixer postcss || true;     echo "--- Autoprefixer and PostCSS modules verification completed ---";         echo "--- Verifying Prisma schema and client files ---";     ls -l prisma/schema.prisma || true;     ls -l node_modules/@prisma/client/runtime/library.d.ts || true;     ls -l node_modules/.prisma/client/runtime/ || true;     echo "--- Prisma schema and client files verification completed ---";         chown -R node:node /app;     echo "--- Ownership of /app changed to node user ---"
+#11 0.184 + echo --- Updating npm to latest version ---
+#11 0.184 + npm install -g npm@latest
+#11 0.184 --- Updating npm to latest version ---
+#11 6.627 
+#11 6.627 removed 9 packages, and changed 108 packages in 6s
+#11 6.627 
+#11 6.627 25 packages are looking for funding
+#11 6.627   run `npm fund` for details
+#11 6.652 + echo --- npm updated ---
+#11 6.652 + echo --- Running npm ci (clean install) ---
+#11 6.652 + npm ci
+#11 6.652 --- npm updated ---
+#11 6.652 --- Running npm ci (clean install) ---
+#11 8.908 npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+#11 11.48 npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+#11 18.46 npm warn deprecated eslint@8.57.1: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+#11 21.03 npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
+#11 21.11 npm warn deprecated @humanwhocodes/config-array@0.13.0: Use @eslint/config-array instead
+#11 22.27 npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+#11 49.83 
+#11 49.83 > arkstok@0.1.0 postinstall
+#11 49.83 > npx prisma generate
+#11 49.83 
+#11 50.78 Prisma schema loaded from prisma/schema.prisma
+#11 51.28 
+#11 51.28 ✔ Generated Prisma Client (v6.12.0) to ./node_modules/.prisma/client in 267ms
+#11 51.28 
+#11 51.28 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+#11 51.28 
+#11 51.28 Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+#11 51.28 
+#11 51.33 
+#11 51.33 added 627 packages, and audited 628 packages in 45s
+#11 51.33 
+#11 51.33 164 packages are looking for funding
+#11 51.33   run `npm fund` for details
+#11 51.33 
+#11 51.33 found 0 vulnerabilities
+#11 51.36 + echo --- npm ci completed ---
+#11 51.36 + echo --- Running npm rebuild ---
+#11 51.36 + npm rebuild
+#11 51.36 --- npm ci completed ---
+#11 51.36 --- Running npm rebuild ---
+#11 54.36 rebuilt dependencies successfully
+#11 54.37 --- npm rebuild completed ---
+#11 54.37 --- Verifying installed versions of autoprefixer and postcss ---
+#11 54.37 + echo --- npm rebuild completed ---
+#11 54.37 + echo --- Verifying installed versions of autoprefixer and postcss ---
+#11 54.37 + npm ls autoprefixer postcss
+#11 55.16 arkstok@0.1.0 /app
+#11 55.16 +-- autoprefixer@10.4.21
+#11 55.16 | `-- postcss@8.5.6 deduped
+#11 55.16 +-- next@14.2.30
+#11 55.16 | `-- postcss@8.4.31
+#11 55.16 +-- postcss@8.5.6
+#11 55.16 `-- tailwindcss@3.4.17
+#11 55.16   +-- postcss-import@15.1.0
+#11 55.16   | `-- postcss@8.5.6 deduped
+#11 55.16   +-- postcss-js@4.0.1
+#11 55.16   | `-- postcss@8.5.6 deduped
+#11 55.16   +-- postcss-load-config@4.0.2
+#11 55.16   | `-- postcss@8.5.6 deduped
+#11 55.16   +-- postcss-nested@6.2.0
+#11 55.16   | `-- postcss@8.5.6 deduped
+#11 55.16   `-- postcss@8.5.6 deduped
+#11 55.16 
+#11 55.17 + echo --- Autoprefixer and PostCSS modules verification completed ---
+#11 55.17 + echo --- Verifying Prisma schema and client files ---
+#11 55.17 + ls -l prisma/schema.prisma
+#11 55.17 --- Autoprefixer and PostCSS modules verification completed ---
+#11 55.17 --- Verifying Prisma schema and client files ---
+#11 55.17 -rwxr-xr-x. 1 root root 33347 Jul 28 11:52 prisma/schema.prisma
+#11 55.18 + ls -l node_modules/@prisma/client/runtime/library.d.ts
+#11 55.18 -rw-r--r--. 1 root root 124600 Jul 28 22:01 node_modules/@prisma/client/runtime/library.d.ts
+#11 55.18 + ls -l node_modules/.prisma/client/runtime/
+#11 55.18 total 1220
+#11 55.18 -rw-r--r--. 1 root root 169934 Jul 28 22:01 edge-esm.js
+#11 55.18 -rw-r--r--. 1 root root 170475 Jul 28 22:01 edge.js
+#11 55.18 -rw-r--r--. 1 root root  11915 Jul 28 22:01 index-browser.d.ts
+#11 55.18 -rw-r--r--. 1 root root  35421 Jul 28 22:01 index-browser.js
+#11 55.18 -rw-r--r--. 1 root root 124600 Jul 28 22:01 library.d.ts
+#11 55.18 -rw-r--r--. 1 root root 202787 Jul 28 22:01 library.js
+#11 55.18 -rw-r--r--. 1 root root 182514 Jul 28 22:01 react-native.js
+#11 55.18 -rw-r--r--. 1 root root 201457 Jul 28 22:01 wasm-compiler-edge.js
+#11 55.18 -rw-r--r--. 1 root root 131958 Jul 28 22:01 wasm-engine-edge.js
+#11 55.18 + echo --- Prisma schema and client files verification completed ---
+#11 55.18 + chown -R node:node /app
+#11 55.18 --- Prisma schema and client files verification completed ---
+#11 56.03 + echo --- Ownership of /app changed to node user ---
+#11 56.03 --- Ownership of /app changed to node user ---
+#11 DONE 56.5s
+
+#12 [app builder 7/7] RUN set -eux;     echo "--- Starting Next.js build ---";     npm run build;     echo "--- Next.js build completed ---";         echo "--- Listing contents of /app/.next after build ---";     ls -la /app/.next/ || true;     echo "--- Listing contents of /app/.next/standalone after build ---";     ls -la /app/.next/standalone/ || true;     echo "--- Listing contents of /app/.next/static after build ---";     ls -la /app/.next/static/ || true;     echo "--- Searching for 'standalone' directory in /app ---";     find /app -name "standalone" || true;     echo "--- DIAGNOSTIK END ---"
+#12 0.166 --- Starting Next.js build ---
+#12 0.166 + echo --- Starting Next.js build ---
+#12 0.166 + npm run build
+#12 0.510 
+#12 0.510 > arkstok@0.1.0 build
+#12 0.510 > next build
+#12 0.510 
+#12 1.032 Attention: Next.js now collects completely anonymous telemetry regarding usage.
+#12 1.032 This information is used to shape Next.js' roadmap and prioritize features.
+#12 1.032 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+#12 1.032 https://nextjs.org/telemetry
+#12 1.032 
+#12 1.090   ▲ Next.js 14.2.30
+#12 1.090 
+#12 1.158    Creating an optimized production build ...
+#12 29.24  ✓ Compiled successfully
+#12 29.25    Linting and checking validity of types ...
+#12 39.62    Collecting page data ...
+#12 40.21 Prisma: Running in production mode.
+#12 41.73    Generating static pages (0/63) ...
+#12 42.25 Prisma: Running in production mode.
+#12 42.32    Generating static pages (15/63) 
+#12 42.65    Generating static pages (31/63) 
+#12 42.96    Generating static pages (47/63) 
+#12 43.19  ✓ Generating static pages (63/63)
+#12 43.80    Finalizing page optimization ...
+#12 43.80    Collecting build traces ...
+#12 53.81 
+#12 53.82 Route (app)                                                                       Size     First Load JS
+#12 53.82 ┌ ○ /                                                                             3.26 kB         128 kB
+#12 53.82 ├ ○ /_not-found                                                                   880 B          88.3 kB
+#12 53.82 ├ ○ /admin-dashboard                                                              2.05 kB         209 kB
+#12 53.82 ├ ○ /admin-dashboard/settings                                                     152 B          87.6 kB
+#12 53.82 ├ ƒ /api/auth/login                                                               0 B                0 B
+#12 53.82 ├ ƒ /api/companies                                                                0 B                0 B
+#12 53.82 ├ ƒ /api/companies/[companyId]                                                    0 B                0 B
+#12 53.82 ├ ƒ /api/employees                                                                0 B                0 B
+#12 53.82 ├ ƒ /api/employees/[employeeId]                                                   0 B                0 B
+#12 53.82 ├ ○ /api/enums                                                                    0 B                0 B
+#12 53.82 ├ ƒ /api/estimation-items                                                         0 B                0 B
+#12 53.82 ├ ƒ /api/estimation-items/[estimationItemId]                                      0 B                0 B
+#12 53.82 ├ ƒ /api/estimation-services                                                      0 B                0 B
+#12 53.82 ├ ƒ /api/estimations                                                              0 B                0 B
+#12 53.82 ├ ƒ /api/estimations/[estimationId]                                               0 B                0 B
+#12 53.82 ├ ƒ /api/invoice-items                                                            0 B                0 B
+#12 53.82 ├ ƒ /api/invoice-items/[invoiceItemId]                                            0 B                0 B
+#12 53.82 ├ ƒ /api/invoice-services                                                         0 B                0 B
+#12 53.82 ├ ƒ /api/invoice-services/[invoiceServiceId]                                      0 B                0 B
+#12 53.82 ├ ƒ /api/invoices                                                                 0 B                0 B
+#12 53.82 ├ ƒ /api/invoices/[invoicesId]                                                    0 B                0 B
+#12 53.82 ├ ƒ /api/locations                                                                0 B                0 B
+#12 53.82 ├ ƒ /api/locations/[locationId]                                                   0 B                0 B
+#12 53.82 ├ ƒ /api/purchase-order-items                                                     0 B                0 B
+#12 53.82 ├ ƒ /api/purchase-order-items/[purchaseOrderItemId]                               0 B                0 B
+#12 53.82 ├ ƒ /api/purchase-orders                                                          0 B                0 B
+#12 53.82 ├ ƒ /api/purchase-orders/[purchaseOrderId]                                        0 B                0 B
+#12 53.82 ├ ƒ /api/service-required-spare-parts                                             0 B                0 B
+#12 53.82 ├ ƒ /api/service-required-spare-parts/[serviceRequiredSparePartId]                0 B                0 B
+#12 53.82 ├ ƒ /api/services                                                                 0 B                0 B
+#12 53.82 ├ ƒ /api/services/[serviceId]                                                     0 B                0 B
+#12 53.82 ├ ƒ /api/spare-part-suitable-vehicles                                             0 B                0 B
+#12 53.82 ├ ƒ /api/spare-part-suitable-vehicles/[sparePartId]/[vehicleMake]/[vehicleModel]  0 B                0 B
+#12 53.82 ├ ƒ /api/spare-parts                                                              0 B                0 B
+#12 53.82 ├ ƒ /api/spare-parts/[sparePartId]                                                0 B                0 B
+#12 53.82 ├ ƒ /api/stock-transactions                                                       0 B                0 B
+#12 53.82 ├ ƒ /api/stock-transactions/[stockTransactionId]                                  0 B                0 B
+#12 53.82 ├ ƒ /api/units                                                                    0 B                0 B
+#12 53.82 ├ ƒ /api/units/[unitId]                                                           0 B                0 B
+#12 53.82 ├ ƒ /api/vehicles                                                                 0 B                0 B
+#12 53.82 ├ ƒ /api/vehicles/[vehicleId]                                                     0 B                0 B
+#12 53.82 ├ ƒ /api/warehouse-stoks                                                          0 B                0 B
+#12 53.82 ├ ƒ /api/warehouse-stoks/[warehouseStockId]                                       0 B                0 B
+#12 53.82 ├ ƒ /api/warehouses                                                               0 B                0 B
+#12 53.82 ├ ƒ /api/warehouses/[warehouseId]                                                 0 B                0 B
+#12 53.82 ├ ƒ /api/work-order-images                                                        0 B                0 B
+#12 53.82 ├ ƒ /api/work-order-images/[workOrderImageId]                                     0 B                0 B
+#12 53.82 ├ ƒ /api/work-order-items                                                         0 B                0 B
+#12 53.82 ├ ƒ /api/work-order-items/[workOrderItemId]                                       0 B                0 B
+#12 53.82 ├ ƒ /api/work-order-services                                                      0 B                0 B
+#12 53.82 ├ ƒ /api/work-order-services/[workOrderServiceId]                                 0 B                0 B
+#12 53.82 ├ ƒ /api/work-order-spare-parts                                                   0 B                0 B
+#12 53.82 ├ ƒ /api/work-order-spare-parts/[workOrderSparePartId]                            0 B                0 B
+#12 53.82 ├ ƒ /api/work-order-tasks                                                         0 B                0 B
+#12 53.82 ├ ƒ /api/work-order-tasks/[workOrderTaskId]                                       0 B                0 B
+#12 53.82 ├ ƒ /api/work-orders                                                              0 B                0 B
+#12 53.82 ├ ƒ /api/work-orders/[workOrderId]                                                0 B                0 B
+#12 53.82 ├ ○ /app-dashboard                                                                21.4 kB         228 kB
+#12 53.82 ├ ○ /companies                                                                    5.59 kB         210 kB
+#12 53.82 ├ ƒ /companies/[companyId]                                                        2.79 kB         104 kB
+#12 53.82 ├ ƒ /companies/[companyId]/vehicles                                               152 B          87.6 kB
+#12 53.82 ├ ○ /employees                                                                    7.87 kB         223 kB
+#12 53.82 ├ ƒ /employees/[employeeId]                                                       2.62 kB         104 kB
+#12 53.82 ├ ○ /estimation-items                                                             4.94 kB         191 kB
+#12 53.82 ├ ƒ /estimation-items/[estimationItemId]                                          2.71 kB          99 kB
+#12 53.82 ├ ○ /estimation-services                                                          4.89 kB         191 kB
+#12 53.82 ├ ƒ /estimation-services/[estimationServiceId]                                    2.67 kB          99 kB
+#12 53.82 ├ ○ /estimations                                                                  8.64 kB         237 kB
+#12 53.82 ├ ƒ /estimations/[estimationId]                                                   4.74 kB         107 kB
+#12 53.82 ├ ○ /invoice-items                                                                4.93 kB         191 kB
+#12 53.82 ├ ƒ /invoice-items/[invoiceItemId]                                                2.71 kB          99 kB
+#12 53.82 ├ ○ /invoice-services                                                             4.84 kB         191 kB
+#12 53.82 ├ ƒ /invoice-services/[invoiceServiceId]                                          2.66 kB          99 kB
+#12 53.82 ├ ○ /invoices                                                                     8.36 kB         219 kB
+#12 53.82 ├ ƒ /invoices/[invoiceId]                                                         4.73 kB         107 kB
+#12 53.82 ├ ○ /locations                                                                    3.08 kB         182 kB
+#12 53.82 ├ ƒ /locations/[locationId]                                                       2.49 kB        98.8 kB
+#12 53.82 ├ ○ /login                                                                        3.26 kB         128 kB
+#12 53.82 ├ ○ /purchase-order-items                                                         4.91 kB         191 kB
+#12 53.82 ├ ƒ /purchase-order-items/[purchaseOrderItemId]                                   2.72 kB          99 kB
+#12 53.82 ├ ○ /purchase-orders                                                              8.35 kB         236 kB
+#12 53.82 ├ ƒ /purchase-orders/[poId]                                                       4.61 kB         107 kB
+#12 53.82 ├ ○ /service-required-spare-parts                                                 4.55 kB         190 kB
+#12 53.82 ├ ƒ /service-required-spare-parts/[serviceRequiredSparePartId]                    2.73 kB          99 kB
+#12 53.82 ├ ○ /services                                                                     3.65 kB         183 kB
+#12 53.82 ├ ƒ /services/[serviceId]                                                         2.59 kB        98.9 kB
+#12 53.82 ├ ○ /spare-part-suitable-vehicles                                                 4.67 kB         190 kB
+#12 53.82 ├ ƒ /spare-part-suitable-vehicles/[sparepartSuitableId]                           2.68 kB          99 kB
+#12 53.82 ├ ○ /spare-parts                                                                  5.1 kB          209 kB
+#12 53.82 ├ ƒ /spare-parts/[SparePartId]                                                    2.7 kB           99 kB
+#12 53.82 ├ ○ /stock-transactions                                                           8.21 kB         236 kB
+#12 53.82 ├ ƒ /stock-transactions/[stockTransactionId]                                      4.6 kB          107 kB
+#12 53.82 ├ ○ /units                                                                        4.81 kB         209 kB
+#12 53.82 ├ ƒ /units/[unitId]                                                               2.56 kB        98.9 kB
+#12 53.82 ├ ○ /vehicles                                                                     7.8 kB          236 kB
+#12 53.82 ├ ƒ /vehicles/[vehicleId]                                                         4.66 kB         107 kB
+#12 53.82 ├ ○ /warehouse                                                                    4.29 kB         208 kB
+#12 53.82 ├ ○ /warehouse-stocks                                                             4.62 kB         190 kB
+#12 53.82 ├ ƒ /warehouse-stocks/[warehouseStockId]                                          2.69 kB          99 kB
+#12 53.82 ├ ƒ /warehouse/[warehouseId]                                                      2.52 kB        98.8 kB
+#12 53.82 ├ ○ /work-order-images                                                            4.82 kB         196 kB
+#12 53.82 ├ ƒ /work-order-images/[workOrderImageId]                                         2.81 kB         104 kB
+#12 53.82 ├ ○ /work-order-items                                                             5.05 kB         191 kB
+#12 53.82 ├ ƒ /work-order-items/[workOrderItemId]                                           2.72 kB          99 kB
+#12 53.82 ├ ○ /work-order-services                                                          4.98 kB         191 kB
+#12 53.82 ├ ƒ /work-order-services/[workOrderServiceId]                                     2.67 kB          99 kB
+#12 53.82 ├ ○ /work-order-spare-parts                                                       5.06 kB         191 kB
+#12 53.82 ├ ƒ /work-order-spare-parts/[workOrderSparePartId]                                2.73 kB          99 kB
+#12 53.82 ├ ○ /work-order-tasks                                                             7.8 kB          200 kB
+#12 53.82 ├ ƒ /work-order-tasks/[workOrderTaskId]                                           4.5 kB          107 kB
+#12 53.82 ├ ○ /work-orders                                                                  9.45 kB         237 kB
+#12 53.82 └ ƒ /work-orders/[woId]                                                           4.96 kB         108 kB
+#12 53.82 + First Load JS shared by all                                                     87.4 kB
+#12 53.82   ├ chunks/2117-f535b8646c1787d6.js                                               31.8 kB
+#12 53.82   ├ chunks/fd9d1056-ee4b1af3803e5c4c.js                                           53.6 kB
+#12 53.82   └ other shared chunks (total)                                                   2.03 kB
+#12 53.82 
+#12 53.82 
+#12 53.82 ○  (Static)   prerendered as static content
+#12 53.82 ƒ  (Dynamic)  server-rendered on demand
+#12 53.82 
+#12 53.90 --- Next.js build completed ---
+#12 53.90 --- Listing contents of /app/.next after build ---
+#12 53.90 + echo --- Next.js build completed ---
+#12 53.90 + echo --- Listing contents of /app/.next after build ---
+#12 53.90 + ls -la /app/.next/
+#12 53.90 total 3096
+#12 53.90 drwxr-xr-x. 1 node node     634 Jul 28 22:02 .
+#12 53.90 drwxr-xr-x. 1 node node      10 Jul 28 22:01 ..
+#12 53.90 -rw-r--r--. 1 node node      21 Jul 28 22:02 BUILD_ID
+#12 53.90 -rw-r--r--. 1 node node   35778 Jul 28 22:02 app-build-manifest.json
+#12 53.90 -rw-r--r--. 1 node node    7318 Jul 28 22:02 app-path-routes-manifest.json
+#12 53.90 -rw-r--r--. 1 node node     969 Jul 28 22:02 build-manifest.json
+#12 53.90 drwxr-xr-x. 1 node node      56 Jul 28 22:02 cache
+#12 53.90 -rw-r--r--. 1 node node      94 Jul 28 22:02 export-marker.json
+#12 53.90 -rw-r--r--. 1 node node     511 Jul 28 22:02 images-manifest.json
+#12 53.90 -rw-r--r--. 1 node node    7314 Jul 28 22:02 next-minimal-server.js.nft.json
+#12 53.90 -rw-r--r--. 1 node node  108956 Jul 28 22:02 next-server.js.nft.json
+#12 53.90 -rw-r--r--. 1 node node      20 Jul 28 22:01 package.json
+#12 53.90 -rw-r--r--. 1 node node    8952 Jul 28 22:02 prerender-manifest.json
+#12 53.90 -rw-r--r--. 1 node node       2 Jul 28 22:02 react-loadable-manifest.json
+#12 53.90 -rw-r--r--. 1 node node    4536 Jul 28 22:02 required-server-files.json
+#12 53.90 -rw-r--r--. 1 node node   16133 Jul 28 22:01 routes-manifest.json
+#12 53.90 drwxr-xr-x. 1 node node     702 Jul 28 22:02 server
+#12 53.90 drwxr-xr-x. 1 node node      76 Jul 28 22:02 standalone
+#12 53.90 drwxr-xr-x. 1 node node      70 Jul 28 22:02 static
+#12 53.90 -rw-r--r--. 1 node node 2944160 Jul 28 22:02 trace
+#12 53.90 drwxr-xr-x. 1 node node      30 Jul 28 22:01 types
+#12 53.90 + echo --- Listing contents of /app/.next/standalone after build ---
+#12 53.90 + ls -la /app/.next/standalone/
+#12 53.90 --- Listing contents of /app/.next/standalone after build ---
+#12 53.90 total 12
+#12 53.90 drwxr-xr-x. 1 node node   76 Jul 28 22:02 .
+#12 53.90 drwxr-xr-x. 1 node node  634 Jul 28 22:02 ..
+#12 53.90 drwxr-xr-x. 1 node node  388 Jul 28 22:02 .next
+#12 53.90 drwxr-xr-x. 1 node node  282 Jul 28 22:02 node_modules
+#12 53.90 -rwxr-xr-x. 1 node node 2173 Jul 28 22:02 package.json
+#12 53.90 -rw-r--r--. 1 node node 4591 Jul 28 22:02 server.js
+#12 53.90 --- Listing contents of /app/.next/static after build ---
+#12 53.90 + echo --- Listing contents of /app/.next/static after build ---
+#12 53.90 + ls -la /app/.next/static/
+#12 53.90 total 0
+#12 53.90 drwxr-xr-x. 1 node node   70 Jul 28 22:02 .
+#12 53.90 drwxr-xr-x. 1 node node  634 Jul 28 22:02 ..
+#12 53.90 drwxr-xr-x. 1 node node   64 Jul 28 22:02 PvSGfG7EUqusWz45lpy2j
+#12 53.90 drwxr-xr-x. 1 node node 1418 Jul 28 22:02 chunks
+#12 53.90 drwxr-xr-x. 1 node node  120 Jul 28 22:02 css
+#12 53.90 drwxr-xr-x. 1 node node 1332 Jul 28 22:02 media
+#12 53.90 --- Searching for 'standalone' directory in /app ---
+#12 53.90 + echo --- Searching for 'standalone' directory in /app ---
+#12 53.90 + find /app -name standalone
+#12 54.02 /app/.next/standalone
+#12 54.02 + echo --- DIAGNOSTIK END ---
+#12 54.02 --- DIAGNOSTIK END ---
+#12 DONE 54.2s
+
+#13 [cli] exporting to image
+#13 exporting layers
+#13 ...
+
+#14 [app runner  3/11] COPY --from=builder /app/.next/standalone ./
+#14 DONE 0.6s
+
+#15 [app runner  4/11] COPY --from=builder /app/.next/static ./.next/static
+#15 DONE 0.1s
+
+#13 [cli] exporting to image
+#13 ...
+
+#16 [app runner  5/11] COPY --from=builder /app/public ./public
+#16 DONE 0.1s
+
+#17 [app runner  6/11] COPY --from=builder /app/node_modules /app/node_modules
+#17 ...
+
+#13 [cli] exporting to image
+#13 exporting layers 6.9s done
+#13 writing image sha256:1b5f709d27ba2b131f87e2e274616797d63c5fa00404e0723aa956ec657e4a36 done
+#13 naming to docker.io/library/arkstock-cli done
+#13 DONE 7.0s
+
+#18 [cli] resolving provenance for metadata file
+#18 DONE 0.0s
+
+#17 [app runner  6/11] COPY --from=builder /app/node_modules /app/node_modules
+#17 DONE 8.1s
+
+#19 [app runner  7/11] COPY --from=builder /app/package.json ./package.json
+#19 DONE 0.0s
+
+#20 [app runner  8/11] COPY --from=builder /app/package-lock.json ./package-lock.json
+#20 DONE 0.1s
+
+#21 [app runner  9/11] COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+#21 DONE 0.1s
+
+#22 [app runner 10/11] RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+#22 DONE 0.2s
+
+#23 [app runner 11/11] RUN ls -l /usr/local/bin/docker-entrypoint.sh
+#23 0.193 -rwxr-xr-x. 1 root root 826 Jul 26 14:08 /usr/local/bin/docker-entrypoint.sh
+#23 DONE 0.2s
+
+#24 [app] exporting to image
+#24 exporting layers
+#24 exporting layers 7.1s done
+#24 writing image sha256:3ec29e45d70d9e1d687e4fa6b007897b423742567129e9a9167027f7095c085d done
+#24 naming to docker.io/library/arkstock-app done
+#24 DONE 7.1s
+
+#25 [app] resolving provenance for metadata file
+#25 DONE 0.0s
+ app  Built
+ cli  Built

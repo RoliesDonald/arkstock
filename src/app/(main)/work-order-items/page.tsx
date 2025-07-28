@@ -241,7 +241,7 @@ export default function WorkOrderItemListPage() {
       (woi.sparePart?.partName && woi.sparePart.partName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (woi.sparePart?.partNumber && woi.sparePart.partNumber.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [allWorkOrderItems, activeTab, searchQuery]);
+  }, [allWorkOrderItems, searchQuery]);
 
   const handleAddNewWorkOrderItemClick = useCallback(() => {
     setEditWorkOrderItemData(undefined);

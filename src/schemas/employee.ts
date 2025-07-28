@@ -1,40 +1,42 @@
-// src/schemas/employee.ts
 import { z } from "zod";
-// Impor Enums langsung dari @prisma/client untuk validasi Zod
-import { EmployeeRole, EmployeeStatus, Gender } from "@prisma/client";
+// Hapus import Prisma Enums langsung di sini!
+// import { EmployeeRole, EmployeeStatus, Gender } from "@prisma/client";
 
 export const employeeFormSchema = z.object({
-  id: z.string().optional(), // ID opsional karena hanya ada saat edit
-  employeeId: z.string().min(1, "ID Karyawan wajib diisi."), // Asumsi ini wajib
-  name: z.string().min(1, "Nama Karyawan wajib diisi."), // Asumsi ini wajib
-  email: z.string().email("Format email tidak valid.").nullable().optional(), // Opsional
-  photo: z.string().url("Format URL foto tidak valid.").nullable().optional(), // Opsional
-  phone: z.string().nullable().optional(), // Opsional
-  address: z.string().nullable().optional(), // Opsional
-  position: z.string().nullable().optional(), // Opsional
-  role: z.nativeEnum(EmployeeRole, {
-    errorMap: () => ({ message: "Role Karyawan tidak valid." }),
-  }),
-  department: z.string().nullable().optional(), // Opsional
-  status: z.nativeEnum(EmployeeStatus, {
-    errorMap: () => ({ message: "Status Karyawan tidak valid." }),
-  }),
+  id: z.string().optional(),
+  employeeId: z.string().min(1, "ID Karyawan wajib diisi."),
+  name: z.string().min(1, "Nama Karyawan wajib diisi."),
+  email: z.string().email("Format email tidak valid.").or(z.literal("")).nullable().optional(), // Tambahkan .or(z.literal("")) untuk string kosong
+  photo: z.string().url("Format URL foto tidak valid.").or(z.literal("")).nullable().optional(), // Tambahkan .or(z.literal("")) untuk string kosong
+  phone: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  position: z.string().min(1, "Posisi/Jabatan wajib dipilih"),
+
+  // KUNCI PERBAIKAN: Ubah z.nativeEnum menjadi z.string()
+  role: z.string().min(1, "Role Karyawan wajib dipilih."), // Sekarang akan divalidasi sebagai string
+
+  department: z.string().nullable().optional(),
+
+  // KUNCI PERBAIKAN: Ubah z.nativeEnum menjadi z.string()
+  status: z.string().min(1, "Status Karyawan wajib dipilih."), // Sekarang akan divalidasi sebagai string
+
   tanggalLahir: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal lahir tidak valid (YYYY-MM-DD).")
+    .or(z.literal("")) // Izinkan string kosong
     .nullable()
-    .optional(), // Opsional
+    .optional(),
   tanggalBergabung: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal bergabung tidak valid (YYYY-MM-DD).")
+    .or(z.literal("")) // Izinkan string kosong
     .nullable()
-    .optional(), // Opsional
-  companyId: z.string().nullable().optional(), // Opsional, karena bisa null di defaultValues
-  password: z.string().min(6, "Password minimal 6 karakter.").nullable().optional(), // Opsional, hanya diisi saat membuat/mengubah
-  gender: z.nativeEnum(Gender, {
-    errorMap: () => ({ message: "Jenis Kelamin tidak valid." }),
-  }), // Tambahkan field gender
+    .optional(),
+  companyId: z.string().nullable().optional(),
+  password: z.string().min(6, "Password minimal 6 karakter.").or(z.literal("")).nullable().optional(), // Tambahkan .or(z.literal(""))
+
+  // KUNCI PERBAIKAN: Ubah z.nativeEnum menjadi z.string()
+  gender: z.string().min(1, "Jenis Kelamin wajib dipilih."), // Sekarang akan divalidasi sebagai string
 });
 
-// Ekspor tipe EmployeeFormValues langsung dari skema Zod
 export type EmployeeFormValues = z.infer<typeof employeeFormSchema>;

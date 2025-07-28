@@ -11,8 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { SparePart, RawSparePartApiResponse } from "@/types/sparepart"; // Import dari types/spareParts
-import { SparePartFormValues } from "@/schemas/sparePart"; // Import dari schemas/sparePart
+import { SparePart, RawSparePartApiResponse } from "@/types/sparepart";
+import { SparePartFormValues } from "@/schemas/sparePart";
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreVertical } from "lucide-react";
 import React, { useCallback, useMemo, useState, useEffect } from "react";
@@ -31,9 +31,17 @@ import {
 import { Dialog } from "@/components/ui/dialog"; 
 import { useToast } from "@/hooks/use-toast";
 import { fetchSpareParts, formatSparePartDates } from "@/store/slices/sparePartSlice"; 
-import { PartVariant, SparePartCategory, SparePartStatus } from "@prisma/client"; 
+// Hapus import Prisma enum langsung dari @prisma/client di sini
+// import { PartVariant, SparePartCategory, SparePartStatus } from "@prisma/client"; 
 import { api } from "@/lib/utils/api"; 
 import SparePartDialogWrapper from "@/components/dialog/sparePartDialog/SparePartDialogWrapper";
+
+// Definisikan tipe untuk enum yang akan kita ambil dari API
+interface EnumsApiResponse {
+  SparePartCategory: string[];
+  SparePartStatus: string[];
+  PartVariant: string[];
+}
 
 export default function SparePartListPage() {
   const router = useRouter();
@@ -49,6 +57,10 @@ export default function SparePartListPage() {
   const [isSparePartDialogOpen, setIsSparePartDialogOpen] = useState<boolean>(false);
   const [editSparePartData, setEditSparePartData] = useState<SparePart | undefined>(undefined);
   const [sparePartToDelete, setSparePartToDelete] = useState<SparePart | undefined>(undefined);
+  
+  const [enums, setEnums] = useState<EnumsApiResponse | null>(null);
+  const [enumsLoading, setEnumsLoading] = useState<boolean>(true);
+  const [enumsError, setEnumsError] = useState<string | null>(null);
 
   const getAuthToken = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -59,7 +71,30 @@ export default function SparePartListPage() {
 
   useEffect(() => {
     dispatch(fetchSpareParts());
-  }, [dispatch]);
+
+    const fetchEnums = async () => {
+      try {
+        const response = await fetch('/api/enums');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: EnumsApiResponse = await response.json();
+        setEnums(data);
+      } catch (err: any) {
+        console.error("Failed to fetch enums:", err);
+        setEnumsError(err.message || "Gagal mengambil data enum.");
+        toast({
+          title: "Error",
+          description: "Gagal memuat filter kategori. Silakan coba lagi.",
+          variant: "destructive",
+        });
+      } finally {
+        setEnumsLoading(false);
+      }
+    };
+
+    fetchEnums();
+  }, [dispatch, toast]);
 
   const handleDetailSparePart = useCallback(
     (sparePart: SparePart) => {
@@ -196,20 +231,21 @@ export default function SparePartListPage() {
         cell: ({ row }) => {
           const variant = row.original.variant;
           let variantColor: string;
+          // Menggunakan nilai string langsung dari data yang sudah ada
           switch (variant) {
-            case PartVariant.OEM:
+            case "OEM":
               variantColor = "bg-blue-200 text-blue-800";
               break;
-            case PartVariant.AFTERMARKET:
+            case "AFTERMARKET":
               variantColor = "bg-green-200 text-green-800";
               break;
-            case PartVariant.RECONDITIONED:
+            case "RECONDITIONED":
               variantColor = "bg-yellow-200 text-yellow-800";
               break;
-            case PartVariant.USED:
+            case "USED":
               variantColor = "bg-red-200 text-red-800";
               break;
-            case PartVariant.GBOX:
+            case "GBOX":
               variantColor = "bg-purple-200 text-purple-800";
               break;
             default:
@@ -226,17 +262,18 @@ export default function SparePartListPage() {
         cell: ({ row }) => {
           const status = row.original.status;
           let statusColor: string;
+          // Menggunakan nilai string langsung dari data yang sudah ada
           switch (status) {
-            case SparePartStatus.AVAILABLE:
+            case "AVAILABLE":
               statusColor = "bg-green-500 text-white";
               break;
-            case SparePartStatus.LOW_STOCK:
+            case "LOW_STOCK":
               statusColor = "bg-yellow-500 text-black";
               break;
-            case SparePartStatus.OUT_OF_STOCK:
+            case "OUT_OF_STOCK":
               statusColor = "bg-red-500 text-white";
               break;
-            case SparePartStatus.DISCONTINUED:
+            case "DISCONTINUED":
               statusColor = "bg-gray-700 text-white";
               break;
             default:
@@ -277,152 +314,37 @@ export default function SparePartListPage() {
         },
       },
     ],
-    [handleDetailSparePart, handleEditSparePart]
+    [handleDetailSparePart, handleEditSparePart] // Hapus enums dari dependencies karena tidak lagi digunakan di sini
   );
 
   const sparePartTabItems = useMemo(() => {
+    if (!enums) return []; // Tampilkan kosong atau loading jika enum belum dimuat
+
+    const categoryTabs = enums.SparePartCategory.map((category) => ({
+      value: category.toLowerCase(),
+      label: category.replace(/_/g, " "), // Format label jika perlu
+      count: allSpareParts.filter((part) => part.category === category).length,
+    }));
+
+    const statusTabs = enums.SparePartStatus.map((status) => ({
+      value: status.toLowerCase(),
+      label: status.replace(/_/g, " "),
+      count: allSpareParts.filter((part) => part.status === status).length,
+    }));
+
+    const variantTabs = enums.PartVariant.map((variant) => ({
+      value: variant.toLowerCase(),
+      label: variant.replace(/_/g, " "),
+      count: allSpareParts.filter((part) => part.variant === variant).length,
+    }));
+
     return [
       { value: "all", label: "All", count: allSpareParts.length },
-      // Tabs for SparePartCategory
-      {
-        value: SparePartCategory.ENGINE.toLowerCase(),
-        label: "Mesin",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.ENGINE).length,
-      },
-      {
-        value: SparePartCategory.BRAKE.toLowerCase(),
-        label: "Rem",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.BRAKE).length,
-      },
-      {
-        value: SparePartCategory.SUSPENSION.toLowerCase(),
-        label: "Suspensi",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.SUSPENSION).length,
-      },
-      {
-        value: SparePartCategory.ELECTRICAL.toLowerCase(),
-        label: "Elektrikal",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.ELECTRICAL).length,
-      },
-      {
-        value: SparePartCategory.BODY.toLowerCase(),
-        label: "Body",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.BODY).length,
-      },
-      {
-        value: SparePartCategory.TIRE.toLowerCase(),
-        label: "Ban",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.TIRE).length,
-      },
-      {
-        value: SparePartCategory.LIGHTING.toLowerCase(),
-        label: "Pencahayaan",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.LIGHTING).length,
-      },
-      {
-        value: SparePartCategory.EXHAUST.toLowerCase(),
-        label: "Knalpot",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.EXHAUST).length,
-      },
-      {
-        value: SparePartCategory.COOLING.toLowerCase(),
-        label: "Pendingin",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.COOLING).length,
-      },
-      {
-        value: SparePartCategory.STEERING.toLowerCase(),
-        label: "Kemudi",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.STEERING).length,
-      },
-      {
-        value: SparePartCategory.TRANSMISSION.toLowerCase(),
-        label: "Transmisi",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.TRANSMISSION).length,
-      },
-      {
-        value: SparePartCategory.INTERIOR.toLowerCase(),
-        label: "Interior",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.INTERIOR).length,
-      },
-      {
-        value: SparePartCategory.EXTERIOR.toLowerCase(),
-        label: "Eksterior",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.EXTERIOR).length,
-      },
-      {
-        value: SparePartCategory.FILTERS.toLowerCase(),
-        label: "Filter",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.FILTERS).length,
-      },
-      {
-        value: SparePartCategory.FLUIDS.toLowerCase(),
-        label: "Cairan",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.FLUIDS).length,
-      },
-      {
-        value: SparePartCategory.TOOLS.toLowerCase(),
-        label: "Peralatan",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.TOOLS).length,
-      },
-      {
-        value: SparePartCategory.ACCESSORIES.toLowerCase(),
-        label: "Aksesoris",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.ACCESSORIES).length,
-      },
-      {
-        value: SparePartCategory.OTHER.toLowerCase(),
-        label: "Lainnya",
-        count: allSpareParts.filter((part) => part.category === SparePartCategory.OTHER).length,
-      },
-      // Tabs for SparePartStatus
-      {
-        value: SparePartStatus.AVAILABLE.toLowerCase(),
-        label: "Tersedia",
-        count: allSpareParts.filter((part) => part.status === SparePartStatus.AVAILABLE).length,
-      },
-      {
-        value: SparePartStatus.LOW_STOCK.toLowerCase(),
-        label: "Stok Rendah",
-        count: allSpareParts.filter((part) => part.status === SparePartStatus.LOW_STOCK).length,
-      },
-      {
-        value: SparePartStatus.OUT_OF_STOCK.toLowerCase(),
-        label: "Stok Habis",
-        count: allSpareParts.filter((part) => part.status === SparePartStatus.OUT_OF_STOCK).length,
-      },
-      {
-        value: SparePartStatus.DISCONTINUED.toLowerCase(),
-        label: "Discontinued",
-        count: allSpareParts.filter((part) => part.status === SparePartStatus.DISCONTINUED).length,
-      },
-      // Tabs for PartVariant
-      {
-        value: PartVariant.OEM.toLowerCase(),
-        label: "OEM",
-        count: allSpareParts.filter((part) => part.variant === PartVariant.OEM).length,
-      },
-      {
-        value: PartVariant.AFTERMARKET.toLowerCase(),
-        label: "Aftermarket",
-        count: allSpareParts.filter((part) => part.variant === PartVariant.AFTERMARKET).length,
-      },
-      {
-        value: PartVariant.RECONDITIONED.toLowerCase(),
-        label: "Rekondisi",
-        count: allSpareParts.filter((part) => part.variant === PartVariant.RECONDITIONED).length,
-      },
-      {
-        value: PartVariant.USED.toLowerCase(),
-        label: "Bekas",
-        count: allSpareParts.filter((part) => part.variant === PartVariant.USED).length,
-      },
-      {
-        value: PartVariant.GBOX.toLowerCase(),
-        label: "GBOX",
-        count: allSpareParts.filter((part) => part.variant === PartVariant.GBOX).length,
-      },
+      ...categoryTabs,
+      ...statusTabs,
+      ...variantTabs,
     ];
-  }, [allSpareParts]);
+  }, [allSpareParts, enums]);
 
   const filteredSpareParts = useMemo(() => {
     let data = allSpareParts;
@@ -430,16 +352,14 @@ export default function SparePartListPage() {
     if (activeTab !== "all") {
       data = data.filter((sparePart) => {
         const lowerCaseActiveTab = activeTab.toLowerCase();
-        // Cek berdasarkan SparePartCategory
-        if (Object.values(SparePartCategory).some(c => c.toLowerCase() === lowerCaseActiveTab)) {
+        
+        if (enums?.SparePartCategory.some(c => c.toLowerCase() === lowerCaseActiveTab)) {
           return sparePart.category.toLowerCase() === lowerCaseActiveTab;
         }
-        // Cek berdasarkan SparePartStatus
-        if (Object.values(SparePartStatus).some(s => s.toLowerCase() === lowerCaseActiveTab)) {
+        if (enums?.SparePartStatus.some(s => s.toLowerCase() === lowerCaseActiveTab)) {
           return sparePart.status.toLowerCase() === lowerCaseActiveTab;
         }
-        // Cek berdasarkan PartVariant
-        if (Object.values(PartVariant).some(v => v.toLowerCase() === lowerCaseActiveTab)) {
+        if (enums?.PartVariant.some(v => v.toLowerCase() === lowerCaseActiveTab)) {
           return sparePart.variant.toLowerCase() === lowerCaseActiveTab;
         }
         return false;
@@ -455,7 +375,7 @@ export default function SparePartListPage() {
       (sparePart.manufacturer && sparePart.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (sparePart.description && sparePart.description.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [allSpareParts, activeTab, searchQuery]);
+  }, [allSpareParts, activeTab, searchQuery, enums]);
 
   const handleAddNewSparePartClick = useCallback(() => {
     setEditSparePartData(undefined);
@@ -466,6 +386,22 @@ export default function SparePartListPage() {
     setIsSparePartDialogOpen(false);
     setEditSparePartData(undefined);
   }, []);
+
+  if (enumsLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <p>Memuat filter kategori...</p>
+      </div>
+    );
+  }
+
+  if (enumsError) {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh] text-red-500">
+        <p>Error memuat filter kategori: {enumsError}</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -489,6 +425,7 @@ export default function SparePartListPage() {
           onClose={handleSparePartDialogClose}
           initialData={editSparePartData}
           onSubmit={handleSubmitSparePart}
+          enums={enums} 
         />
       </Dialog>
 
