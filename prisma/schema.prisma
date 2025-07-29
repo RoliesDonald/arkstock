@@ -386,7 +386,7 @@ model Vehicle {
 /// =================================================================
 model Employee {
   id               String            @id @default(uuid())
-  userId           String?           @unique @map("user_id")
+  employeeId       String?           @unique @map("employee_id")
   name             String
   email            String?           @unique
   password         String?           @map("password")

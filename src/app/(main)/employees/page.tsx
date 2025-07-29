@@ -1,4 +1,4 @@
-// src/app/(main)/employee/page.tsx
+// src/app/(main)/employees/page.tsx
 "use client";
 
 import TableMain from "@/components/common/table/TableMain";
@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { Employee, RawEmployeeApiResponse } from "@/types/employee";
+import { Employee, RawEmployeeApiResponse } from "@/schemas/employee";
 import { EmployeeFormValues } from "@/schemas/employee";
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreVertical } from "lucide-react";
@@ -35,8 +35,9 @@ import { fetchEmployees, formatEmployeeDates } from "@/store/slices/employeeSlic
 import { api } from "@/lib/utils/api";
 import Link from "next/link";
 import EmployeeDialogWrapper from "@/components/dialog/employeeDialog/_component/EmployeeDialogWrapper";
+import { format } from "date-fns";
 
-interface EnumsApiResponse {
+export interface EnumsApiResponse {
   SparePartCategory: string[];
   SparePartStatus: string[];
   PartVariant: string[];
@@ -99,14 +100,6 @@ export default function EmployeeListPage() {
     fetchEnums();
   }, [dispatch, toast]);
 
-  // handleDetailEmployee tidak lagi diperlukan jika nama karyawan yang diklik
-  // const handleDetailEmployee = useCallback(
-  //   (employee: Employee) => {
-  //     router.push(`/employee/${employee.id}`);
-  //   },
-  //   [router]
-  // );
-
   const handleEditEmployee = useCallback((employee: Employee) => {
     setEditEmployeeData(employee);
     setIsEmployeeDialogOpen(true);
@@ -127,18 +120,31 @@ export default function EmployeeListPage() {
       }
 
       try {
-        const url = `http://localhost:3000/api/employees${values.id ? `/${values.id}` : ""}`;
+        const payload = {
+          ...values,
+          email: values.email === "" ? null : values.email,
+          photo: values.photo === "" ? null : values.photo,
+          phone: values.phone === "" ? null : values.phone,
+          address: values.address === "" ? null : values.address,
+          department: values.department === "" ? null : values.department,
+          gender: values.gender === "" ? null : values.gender,
+          password: values.password === "" ? null : values.password,
+          tanggalLahir: values.tanggalLahir ? format(values.tanggalLahir, "yyyy-MM-dd") : null,
+          tanggalBergabung: values.tanggalBergabung ? format(values.tanggalBergabung, "yyyy-MM-dd") : null,
+        };
+
+        const url = `/api/employees${values.id ? `/${values.id}` : ""}`;
 
         let response;
         if (values.id) {
-          response = await api.put<Employee | RawEmployeeApiResponse>(url, values, {
+          response = await api.put<Employee | RawEmployeeApiResponse>(url, payload, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
           });
         } else {
-          response = await api.post<Employee | RawEmployeeApiResponse>(url, values, {
+          response = await api.post<Employee | RawEmployeeApiResponse>(url, payload, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
@@ -179,7 +185,7 @@ export default function EmployeeListPage() {
       }
 
       try {
-        await api.delete(`http://localhost:3000/api/employees/${employeeId}`, {
+        await api.delete(`/api/employees/${employeeId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -229,12 +235,12 @@ export default function EmployeeListPage() {
         enableSorting: false,
         enableHiding: false,
       },
-      { accessorKey: "employeeId", header: "ID Karyawan" },
+      { accessorKey: "employeeId", header: "ID Karyawan" }, // KRUSIAL: Gunakan employeeId
       {
         accessorKey: "name",
         header: "Nama",
         cell: ({ row }) => (
-          <Link href={`/employee/${row.original.id}`} className="text-blue-600 hover:underline">
+          <Link href={`/employees/${row.original.id}`} className="text-blue-600 hover:underline">
             {row.original.name}
           </Link>
         ),
@@ -298,10 +304,6 @@ export default function EmployeeListPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                {/* KUNCI PERBAIKAN: Hapus DropdownMenuItem "Lihat Detail" */}
-                {/* <DropdownMenuItem onClick={() => handleDetailEmployee(employee)}>
-                  Lihat Detail
-                </DropdownMenuItem> */}
                 <DropdownMenuItem onClick={() => handleEditEmployee(employee)}>
                   Edit Karyawan
                 </DropdownMenuItem>
@@ -314,7 +316,7 @@ export default function EmployeeListPage() {
         },
       },
     ],
-    [handleEditEmployee] // handleDetailEmployee dihapus dari dependencies
+    [handleEditEmployee]
   );
 
   const employeeTabItems = useMemo(() => {
@@ -360,7 +362,7 @@ export default function EmployeeListPage() {
           return employee.status.toLowerCase() === lowerCaseActiveTab;
         }
         if (enums?.Gender.some((g) => g.toLowerCase() === lowerCaseActiveTab)) {
-          return employee.gender.toLowerCase() === lowerCaseActiveTab;
+          return employee.gender?.toLowerCase() === lowerCaseActiveTab;
         }
         return false;
       });
@@ -368,7 +370,7 @@ export default function EmployeeListPage() {
 
     return data.filter(
       (employee) =>
-        employee.employeeId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        employee.employeeId?.toLowerCase().includes(searchQuery.toLowerCase()) || // KRUSIAL: Gunakan employeeId
         employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         employee.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         employee.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||

@@ -12,7 +12,7 @@ export async function GET(request: Request, { params }: { params: { employeeId: 
       select: {
         // Menggunakan select untuk hanya mengambil properti yang dibutuhkan
         id: true,
-        userId: true,
+        employeeId: true,
         name: true,
         email: true,
         photo: true,
@@ -53,7 +53,7 @@ export async function PUT(request: Request, { params }: { params: { employeeId: 
   try {
     const body = await request.json();
     const {
-      userId,
+      employeeId,
       name,
       email,
       password,
@@ -73,7 +73,7 @@ export async function PUT(request: Request, { params }: { params: { employeeId: 
     const updatedEmployee = await prisma.employee.update({
       where: { id: employeeId },
       data: {
-        userId,
+        employeeId,
         name,
         email,
         // password, // Hati-hati saat mengupdate password, biasanya ada endpoint terpisah
@@ -92,7 +92,7 @@ export async function PUT(request: Request, { params }: { params: { employeeId: 
       select: {
         // Sertakan properti yang sama seperti GET untuk konsistensi respons
         id: true,
-        userId: true,
+        employeeId: true,
         name: true,
         email: true,
         photo: true,

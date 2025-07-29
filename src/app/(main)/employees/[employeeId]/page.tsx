@@ -1,132 +1,159 @@
-"use client";
+// src/app/(main)/employees/[employeeId]/page.tsx
+// Ini adalah komponen halaman detail karyawan untuk Next.js App Router (Server Component).
 
-import React, { useCallback, useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
-import { Employee, RawEmployeeApiResponse } from "@/types/employee"; 
-import { EmployeeStatus, EmployeeRole, Gender } from "@prisma/client"; // <--- IMPORT GENDER DARI @PRISMA/CLIENT
-import { Button } from "@/components/ui/button";
+import { PrismaClient } from "@prisma/client";
+import { notFound } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
+import BackButton from "./_components/backButton";
 
-// ... sisa import lainnya
+const prisma = new PrismaClient();
 
-export default function EmployeeDetailPage() {
-  const router = useRouter();
-  const params = useParams();
-  const { toast } = useToast();
-  const employeeId = params.employeeId as string;
+interface EmployeeDetailPageProps {
+  params: {
+    employeeId: string; // Ini adalah ID UUID dari URL (id utama), bukan ID kustom
+  };
+}
 
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+export default async function EmployeeDetailPage({ params }: EmployeeDetailPageProps) {
+  const { employeeId } = params; // employeeId di sini adalah UUID dari URL
 
-  const getAuthToken = useCallback(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("jwt_token");
-    }
-    return null;
-  }, []);
+  const employee = await prisma.employee.findUnique({
+    where: {
+      id: employeeId, // Cari berdasarkan ID UUID
+    },
+    include: {
+      company: true,
+    },
+  });
 
-  const fetchEmployee = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const token = getAuthToken();
-
-    if (!token) {
-      setError("Tidak ada token otentikasi. Silakan login kembali.");
-      setLoading(false);
-      router.push("/login"); 
-      return;
-    }
-
-    try {
-      const response = await fetch(`http://localhost:3000/api/employees/${employeeId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          toast({
-            title: "Sesi Habis",
-            description: "Token tidak valid atau kadaluarsa. Silakan login kembali.",
-            variant: "destructive",
-          });
-          router.push("/");
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal mengambil data karyawan.");
-      }
-
-      const rawData: RawEmployeeApiResponse = await response.json();
-      const formattedData: Employee = {
-        ...rawData,
-        tanggalLahir: rawData.tanggalLahir ? new Date(rawData.tanggalLahir) : null,
-        tanggalBergabung: rawData.tanggalBergabung ? new Date(rawData.tanggalBergabung) : null,
-        createdAt: new Date(rawData.createdAt),
-        updatedAt: new Date(rawData.updatedAt),
-        role: rawData.role as EmployeeRole,
-        status: rawData.status as EmployeeStatus,
-        gender: rawData.gender as Gender, // Konversi string ke Gender Enum dari @prisma/client
-      };
-
-      setEmployee(formattedData);
-      console.log("Data Karyawan yang diterima dari API (formatted):", formattedData);
-    } catch (err: any) {
-      setError(err.message);
-      toast({
-        title: "Error",
-        description: err.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [employeeId, getAuthToken, router, toast]);
-
-  useEffect(() => {
-    if (employeeId) {
-      fetchEmployee();
-    }
-  }, [employeeId, fetchEmployee]);
-
-  if (loading) return <div>Memuat detail karyawan...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!employee) return <div>Karyawan tidak ditemukan.</div>;
+  if (!employee) {
+    notFound();
+  }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Detail Karyawan: {employee.name}</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <p><strong>ID Karyawan:</strong> {employee.employeeId}</p>
-          <p><strong>Nama:</strong> {employee.name}</p>
-          <p><strong>Email:</strong> {employee.email || 'N/A'}</p>
-          <p><strong>Telepon:</strong> {employee.phone || 'N/A'}</p>
-          <p><strong>Alamat:</strong> {employee.address || 'N/A'}</p>
-          <p><strong>Posisi:</strong> {employee.position || 'N/A'}</p>
-          <p><strong>Departemen:</strong> {employee.department || 'N/A'}</p>
-          <p><strong>Role:</strong> {employee.role}</p>
-          <p><strong>Status:</strong> {employee.status}</p>
-          <p><strong>Jenis Kelamin:</strong> {employee.gender}</p> 
-          <p><strong>Tanggal Lahir:</strong> {employee.tanggalLahir ? new Intl.DateTimeFormat("id-ID").format(employee.tanggalLahir) : 'N/A'}</p>
-          <p><strong>Tanggal Bergabung:</strong> {employee.tanggalBergabung ? new Intl.DateTimeFormat("id-ID").format(employee.tanggalBergabung) : 'N/A'}</p>
-          <p><strong>Perusahaan:</strong> {employee.company?.companyName || 'N/A'}</p>
-          <p><strong>Dibuat Pada:</strong> {new Intl.DateTimeFormat("id-ID").format(employee.createdAt)}</p>
-          <p><strong>Diperbarui Pada:</strong> {new Intl.DateTimeFormat("id-ID").format(employee.updatedAt)}</p>
-        </div>
-        <div>
+    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-3xl mx-auto rounded-lg shadow-lg dark:bg-gray-800 dark:text-gray-100">
+        <CardHeader className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-6 rounded-t-lg">
+          <CardTitle className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            Detail Karyawan
+          </CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400 mt-2">
+            Informasi lengkap mengenai {employee.name}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
           {employee.photo && (
-            <div className="mb-4">
-              <strong>Foto:</strong>
-              <Image src={employee.photo} alt="Foto Karyawan" className="mt-2 rounded-md max-w-xs" />
+            <div className="flex justify-center mb-6">
+              <Image
+                src={employee.photo}
+                alt={`Foto ${employee.name}`}
+                width={150}
+                height={150}
+                className="rounded-full object-cover border-4 border-blue-500 dark:border-blue-400 shadow-md"
+              />
             </div>
           )}
-        </div>
-      </div>
-      <Button onClick={() => router.back()} className="mt-4">Kembali</Button>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">ID Karyawan</Label>
+              <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {employee.employeeId || "-"}
+              </p>{" "}
+              {/* KRUSIAL: Tampilkan employeeId */}
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Nama</Label>
+              <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{employee.name}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
+              <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {employee.email || "-"}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Telepon</Label>
+              <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {employee.phone || "-"}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Jabatan</Label>
+              <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {employee.position || "-"}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Role</Label>
+              <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{employee.role}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Status</Label>
+              <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">{employee.status}</p>
+            </div>
+          </div>
+
+          <Separator className="my-6 bg-gray-200 dark:bg-gray-700" />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Alamat</Label>
+              <p className="mt-1 text-lg text-gray-900 dark:text-gray-100">{employee.address || "-"}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Departemen</Label>
+              <p className="mt-1 text-lg text-gray-900 dark:text-gray-100">{employee.department || "-"}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Tanggal Lahir</Label>
+              <p className="mt-1 text-lg text-gray-900 dark:text-gray-100">
+                {employee.tanggalLahir ? new Date(employee.tanggalLahir).toLocaleDateString("id-ID") : "-"}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Tanggal Bergabung
+              </Label>
+              <p className="mt-1 text-lg text-gray-900 dark:text-gray-100">
+                {employee.tanggalBergabung
+                  ? new Date(employee.tanggalBergabung).toLocaleDateString("id-ID")
+                  : "-"}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Jenis Kelamin</Label>
+              <p className="mt-1 text-lg text-gray-900 dark:text-gray-100">{employee.gender || "-"}</p>
+            </div>
+            {employee.company && (
+              <div>
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Perusahaan</Label>
+                <p className="mt-1 text-lg text-gray-900 dark:text-gray-100">
+                  {employee.company.companyName}
+                </p>
+              </div>
+            )}
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Dibuat Pada</Label>
+              <p className="mt-1 text-lg text-gray-900 dark:text-gray-100">
+                {new Date(employee.createdAt).toLocaleDateString("id-ID")}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">Diperbarui Pada</Label>
+              <p className="mt-1 text-lg text-gray-900 dark:text-gray-100">
+                {new Date(employee.updatedAt).toLocaleDateString("id-ID")}
+              </p>
+            </div>
+          </div>
+          <div className="mt-8 flex justify-end">
+            <BackButton />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

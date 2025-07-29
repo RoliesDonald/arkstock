@@ -18,10 +18,7 @@ export async function POST(req: NextRequest) {
     // validasi
     const validation = loginSchema.safeParse(body);
     if (!validation.success) {
-      return NextResponse.json(
-        { errors: validation.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      return NextResponse.json({ errors: validation.error.flatten().fieldErrors }, { status: 400 });
     }
     const { email, password } = validation.data;
 
@@ -38,10 +35,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!employee.password) {
-      return NextResponse.json(
-        { message: "Karyawan ini tidak memiliki password" },
-        { status: 500 }
-      );
+      return NextResponse.json({ message: "Karyawan ini tidak memiliki password" }, { status: 500 });
     }
 
     const isPasswordValid = await bcrypt.compare(password, employee.password);
@@ -76,7 +70,7 @@ export async function POST(req: NextRequest) {
         token: token,
         employee: {
           id: employee.id,
-          userId: employee.userId,
+          employeeId: employee.employeeId,
           name: employee.name,
           email: employee.email,
           role: employee.role,

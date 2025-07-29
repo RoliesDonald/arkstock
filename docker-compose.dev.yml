@@ -3,30 +3,27 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runner # Pastikan service 'app' menggunakan tahap 'runner'
+      target: builder 
     ports:
       - "3000:3000"
-    # BARIS INI TIDAK ADA UNTUK SERVICE 'APP'
-    # volumes:
-    #   - .:/app
+    volumes:
+      - .:/app 
     environment:
-      - NODE_ENV=development # Atau production jika ini untuk produksi
-      - DATABASE_URL=${DATABASE_URL} # Pastikan variabel lingkungan database diteruskan
-      # Tambahkan variabel lingkungan lain yang dibutuhkan aplikasi Anda
-    # command: "npm run dev" # Ini bisa diaktifkan jika Anda ingin menjalankan dev server
-    # Jika Anda ingin menjalankan server produksi, gunakan:
-    # command: "node server.js"
+      - NODE_ENV=development 
+      - DATABASE_URL=${DATABASE_URL} 
+    command: "npm run dev"
+    # Hapus baris 'server.js' karena kita akan menjalankan dev server Next.js
+    # CMD ["node", "server.js"] # Hapus atau komen baris ini di Dockerfile jika ada
 
   # Service untuk menjalankan perintah CLI seperti Prisma dan seeding
   cli:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder # Service ini akan menggunakan tahap 'builder' dari Dockerfile
+      target: builder 
     volumes:
-      - .:/app # <--- PASTIKAN BARIS INI ADA UNTUK SERVICE 'CLI'
+      - .:/app 
     environment:
-      - NODE_ENV=development # Penting untuk alat pengembangan
-      - DATABASE_URL=${DATABASE_URL} # Pastikan variabel lingkungan database diteruskan
-      # Tambahkan variabel lingkungan lain yang dibutuhkan oleh Prisma atau skrip seed Anda
-    command: "tail -f /dev/null" # Perintah ini menjaga kontainer tetap berjalan agar Anda bisa 'exec' ke dalamnya
+      - NODE_ENV=development 
+      - DATABASE_URL=${DATABASE_URL} 
+    command: "tail -f /dev/null" 
